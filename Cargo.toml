@@ -1,0 +1,8 @@
+[package]
+name = "feo"
+version = "0.0.1"
+edition = "2021"
+authors = ["Nobuharu Shimazu <nobu.bichanna@gmail.com>"]
+repository = "https://github.com/bichanna/feo"
+
+[dependencies]
