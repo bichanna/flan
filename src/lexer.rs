@@ -1,10 +1,13 @@
+use std::process;
+
 use crate::error::ParserError;
 use crate::token::{Token, TokenType};
 
 pub struct Lexer {
+    pub tokens: Vec<Token>,
+    filename: String,
     errors: Vec<ParserError>,
     source: String,
-    tokens: Vec<Token>,
     line: usize,
     col: usize,
     c: usize,
@@ -12,8 +15,9 @@ pub struct Lexer {
 }
 
 impl Lexer {
-    pub fn new(source: String) -> Self {
+    pub fn new(filename: String, source: String) -> Self {
         Lexer {
+            filename,
             errors: vec![],
             source,
             tokens: vec![],
@@ -24,18 +28,27 @@ impl Lexer {
         }
     }
 
+    /// Reports errors if any
+    pub fn report_errors(&self) {
+        if self.errors.len() > 0 {
+            for err in &self.errors {
+                println!("{}", err.format(self.filename.as_str()));
+            }
+            process::exit(1);
+        }
+    }
+
+    /// Tokenizes the source
     pub fn tokenize(&mut self) {
         self.current = self.source.chars().nth(self.c).unwrap();
 
         while !self.is_end() {
-            if self.c != 0 {
-                self.advance();
-            }
             match self.current {
                 '\n' => {
                     self.line += 1;
                     self.col = 1;
                 }
+                '\t' | ' ' => {}
                 '(' => self.add_no_value_token(TokenType::LParen),
                 ')' => self.add_no_value_token(TokenType::RParen),
                 '{' => self.add_no_value_token(TokenType::LBrace),
@@ -86,6 +99,8 @@ impl Lexer {
                     }
                     '*' => {
                         // multi-line comment
+                        self.advance();
+                        self.advance();
                         self.skip_block_comment();
                     }
                     '=' => {
@@ -180,16 +195,27 @@ impl Lexer {
                             Some(kind) => self.add_no_value_token(kind),
                             _ => self.add_token(TokenType::Id, var),
                         }
-                    } else if self.current.is_numeric() || self.current == '-' {
+                        self.reverse();
+                    } else if self.current.is_numeric() {
                         // a number
                         let mut number = String::new();
 
-                        if self.current == '-' && self.next_char().is_numeric() {
-                            number.push(self.current);
-                            self.advance();
-                            self.make_normal_number(&mut number);
-                        } else if self.current.is_numeric() {
-                            self.make_normal_number(&mut number);
+                        if self.current.is_numeric() {
+                            let mut had_dot = false;
+
+                            while !self.is_end() && self.current.is_numeric() {
+                                number.push(self.current);
+                                self.advance();
+
+                                if self.current == '.' && self.next_char().is_numeric() {
+                                    if had_dot {
+                                        self.add_error("invalid dot");
+                                    } else {
+                                        number.push('.');
+                                        had_dot = true;
+                                    }
+                                }
+                            }
                         }
                         if self.current == '0' && self.next_char() == 'x' {
                             // hex number
@@ -201,11 +227,13 @@ impl Lexer {
                         }
 
                         self.add_token(TokenType::Num, number);
+                        self.reverse();
                     } else if self.current == '"' {
                         // a string
                         let mut value = String::new();
+                        self.advance();
 
-                        while !self.is_end() && self.current == '"' {
+                        while !self.is_end() && self.current != '"' {
                             if self.current == '\\' {
                                 // excape chars
                                 self.advance();
@@ -226,31 +254,14 @@ impl Lexer {
                                 }
                                 value.push(self.current);
                             }
+                            self.advance();
                         }
 
                         self.add_token(TokenType::Str, value);
                     }
                 }
             };
-        }
-    }
-
-    /// Creates a normal number
-    fn make_normal_number(&mut self, number: &mut String) {
-        let mut had_dot = false;
-
-        while !self.is_end() && self.current.is_numeric() {
-            number.push(self.current);
             self.advance();
-
-            if self.current == '.' && self.next_char().is_numeric() {
-                if had_dot {
-                    self.add_error("invalid dot");
-                } else {
-                    number.push('.');
-                    had_dot = true;
-                }
-            }
         }
     }
 
@@ -330,13 +341,14 @@ impl Lexer {
 
     /// Checks if the lexer is at the end of the source or not
     fn is_end(&self) -> bool {
-        if self.source.len() <= self.c && !(self.source.len() <= self.c + 1) {
+        if self.source.len() <= self.c || self.source.len() <= self.c + 1 {
             true
         } else {
             false
         }
     }
 
+    /// Advances one character
     fn advance(&mut self) -> char {
         if !self.is_end() {
             if self.current == '\n' {
@@ -351,5 +363,51 @@ impl Lexer {
             self.c = self.source.len();
         }
         self.current
+    }
+
+    /// Revereses one character
+    fn reverse(&mut self) -> char {
+        if self.c - 1 > 0 {
+            self.c -= 1;
+            self.current = self.source.chars().nth(self.c).unwrap();
+            if self.current == '\n' {
+                self.line -= 1;
+                let mut count: i32 = -1;
+                let mut i = self.c - 1;
+                while self.source.chars().nth(i).unwrap() != '\n' {
+                    count += 1;
+                    i += 1;
+                }
+                self.col = count as usize;
+            } else {
+                self.col -= 1;
+            }
+        } else {
+            self.c = 0;
+            self.current = self.source.chars().nth(0).unwrap();
+        }
+        self.current
+    }
+}
+
+// Tests
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_lexer() {
+        let source = r#"
+let name = "Nobuharu Shimazu";
+let _age = 16;
+println(name, _age);
+// Some comment
+/* comment!! /* block */ */
+}"#;
+        let mut lexer = Lexer::new(String::from("<input>"), String::from(source));
+        lexer.tokenize();
+
+        assert_eq!(lexer.errors.len(), 0);
+        assert_eq!(lexer.tokens.len(), 17);
     }
 }
