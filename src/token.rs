@@ -36,7 +36,8 @@ pub enum TokenType {
     LTEq,     // <=
     Bang,     // !
     BangEq,   // !=
-    Equal,    // ==
+    DEq,      // ==
+    Equal,    // =
     Dot,      // .
     DAmp,     // &&
     DPipe,    // ||
@@ -56,7 +57,7 @@ pub enum TokenType {
     Continue, // continue
     Break,    // break
     True,     // true
-    False,    // False
+    False,    // false
     Null,     // null
     Import,   // import
 
