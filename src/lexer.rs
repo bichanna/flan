@@ -269,6 +269,7 @@ impl Lexer {
             };
             self.advance();
         }
+        self.add_no_value_token(TokenType::EOF);
     }
 
     /// Skips the rest of a block comment
@@ -414,6 +415,6 @@ println(name!, _age);
         lexer.tokenize();
 
         assert_eq!(lexer.errors.len(), 0);
-        assert_eq!(lexer.tokens.len(), 17);
+        assert_eq!(lexer.tokens.len(), 18);
     }
 }
