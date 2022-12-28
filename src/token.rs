@@ -68,7 +68,7 @@ pub enum TokenType {
 pub struct Token {
     pub kind: TokenType,
     pub value: String,
-    position: (usize, usize), // (line, col)
+    pub position: (usize, usize), // (line, col)
 }
 
 impl Token {
