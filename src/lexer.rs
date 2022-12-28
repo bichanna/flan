@@ -191,6 +191,12 @@ impl Lexer {
                             self.advance();
                         }
 
+                        // include ! if there's any
+                        if self.current == '!' {
+                            var.push(self.current);
+                            self.advance();
+                        }
+
                         match Lexer::keyword(var.as_str()) {
                             Some(kind) => self.add_no_value_token(kind),
                             _ => self.add_token(TokenType::Id, var),
@@ -398,9 +404,9 @@ mod tests {
     #[test]
     fn test_lexer() {
         let source = r#"
-let name = "Nobuharu Shimazu";
+let name! = "Nobuharu Shimazu";
 let _age = 16;
-println(name, _age);
+println(name!, _age);
 // Some comment
 /* comment!! /* block */ */
 }"#;
