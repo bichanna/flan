@@ -22,7 +22,8 @@ impl Parser {
     /// Parses tokens to AST
     pub fn parse(&mut self, tokens: &Vec<Token>) {
         while !self.is_end(tokens) {
-            self.statements.push(self.declaration(tokens));
+            let node = self.declaration(tokens);
+            self.statements.push(node);
         }
     }
 
