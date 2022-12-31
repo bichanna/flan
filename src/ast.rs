@@ -53,7 +53,7 @@ pub enum Expr {
     },
     Func {
         params: Vec<Token>,
-        body: Vec<Box<Expr>>,
+        body: Vec<Node>,
     },
 }
 
@@ -68,15 +68,21 @@ pub enum Stmt {
     },
     If {
         condition: Expr,
-        then: Box<Stmt>,
-        elif: Option<Box<Stmt>>,
+        then: Box<Node>,
+        els: Option<Box<Node>>,
     },
     Block {
-        statements: Vec<Box<Stmt>>,
+        statements: Vec<Node>,
     },
     While {
         condition: Expr,
-        body: Box<Stmt>,
+        body: Box<Node>,
+        token: Token,
+    },
+    For {
+        id: Token,
+        expr: Expr,
+        body: Box<Node>,
         token: Token,
     },
     Func {
@@ -85,15 +91,19 @@ pub enum Stmt {
     },
     Return {
         token: Token,
-        value: Expr,
+        values: Vec<Expr>,
     },
     Break,
     Continue,
     Class {
         name: Token,
-        superclass: Expr,
+        superclass: Option<Expr>,
         methods: Vec<Stmt>,
         statics: Vec<Stmt>,
+    },
+    Import {
+        name: Expr,
+        token: Token,
     },
 }
 
