@@ -50,6 +50,7 @@ pub enum TokenType {
     If,       // if
     Else,     // else
     For,      // for
+    In,       // In
     While,    // while
     Super,    // super
     This,     // this

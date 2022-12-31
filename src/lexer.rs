@@ -321,7 +321,7 @@ impl Lexer {
 
     /// Returns the TokenType of the keyword if the given &str is a keyword
     fn keyword(value: &str) -> Option<TokenType> {
-        match value {
+        match value.to_lowercase().as_str() {
             "fn" => Some(TokenType::Func),
             "class" => Some(TokenType::Class),
             "static" => Some(TokenType::Static),
@@ -330,6 +330,7 @@ impl Lexer {
             "if" => Some(TokenType::If),
             "else" => Some(TokenType::Else),
             "for" => Some(TokenType::For),
+            "in" => Some(TokenType::In),
             "while" => Some(TokenType::While),
             "super" => Some(TokenType::Super),
             "this" => Some(TokenType::This),
