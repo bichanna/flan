@@ -115,10 +115,8 @@ pub enum Node {
 }
 
 impl Node {
-    pub fn pretty_print(nodes: &Vec<Node>) {
-        for n in nodes {
-            println!("{}", n.print());
-        }
+    pub fn pretty_print(nodes: &Vec<Node>) -> String {
+        bulk_print!(nodes, "\n")
     }
 
     fn print(&self) -> String {
