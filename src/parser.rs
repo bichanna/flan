@@ -1,3 +1,5 @@
+use std::process;
+
 use crate::ast::{Expr, Node, Stmt};
 use crate::error::ParserError;
 use crate::token::{Token, TokenType};
@@ -6,7 +8,7 @@ pub struct Parser {
     c: usize,
     current: Token,
     errors: Vec<ParserError>,
-    statements: Vec<Node>,
+    pub statements: Vec<Node>,
 }
 
 impl Parser {
@@ -16,6 +18,16 @@ impl Parser {
             current: Token::new(TokenType::EOF, String::new(), 0, 0),
             errors: vec![],
             statements: vec![],
+        }
+    }
+
+    /// Reports errors if any
+    pub fn report_errors(&self, filename: &str) {
+        if self.errors.len() > 0 {
+            for err in &self.errors {
+                println!("{}", err.format(filename));
+            }
+            process::exit(1);
         }
     }
 
@@ -150,6 +162,7 @@ impl Parser {
             // map literal
         } else if self.does_match(&[TokenType::Func], tokens) {
             // anonymous function
+            #[allow(unused)]
             let params = self.parse_params("anonymous function", tokens);
             if self.check_next(TokenType::RBrace, tokens) {
                 return self.function_body("anonymous function", tokens);
@@ -359,8 +372,14 @@ impl Parser {
             TokenType::Break => self.break_stmt(tokens),
             TokenType::Import => self.import_stmt(tokens),
             TokenType::Continue => self.continue_stmt(tokens),
-            _ => Node::EXPR(self.expression(tokens)),
+            _ => self.expr_stmt(tokens),
         }
+    }
+
+    fn expr_stmt(&mut self, tokens: &Vec<Token>) -> Node {
+        let node = Node::EXPR(self.expression(tokens));
+        self.expect(TokenType::SColon, "expected ';'", tokens);
+        return node;
     }
 
     fn continue_stmt(&mut self, tokens: &Vec<Token>) -> Node {
@@ -413,8 +432,11 @@ impl Parser {
         self.advance(tokens);
         let mut values: Vec<Expr> = vec![];
         if !self.check_current(TokenType::SColon, tokens) {
-            while !self.check_current(TokenType::Comma, tokens) {
+            loop {
                 values.push(self.expression(tokens));
+                if !self.check_current(TokenType::Comma, tokens) {
+                    break;
+                }
             }
         }
         self.expect(TokenType::SColon, "expected ';'", tokens);
@@ -474,12 +496,14 @@ impl Parser {
         let mut methods: Vec<Stmt> = vec![];
         let mut statics: Vec<Stmt> = vec![];
         while !self.check_current(TokenType::RBrace, tokens) && !self.is_end(tokens) {
-            self.expect(TokenType::Method, "expected 'method'", tokens);
             let is_static = !self.does_match(&[TokenType::Static], tokens);
+            self.expect(TokenType::Method, "expected 'method'", tokens);
+
             let func = match self.function("method", tokens) {
                 Node::STMT(stmt) => stmt,
                 _ => panic!("something's very wrong!"),
             };
+
             if !is_static {
                 methods.push(func);
             } else {
@@ -558,9 +582,12 @@ impl Parser {
             kind: TokenType::Null,
             value: String::new(),
         };
+
         if self.does_match(&[TokenType::Equal], tokens) {
             init = self.expression(tokens);
         }
+
+        self.expect(TokenType::SColon, "expected ';'", tokens);
         Node::STMT(Stmt::Variable { name, init })
     }
 
