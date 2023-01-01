@@ -43,6 +43,7 @@ pub enum TokenType {
     DPipe,    // ||
 
     Func,     // fn
+    Method,   // method
     Class,    // class
     Static,   // static
     Var,      // let
