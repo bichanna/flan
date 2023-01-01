@@ -703,10 +703,10 @@ println(toggler.value);
         parser.parse(&lexer.tokens);
         parser.report_errors("<input>");
 
-        let expected = r#"(class Toggle(methods (func hello (lambda (name) (println"Hello, %{name}!")))) (statics (func init (lambda () (set this.value False))) (func toggle (lambda () (set this.value (Bang this.value))))))
+        let expected = r#"(class Toggle(methods (func hello (lambda (name) (println "Hello, %{name}!")))) (statics (func init (lambda () (set this.value False))) (func toggle (lambda () (set this.value (Bang this.value))))))
 (var toggler (Toggle))
 (toggler.toggle)
-(printlntoggler.value)"#;
+(println toggler.value)"#;
         let result = Node::pretty_print(&parser.statements);
         assert_eq!(result, expected);
     }

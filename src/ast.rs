@@ -162,7 +162,7 @@ impl Expr {
             } => {
                 let mut builder = format!("({}", callee.print());
                 if args.len() > 0 {
-                    builder += &format!("{})", bulk_print!(args, " "));
+                    builder += &format!(" {})", bulk_print!(args, " "));
                 } else {
                     builder += ")";
                 }
