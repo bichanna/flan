@@ -5,7 +5,6 @@ use crate::token::{Token, TokenType};
 
 pub struct Lexer {
     pub tokens: Vec<Token>,
-    filename: String,
     errors: Vec<ParserError>,
     source: String,
     line: usize,
@@ -15,9 +14,8 @@ pub struct Lexer {
 }
 
 impl Lexer {
-    pub fn new(filename: String, source: String) -> Self {
+    pub fn new(source: String) -> Self {
         Lexer {
-            filename,
             errors: vec![],
             source,
             tokens: vec![],
@@ -29,10 +27,10 @@ impl Lexer {
     }
 
     /// Reports errors if any
-    pub fn report_errors(&self) {
+    pub fn report_errors(&self, filename: &str) {
         if self.errors.len() > 0 {
             for err in &self.errors {
-                println!("{}", err.format(self.filename.as_str()));
+                println!("{}", err.format(filename));
                 println!(
                     "{}",
                     self.source.split("\n").collect::<Vec<&str>>()[self.line]
@@ -417,7 +415,7 @@ println(name!, _age);
 // Some comment
 /* comment!! /* block */ */
 }"#;
-        let mut lexer = Lexer::new(String::from("<input>"), String::from(source));
+        let mut lexer = Lexer::new(String::from(source));
         lexer.tokenize();
 
         assert_eq!(lexer.errors.len(), 0);
