@@ -474,6 +474,7 @@ impl Parser {
         let mut methods: Vec<Stmt> = vec![];
         let mut statics: Vec<Stmt> = vec![];
         while !self.check_current(TokenType::RBrace, tokens) && !self.is_end(tokens) {
+            self.expect(TokenType::Method, "expected 'method'", tokens);
             let is_static = !self.does_match(&[TokenType::Static], tokens);
             let func = match self.function("method", tokens) {
                 Node::STMT(stmt) => stmt,
