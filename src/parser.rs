@@ -666,3 +666,48 @@ impl Parser {
         self.errors.push(error);
     }
 }
+
+// Tests
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ast::Node;
+    use crate::lexer::Lexer;
+
+    #[test]
+    fn test_parser() {
+        let source = r#"
+class Toggle {
+    method init() {
+        this.value = false;
+    }
+
+    method toggle() {
+        this.value = !this.value;
+    }
+
+    static method hello(name) {
+        println("Hello, %{name}!");
+    }
+}
+
+let toggler = Toggle();
+toggler.toggle();
+println(toggler.value);
+}"#;
+        let mut lexer = Lexer::new(String::from(source));
+        lexer.tokenize();
+        lexer.report_errors("<input>");
+
+        let mut parser = Parser::new();
+        parser.parse(&lexer.tokens);
+        parser.report_errors("<input>");
+
+        let expected = r#"(class Toggle(methods (func hello (lambda (name) (println"Hello, %{name}!")))) (statics (func init (lambda () (set this.value False))) (func toggle (lambda () (set this.value (Bang this.value))))))
+(var toggler (Toggle))
+(toggler.toggle)
+(printlntoggler.value)"#;
+        let result = Node::pretty_print(&parser.statements);
+        assert_eq!(result, expected);
+    }
+}
