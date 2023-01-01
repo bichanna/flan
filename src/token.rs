@@ -83,6 +83,16 @@ impl Token {
     }
 }
 
+impl Token {
+    pub fn print(&self) -> String {
+        if self.value == "" {
+            format!("{:?}", self.kind)
+        } else {
+            format!("{}", self.value)
+        }
+    }
+}
+
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}:{}", self.kind, self.value)

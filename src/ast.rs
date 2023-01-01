@@ -1,3 +1,4 @@
+use crate::bulk_print;
 use crate::token::{Token, TokenType};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -111,4 +112,159 @@ pub enum Stmt {
 pub enum Node {
     EXPR(Expr),
     STMT(Stmt),
+}
+
+impl Node {
+    pub fn pretty_print(nodes: &Vec<Node>) {
+        for n in nodes {
+            println!("{}", n.print());
+        }
+    }
+
+    fn print(&self) -> String {
+        match self {
+            Node::EXPR(expr) => expr.print(),
+            Node::STMT(stmt) => stmt.print(),
+        }
+    }
+}
+
+impl Expr {
+    pub fn print(&self) -> String {
+        match self {
+            Expr::Binary { left, right, op } => {
+                format!("({} {} {})", op.print(), left.print(), right.print())
+            }
+            Expr::Group { expr } => {
+                format!("({})", expr.print())
+            }
+            Expr::Unary { right, op } => {
+                format!("({} {})", op.print(), right.print())
+            }
+            Expr::Literal { kind, value } => match kind {
+                TokenType::Str => format!("\"{}\"", value),
+                TokenType::Num | TokenType::False | TokenType::True | TokenType::Null => {
+                    format!("{:?}", kind)
+                }
+                _ => panic!("invalidddddddd"),
+            },
+            Expr::Logical { left, right, op } => {
+                format!("({} {} {})", op.print(), left.print(), right.print())
+            }
+            Expr::Variable { name } => {
+                format!("{}", name.print())
+            }
+            Expr::Assign { name, value } => {
+                format!("(assign {} {})", name.print(), value.print())
+            }
+            Expr::Call {
+                callee,
+                args,
+                token: _,
+            } => {
+                let mut builder = format!("({}", callee.print());
+                if args.len() > 0 {
+                    builder += &format!("{})", bulk_print!(args, " "));
+                } else {
+                    builder += ")";
+                }
+                builder
+            }
+            Expr::Get { instance, token } => {
+                format!("{}.{}", instance.print(), token.print())
+            }
+            Expr::Set {
+                instance,
+                token,
+                value,
+            } => {
+                format!(
+                    "(set {}.{} {})",
+                    instance.print(),
+                    token.print(),
+                    value.print()
+                )
+            }
+            Expr::Super { token: _, method } => {
+                format!("super.{}", method.print())
+            }
+            Expr::This { token: _ } => String::from("this"),
+            Expr::Func { params, body } => {
+                format!(
+                    "(lambda ({}) {})",
+                    bulk_print!(params, " "),
+                    bulk_print!(body, " "),
+                )
+            }
+        }
+    }
+}
+
+impl Stmt {
+    fn print(&self) -> String {
+        match self {
+            Stmt::Expr { expr } => String::from(expr.print()),
+            Stmt::Variable { name, init } => {
+                format!("(var {} {})", name.print(), init.print())
+            }
+            Stmt::If {
+                condition,
+                then,
+                els,
+            } => {
+                let mut builder = format!("(if ({}) {}", condition.print(), then.print());
+                if let Some(els) = els {
+                    builder += els.print().as_str();
+                }
+                builder += ")";
+                builder
+            }
+            Stmt::Block { statements } => {
+                format!("(block {})", bulk_print!(statements, " "))
+            }
+            Stmt::While {
+                condition,
+                body,
+                token: _,
+            } => {
+                format!("(while ({}) {})", condition.print(), body.print())
+            }
+            Stmt::For {
+                id,
+                expr,
+                body,
+                token: _,
+            } => {
+                format!("(for {} in {}) {}", id.print(), expr.print(), body.print())
+            }
+            Stmt::Func { token, func } => {
+                format!("(func {} {})", token.print(), func.print())
+            }
+            Stmt::Return { token: _, values } => {
+                format!("(return {})", bulk_print!(values, " "))
+            }
+            Stmt::Break => String::from("(break)"),
+            Stmt::Continue => String::from("(continue)"),
+            Stmt::Import { name, token: _ } => {
+                format!("(import {})", name.print())
+            }
+            Stmt::Class {
+                name,
+                superclass,
+                methods,
+                statics,
+            } => {
+                let mut builder = format!("(class {}", name.print());
+                if let Some(superclass) = superclass {
+                    builder.push_str(&format!(" superclass:{} ", superclass.print()));
+                }
+                builder += &format!(
+                    "(methods {}) (statics {}))",
+                    bulk_print!(methods, " "),
+                    bulk_print!(statics, " "),
+                );
+                builder
+            }
+        }
+    }
 }
