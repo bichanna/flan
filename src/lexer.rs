@@ -3,18 +3,18 @@ use std::process;
 use crate::error::ParserError;
 use crate::token::{Token, TokenType};
 
-pub struct Lexer {
+pub struct Lexer<'a> {
     pub tokens: Vec<Token>,
     errors: Vec<ParserError>,
-    source: String,
+    source: &'a String,
     line: usize,
     col: usize,
     c: usize,
     current: char,
 }
 
-impl Lexer {
-    pub fn new(source: String) -> Self {
+impl<'a> Lexer<'a> {
+    pub fn new<'b>(source: &'a String) -> Self {
         Lexer {
             errors: vec![],
             source,
@@ -33,7 +33,7 @@ impl Lexer {
                 println!("{}", err.format(filename));
                 println!(
                     "{}",
-                    self.source.split("\n").collect::<Vec<&str>>()[self.line]
+                    self.source.split("\n").collect::<Vec<&str>>()[err.line]
                 );
             }
             process::exit(1);
@@ -415,7 +415,8 @@ println(name!, _age);
 // Some comment
 /* comment!! /* block */ */
 }"#;
-        let mut lexer = Lexer::new(String::from(source));
+        let source = &String::from(source);
+        let mut lexer = Lexer::new(source);
         lexer.tokenize();
 
         assert_eq!(lexer.errors.len(), 0);

@@ -22,10 +22,11 @@ impl Parser {
     }
 
     /// Reports errors if any
-    pub fn report_errors(&self, filename: &str) {
+    pub fn report_errors(&self, filename: &str, source: &String) {
         if self.errors.len() > 0 {
             for err in &self.errors {
                 println!("{}", err.format(filename));
+                println!("{}", source.split("\n").collect::<Vec<&str>>()[err.line]);
             }
             process::exit(1);
         }
@@ -695,13 +696,14 @@ let toggler = Toggle();
 toggler.toggle();
 println(toggler.value);
 }"#;
-        let mut lexer = Lexer::new(String::from(source));
+        let source = String::from(source);
+        let mut lexer = Lexer::new(&source);
         lexer.tokenize();
         lexer.report_errors("<input>");
 
         let mut parser = Parser::new();
         parser.parse(&lexer.tokens);
-        parser.report_errors("<input>");
+        parser.report_errors("<input>", &source);
 
         let expected = r#"(class Toggle(methods (func hello (lambda (name) (println "Hello, %{name}!")))) (statics (func init (lambda () (set this.value False))) (func toggle (lambda () (set this.value (Bang this.value))))))
 (var toggler (Toggle))

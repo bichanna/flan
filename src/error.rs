@@ -1,8 +1,8 @@
 #[derive(Clone, Debug, PartialEq)]
 pub struct ParserError {
     msg: String,
-    line: usize,
-    col: usize,
+    pub line: usize,
+    pub col: usize,
 }
 
 impl ParserError {
