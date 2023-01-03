@@ -370,12 +370,7 @@ impl<'a> Lexer<'a> {
     /// Advances one character
     fn advance(&mut self) -> char {
         if !self.is_strict_end() {
-            if self.current == '\n' {
-                self.line += 1;
-                self.col = 1;
-            } else {
-                self.col += 1;
-            }
+            self.col += 1;
             self.c += 1;
             self.current = self.source.chars().nth(self.c).unwrap();
         } else {
