@@ -691,6 +691,7 @@ mod tests {
     use super::*;
     use crate::ast::Node;
     use crate::lexer::Lexer;
+    use crate::parse;
 
     #[test]
     fn test_parser() {
@@ -732,18 +733,7 @@ println(toggler.value);"#;
     #[test]
     fn test_anonymous_func() {
         let source = r#"let add = func (x, y) x + y;"#;
-        let source = String::from(source);
-
-        let mut lexer = Lexer::new(&source);
-        lexer.tokenize();
-        lexer.report_errors("<input>");
-
-        let mut parser = Parser::new();
-        parser.parse(&lexer.tokens);
-        parser.report_errors("<input>", &source);
-
         let expected = "(var add (lambda (x y) (return (Plus x y))))";
-        let result = Node::pretty_print(&parser.statements);
-        assert_eq!(result, expected);
+        parse!(source, expected);
     }
 }
