@@ -26,7 +26,10 @@ impl Parser {
         if self.errors.len() > 0 {
             for err in &self.errors {
                 println!("{}", err.format(filename));
-                println!("{}", source.split("\n").collect::<Vec<&str>>()[err.line]);
+                println!(
+                    "{}",
+                    source.split("\n").collect::<Vec<&str>>()[err.line - 1]
+                );
             }
             process::exit(1);
         }
