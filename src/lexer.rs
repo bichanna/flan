@@ -33,7 +33,7 @@ impl<'a> Lexer<'a> {
                 println!("{}", err.format(filename));
                 println!(
                     "{}",
-                    self.source.split("\n").collect::<Vec<&str>>()[err.line]
+                    self.source.split("\n").collect::<Vec<&str>>()[err.line - 1]
                 );
             }
             process::exit(1);
