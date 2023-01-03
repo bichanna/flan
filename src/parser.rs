@@ -128,47 +128,49 @@ impl Parser {
         ) {
             // Boolean and null literal
             let token = self.previous(tokens);
-            return Expr::Literal {
+            Expr::Literal {
                 kind: token.kind,
                 value: token.value,
-            };
+            }
         } else if self.does_match(&[TokenType::This], tokens) {
             // this
-            return Expr::This {
+            Expr::This {
                 token: self.previous(tokens),
-            };
+            }
         } else if self.does_match(&[TokenType::Super], tokens) {
             // super class method
             let token = self.previous(tokens);
             self.expect(TokenType::Dot, "expected '.'", tokens);
             self.expect(TokenType::Id, "expected an identifier", tokens);
             let method = self.previous(tokens);
-            return Expr::Super { token, method };
+            Expr::Super { token, method }
         } else if self.does_match(&[TokenType::Num, TokenType::Str], tokens) {
             // string or number literal
             let token = self.previous(tokens);
-            return Expr::Literal {
+            Expr::Literal {
                 kind: token.kind,
                 value: token.value,
-            };
+            }
         } else if self.does_match(&[TokenType::Id], tokens) {
             // identifier
             let token = self.previous(tokens);
-            return Expr::Variable { name: token };
+            Expr::Variable { name: token }
         } else if self.does_match(&[TokenType::LParen], tokens) {
             // grouping
             let expr = Box::new(self.expression(tokens));
             self.expect(TokenType::RParen, "expected ')'", tokens);
-            return Expr::Group { expr };
+            Expr::Group { expr }
         } else if self.does_match(&[TokenType::LBracket], tokens) {
             // list literal
+            Expr::Unknown
         } else if self.does_match(&[TokenType::LBrace], tokens) {
             // map literal
+            Expr::Unknown
         } else if self.does_match(&[TokenType::Func], tokens) {
             // anonymous function
             let params = self.parse_params("anonymous function", tokens);
             if self.check_current(TokenType::RBrace, tokens) {
-                return self.function_body("anonymous function", tokens);
+                self.function_body("anonymous function", tokens)
             } else {
                 // if there's no block, then expects an expression
                 let token = self.previous(tokens);
@@ -178,14 +180,16 @@ impl Parser {
                     token,
                     values: vec![expr],
                 });
-                let func = Expr::Func {
+                Expr::Func {
                     params,
                     body: vec![return_node],
-                };
-                return func;
+                }
             }
+        } else {
+            self.add_error("unexpected token");
+            self.advance(tokens);
+            Expr::Unknown
         }
-        panic!("aaaaaaarrrrrggh")
     }
 
     fn finish_call(&mut self, callee: Expr, arg: Option<Expr>, tokens: &Vec<Token>) -> Expr {

@@ -56,6 +56,7 @@ pub enum Expr {
         params: Vec<Token>,
         body: Vec<Node>,
     },
+    Unknown,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -194,6 +195,7 @@ impl Expr {
                     bulk_print!(body, " "),
                 )
             }
+            Expr::Unknown => String::from("unknown"),
         }
     }
 }
