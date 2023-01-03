@@ -241,7 +241,7 @@ impl<'a> Lexer<'a> {
                         let mut value = String::new();
                         self.advance();
 
-                        while !self.is_end() && self.current != '"' {
+                        while !self.is_strict_end() && self.current != '"' {
                             if self.current == '\\' {
                                 // excape chars
                                 self.advance();
@@ -310,7 +310,7 @@ impl<'a> Lexer<'a> {
 
     /// Returns the next character without advancing
     fn next_char(&self) -> char {
-        if self.is_end() {
+        if self.is_strict_end() {
             '\0'
         } else {
             self.source.chars().nth(self.c + 1).unwrap()
@@ -351,8 +351,16 @@ impl<'a> Lexer<'a> {
     }
 
     /// Checks if the lexer is at the end of the source or not
+    fn is_strict_end(&self) -> bool {
+        if self.is_end() || self.source.len() <= self.c + 1 {
+            true
+        } else {
+            false
+        }
+    }
+
     fn is_end(&self) -> bool {
-        if self.source.len() <= self.c || self.source.len() <= self.c + 1 {
+        if self.source.len() <= self.c {
             true
         } else {
             false
@@ -361,7 +369,7 @@ impl<'a> Lexer<'a> {
 
     /// Advances one character
     fn advance(&mut self) -> char {
-        if !self.is_end() {
+        if !self.is_strict_end() {
             if self.current == '\n' {
                 self.line += 1;
                 self.col = 1;
