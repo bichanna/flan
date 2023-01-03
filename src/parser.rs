@@ -163,15 +163,25 @@ impl Parser {
             // map literal
         } else if self.does_match(&[TokenType::Func], tokens) {
             // anonymous function
-            #[allow(unused)]
             let params = self.parse_params("anonymous function", tokens);
-            if self.check_next(TokenType::RBrace, tokens) {
+            if self.check_current(TokenType::RBrace, tokens) {
                 return self.function_body("anonymous function", tokens);
             } else {
-                // TODO: allow just one node
+                // if there's no block, then expects an expression
+                let token = self.previous(tokens);
+                let expr = self.expression(tokens);
+                // automatically returns the expression
+                let return_node = Node::STMT(Stmt::Return {
+                    token,
+                    values: vec![expr],
+                });
+                let func = Expr::Func {
+                    params,
+                    body: vec![return_node],
+                };
+                return func;
             }
         }
-
         panic!("aaaaaaarrrrrggh")
     }
 
@@ -553,12 +563,12 @@ impl Parser {
         );
         let mut params: Vec<Token> = vec![];
         if !self.check_current(TokenType::RParen, tokens) {
-            while !self.check_current(TokenType::RParen, tokens) {
+            loop {
                 self.expect(TokenType::Id, "expected an identifier", tokens);
                 let param = self.previous(tokens);
                 params.push(param);
 
-                if self.does_match(&[TokenType::Comma], tokens) {
+                if !self.does_match(&[TokenType::Comma], tokens) {
                     break;
                 }
             }
@@ -694,8 +704,7 @@ class Toggle {
 
 let toggler = Toggle();
 toggler.toggle();
-println(toggler.value);
-}"#;
+println(toggler.value);"#;
         let source = String::from(source);
         let mut lexer = Lexer::new(&source);
         lexer.tokenize();
@@ -709,6 +718,24 @@ println(toggler.value);
 (var toggler (Toggle))
 (toggler.toggle)
 (println toggler.value)"#;
+        let result = Node::pretty_print(&parser.statements);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_anonymous_func() {
+        let source = r#"let add = func (x, y) x + y;"#;
+        let source = String::from(source);
+
+        let mut lexer = Lexer::new(&source);
+        lexer.tokenize();
+        lexer.report_errors("<input>");
+
+        let mut parser = Parser::new();
+        parser.parse(&lexer.tokens);
+        parser.report_errors("<input>", &source);
+
+        let expected = "(var add (lambda (x y) (return (Plus x y))))";
         let result = Node::pretty_print(&parser.statements);
         assert_eq!(result, expected);
     }
