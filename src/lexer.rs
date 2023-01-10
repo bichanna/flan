@@ -329,6 +329,8 @@ impl<'a> Lexer<'a> {
             "const" => Some(TokenType::Const),
             "if" => Some(TokenType::If),
             "else" => Some(TokenType::Else),
+            "and" => Some(TokenType::And),
+            "or" => Some(TokenType::Or),
             "for" => Some(TokenType::For),
             "in" => Some(TokenType::In),
             "while" => Some(TokenType::While),

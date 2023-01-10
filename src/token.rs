@@ -50,6 +50,8 @@ pub enum TokenType {
     Const,    // const
     If,       // if
     Else,     // else
+    And,      // and
+    Or,       // or
     For,      // for
     In,       // In
     While,    // while

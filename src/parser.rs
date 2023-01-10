@@ -336,7 +336,7 @@ impl Parser {
 
     fn and_expr(&mut self, tokens: &Vec<Token>) -> Expr {
         let mut expr = self.equality(tokens);
-        while self.does_match(&[TokenType::DAmp], tokens) {
+        while self.does_match(&[TokenType::DAmp, TokenType::And], tokens) {
             let op = self.previous(tokens);
             expr = Expr::Logical {
                 left: Box::new(expr),
@@ -349,7 +349,7 @@ impl Parser {
 
     fn or_expr(&mut self, tokens: &Vec<Token>) -> Expr {
         let mut expr = self.and_expr(tokens);
-        while self.does_match(&[TokenType::DPipe], tokens) {
+        while self.does_match(&[TokenType::DPipe, TokenType::Or], tokens) {
             let op = self.previous(tokens);
             expr = Expr::Logical {
                 left: Box::new(expr),
