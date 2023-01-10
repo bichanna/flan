@@ -220,7 +220,14 @@ impl Stmt {
                 builder
             }
             Stmt::Block { statements } => {
-                format!("(block {})", bulk_print!(statements, " "))
+                format!("(block{})", {
+                    let stmts = bulk_print!(statements, " ");
+                    if stmts == "" {
+                        String::new()
+                    } else {
+                        String::from(" ") + &stmts
+                    }
+                })
             }
             Stmt::While {
                 condition,
@@ -235,7 +242,7 @@ impl Stmt {
                 body,
                 token: _,
             } => {
-                format!("(for {} in {}) {}", id.print(), expr.print(), body.print())
+                format!("(for {} in {} {})", id.print(), expr.print(), body.print())
             }
             Stmt::Func { token, func } => {
                 format!("(func {} {})", token.print(), func.print())
