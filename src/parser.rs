@@ -12,10 +12,10 @@ pub struct Parser {
 }
 
 impl Parser {
-    pub fn new() -> Self {
+    pub fn new(tokens: &Vec<Token>) -> Self {
         Parser {
             c: 0,
-            current: Token::new(TokenType::EOF, String::new(), 0, 0),
+            current: tokens[0].clone(),
             errors: vec![],
             statements: vec![],
         }
@@ -186,7 +186,7 @@ impl Parser {
                 }
             }
         } else {
-            self.add_error("unexpected token");
+            self.add_error(format!("unexpected token: {:?}", &self.current).as_str());
             self.advance(tokens);
             Expr::Unknown
         }
@@ -718,7 +718,7 @@ println(toggler.value);"#;
         lexer.tokenize();
         lexer.report_errors("<input>");
 
-        let mut parser = Parser::new();
+        let mut parser = Parser::new(&lexer.tokens);
         parser.parse(&lexer.tokens);
         parser.report_errors("<input>", &source);
 
@@ -734,6 +734,13 @@ println(toggler.value);"#;
     fn test_anonymous_func() {
         let source = r#"let add = func (x, y) x + y;"#;
         let expected = "(var add (lambda (x y) (return (Plus x y))))";
+        parse!(source, expected);
+    }
+
+    #[test]
+    fn test_for_stmt() {
+        let source = r#"for (i in list) { /* do something */ }"#;
+        let expected = "(for i in list (block))";
         parse!(source, expected);
     }
 }
