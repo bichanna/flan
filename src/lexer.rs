@@ -295,6 +295,7 @@ impl<'a> Lexer<'a> {
             }
             self.advance();
         }
+        self.reverse();
     }
 
     /// Appends the Token created with the given TokenType without any String value
@@ -417,7 +418,7 @@ let _age = 16;
 println(name!, _age);
 // Some comment
 /* comment!! /* block */ */
-}"#;
+"#;
         let source = &String::from(source);
         let mut lexer = Lexer::new(source);
         lexer.tokenize();

@@ -18,7 +18,7 @@ macro_rules! parse {
         lexer.tokenize();
         lexer.report_errors("<input>");
 
-        let mut parser = Parser::new();
+        let mut parser = Parser::new(&lexer.tokens);
         parser.parse(&lexer.tokens);
         parser.report_errors("<input>", &source);
 
