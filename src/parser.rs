@@ -368,8 +368,6 @@ impl Parser {
         {
             self.advance(tokens);
             self.function("function", tokens)
-        } else if self.does_match(&[TokenType::Class], tokens) {
-            self.class_declaration(tokens)
         } else {
             self.statement(tokens)
         }
@@ -539,44 +537,6 @@ impl Parser {
         return body;
     }
 
-    fn class_declaration(&mut self, tokens: &Vec<Token>) -> Node {
-        self.expect(TokenType::Id, "expected an identifier", tokens);
-        let name = self.previous(tokens);
-        let mut superclass: Option<Expr> = None;
-        if self.does_match(&[TokenType::Colon], tokens) {
-            self.expect(TokenType::Id, "expected an identifier", tokens);
-            superclass = Some(Expr::Variable {
-                name: self.previous(tokens),
-            });
-        }
-        self.expect(TokenType::LBrace, "expected '{' before class body", tokens);
-
-        let mut methods: Vec<Stmt> = vec![];
-        let mut statics: Vec<Stmt> = vec![];
-        while !self.check_current(TokenType::RBrace, tokens) && !self.is_end(tokens) {
-            let is_static = !self.does_match(&[TokenType::Static], tokens);
-            self.expect(TokenType::Method, "expected 'method'", tokens);
-
-            let func = match self.function("method", tokens) {
-                Node::STMT(stmt) => stmt,
-                _ => panic!("something's very wrong!"),
-            };
-
-            if !is_static {
-                methods.push(func);
-            } else {
-                statics.push(func);
-            }
-        }
-        self.expect(TokenType::RBrace, "expected '}' after class body", tokens);
-        Node::STMT(Stmt::Class {
-            name,
-            superclass,
-            methods,
-            statics,
-        })
-    }
-
     fn function(&mut self, kind: &str, tokens: &Vec<Token>) -> Node {
         self.expect(
             TokenType::Id,
@@ -732,43 +692,6 @@ mod tests {
     use crate::ast::Node;
     use crate::lexer::Lexer;
     use crate::parse;
-
-    #[test]
-    fn test_parser() {
-        let source = r#"
-class Toggle {
-    method init() {
-        this.value = false;
-    }
-
-    method toggle() {
-        this.value = !this.value;
-    }
-
-    static method hello(name) {
-        println("Hello, %{name}!");
-    }
-}
-
-let toggler = Toggle();
-toggler.toggle();
-println(toggler.value);"#;
-        let source = String::from(source);
-        let mut lexer = Lexer::new(&source);
-        lexer.tokenize();
-        lexer.report_errors("<input>");
-
-        let mut parser = Parser::new(&lexer.tokens);
-        parser.parse(&lexer.tokens);
-        parser.report_errors("<input>", &source);
-
-        let expected = r#"(class Toggle(methods (func hello (lambda (name) (println "Hello, %{name}!")))) (statics (func init (lambda () (set this.value False))) (func toggle (lambda () (set this.value (Bang this.value))))))
-(var toggler (Toggle))
-(toggler.toggle)
-(println toggler.value)"#;
-        let result = Node::pretty_print(&parser.statements);
-        assert_eq!(result, expected);
-    }
 
     #[test]
     fn test_anonymous_func() {

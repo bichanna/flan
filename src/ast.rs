@@ -91,12 +91,6 @@ pub enum Stmt {
     },
     Break,
     Continue,
-    Class {
-        name: Token,
-        superclass: Option<Expr>,
-        methods: Vec<Stmt>,
-        statics: Vec<Stmt>,
-    },
     Import {
         name: Expr,
         token: Token,
@@ -240,23 +234,6 @@ impl Stmt {
             Stmt::Continue => String::from("(continue)"),
             Stmt::Import { name, token: _ } => {
                 format!("(import {})", name.print())
-            }
-            Stmt::Class {
-                name,
-                superclass,
-                methods,
-                statics,
-            } => {
-                let mut builder = format!("(class {}", name.print());
-                if let Some(superclass) = superclass {
-                    builder.push_str(&format!(" superclass:{} ", superclass.print()));
-                }
-                builder += &format!(
-                    "(methods {}) (statics {}))",
-                    bulk_print!(methods, " "),
-                    bulk_print!(statics, " "),
-                );
-                builder
             }
         }
     }
