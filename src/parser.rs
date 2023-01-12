@@ -483,20 +483,60 @@ impl Parser {
     fn for_stmt(&mut self, tokens: &Vec<Token>) -> Node {
         let token = self.current.clone();
         self.advance(tokens);
-        self.expect(TokenType::LParen, "expected '(' after 'for'", tokens);
-        self.expect(TokenType::Id, "expected an identifier", tokens);
-        let id = self.previous(tokens);
-        self.expect(TokenType::In, "expected 'in'", tokens);
-        let expr = self.expression(tokens);
+        self.expect(TokenType::LParen, "expected '('", tokens);
+
+        let mut init: Option<Node> = None;
+        if self.does_match(&[TokenType::SColon], tokens) {
+            // do nothing
+        } else if self.does_match(&[TokenType::Var], tokens) {
+            init = Some(self.var_declaration(tokens));
+        } else {
+            init = Some(self.expr_stmt(tokens));
+        }
+
+        let mut condition: Option<Expr> = None;
+        if !self.check_current(TokenType::SColon, tokens) {
+            condition = Some(self.expression(tokens));
+        }
+        self.expect(TokenType::SColon, "expected ';'", tokens);
+
+        let mut increment: Option<Expr> = None;
+        if !self.check_current(TokenType::RParen, tokens) {
+            increment = Some(self.expression(tokens));
+        }
         self.expect(TokenType::RParen, "expected ')'", tokens);
 
-        let body = Box::new(self.statement(tokens));
-        Node::STMT(Stmt::For {
+        let mut body = self.statement(tokens);
+
+        if let Some(increment) = increment {
+            body = Node::STMT(Stmt::Block {
+                statements: vec![body, Node::EXPR(increment)],
+            })
+        }
+
+        let new_condition: Expr;
+        if let Some(condition) = condition {
+            new_condition = condition;
+        } else {
+            new_condition = Expr::Literal {
+                kind: TokenType::True,
+                value: String::new(),
+            };
+        }
+
+        body = Node::STMT(Stmt::While {
+            condition: new_condition,
+            body: Box::new(body),
             token,
-            id,
-            expr,
-            body,
-        })
+        });
+
+        if let Some(init) = init {
+            body = Node::STMT(Stmt::Block {
+                statements: vec![init, body],
+            });
+        }
+
+        return body;
     }
 
     fn class_declaration(&mut self, tokens: &Vec<Token>) -> Node {
@@ -739,8 +779,8 @@ println(toggler.value);"#;
 
     #[test]
     fn test_for_stmt() {
-        let source = r#"for (i in list) { /* do something */ }"#;
-        let expected = "(for i in list (block))";
+        let source = r#"for (let i = 0; i < 10; i++) { println(i); }"#;
+        let expected = "(block (var i Num) (while ((LT i Num)) (block (block (println i)) (assign i (DPlus i Num)))))";
         parse!(source, expected);
     }
 }

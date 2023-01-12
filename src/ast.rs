@@ -81,12 +81,6 @@ pub enum Stmt {
         body: Box<Node>,
         token: Token,
     },
-    For {
-        id: Token,
-        expr: Expr,
-        body: Box<Node>,
-        token: Token,
-    },
     Func {
         token: Token,
         func: Expr,
@@ -235,14 +229,6 @@ impl Stmt {
                 token: _,
             } => {
                 format!("(while ({}) {})", condition.print(), body.print())
-            }
-            Stmt::For {
-                id,
-                expr,
-                body,
-                token: _,
-            } => {
-                format!("(for {} in {} {})", id.print(), expr.print(), body.print())
             }
             Stmt::Func { token, func } => {
                 format!("(func {} {})", token.print(), func.print())
