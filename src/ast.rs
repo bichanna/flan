@@ -95,6 +95,34 @@ pub enum Stmt {
         name: Expr,
         token: Token,
     },
+    Struct {
+        token: Token,
+        fields: Vec<Token>,
+        types: Vec<TypeInfo>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum TypeInfo {
+    Str,
+    Num,
+    Any,
+    Map,
+    List,
+    Id(Token),
+}
+
+impl TypeInfo {
+    pub fn print(&self) -> String {
+        match self {
+            Self::Str => String::from("string"),
+            Self::Num => String::from("number"),
+            Self::Any => String::from("any"),
+            Self::Map => String::from("map"),
+            Self::List => String::from("list"),
+            Self::Id(t) => t.print(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -234,6 +262,24 @@ impl Stmt {
             Stmt::Continue => String::from("(continue)"),
             Stmt::Import { name, token: _ } => {
                 format!("(import {})", name.print())
+            }
+            Stmt::Struct {
+                token,
+                fields,
+                types,
+            } => {
+                let mut builder = format!("(struct {}", token.print());
+                let fields = fields
+                    .iter()
+                    .zip(types.iter())
+                    .map(|(key, value)| format!("{}:{}", key.print(), value.print()))
+                    .collect::<Vec<String>>();
+
+                if fields.len() > 0 {
+                    builder += " ";
+                    builder += &fields.join(" ");
+                }
+                builder + ")"
             }
         }
     }
