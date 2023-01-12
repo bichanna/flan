@@ -323,7 +323,6 @@ impl<'a> Lexer<'a> {
         match value.to_lowercase().as_str() {
             "func" => Some(TokenType::Func),
             "struct" => Some(TokenType::Struct),
-            "any" => Some(TokenType::Any),
             "let" => Some(TokenType::Var),
             "const" => Some(TokenType::Const),
             "if" => Some(TokenType::If),

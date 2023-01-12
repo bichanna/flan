@@ -44,7 +44,6 @@ pub enum TokenType {
 
     Func,     // func
     Struct,   // struct
-    Any,      // any
     Var,      // let
     Const,    // const
     If,       // if
