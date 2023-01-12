@@ -42,10 +42,8 @@ pub enum TokenType {
     DAmp,     // &&
     DPipe,    // ||
 
-    Func,     // fn
-    Method,   // method
-    Class,    // class
-    Static,   // static
+    Func,     // func
+    Struct,   // struct
     Var,      // let
     Const,    // const
     If,       // if
