@@ -1,6 +1,6 @@
 use std::process;
 
-use crate::ast::{Expr, Node, Stmt};
+use crate::ast::{Expr, Node, Stmt, TypeInfo};
 use crate::error::ParserError;
 use crate::token::{Token, TokenType};
 
@@ -368,6 +368,8 @@ impl Parser {
         {
             self.advance(tokens);
             self.function("function", tokens)
+        } else if self.does_match(&[TokenType::Struct], tokens) {
+            self.struct_declaration(tokens)
         } else {
             self.statement(tokens)
         }
@@ -609,6 +611,43 @@ impl Parser {
         Node::STMT(Stmt::Variable { name, init })
     }
 
+    fn struct_declaration(&mut self, tokens: &Vec<Token>) -> Node {
+        self.expect(TokenType::Id, "expected an identifier", tokens);
+        let token = self.previous(tokens);
+        self.expect(TokenType::LBrace, "expected '{'", tokens);
+        let mut fields: Vec<Token> = vec![];
+        let mut types: Vec<TypeInfo> = vec![];
+        while !self.check_current(TokenType::RBrace, tokens) {
+            self.expect(TokenType::Id, "expected an identifier", tokens);
+            fields.push(self.previous(tokens));
+            self.expect(TokenType::Colon, "expected ':'", tokens);
+            match self.current.kind {
+                TokenType::Id => types.push(match self.current.value.to_lowercase().as_str() {
+                    "string" => TypeInfo::Str,
+                    "number" => TypeInfo::Num,
+                    "any" => TypeInfo::Any,
+                    "list" => TypeInfo::List,
+                    "map" => TypeInfo::Map,
+                    _ => TypeInfo::Id(self.current.clone()),
+                }),
+                _ => self.add_error("invalid type info"),
+            }
+            self.advance(tokens);
+            if self.check_current(TokenType::RBrace, tokens) {
+                break;
+            } else {
+                self.expect(TokenType::Comma, "expected ','", tokens);
+            }
+        }
+        self.expect(TokenType::RBrace, "expected '}'", tokens);
+
+        Node::STMT(Stmt::Struct {
+            token,
+            fields,
+            types,
+        })
+    }
+
     /// Checks if the current token is in the given types
     fn does_match(&mut self, these: &[TokenType], tokens: &Vec<Token>) -> bool {
         for kind in these {
@@ -704,6 +743,14 @@ mod tests {
     fn test_for_stmt() {
         let source = r#"for (let i = 0; i < 10; i++) { println(i); }"#;
         let expected = "(block (var i Num) (while ((LT i Num)) (block (block (println i)) (assign i (DPlus i Num)))))";
+        parse!(source, expected);
+    }
+
+    #[test]
+    fn test_struct_stmt() {
+        let source = r#"struct Person { name: string, age: number, friends: list, book_reviews: map, others: any }"#;
+        let expected =
+            "(struct Person name:string age:number friends:list book_reviews:map others:any)";
         parse!(source, expected);
     }
 }
