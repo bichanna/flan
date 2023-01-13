@@ -11,6 +11,16 @@ pub struct Parser {
     pub statements: Vec<Node>,
 }
 
+macro_rules! expect {
+    ($self: expr, $kind: expr, $msg: expr, $tokens: expr) => {
+        if $self.check_current($kind, $tokens) {
+            $self.advance($tokens);
+        } else {
+            return Err($msg);
+        }
+    };
+}
+
 impl Parser {
     pub fn new(tokens: &Vec<Token>) -> Self {
         Parser {
@@ -39,38 +49,37 @@ impl Parser {
     pub fn parse(&mut self, tokens: &Vec<Token>) {
         while !self.is_end(tokens) {
             let node = self.declaration(tokens);
-            self.statements.push(node);
+            match node {
+                Ok(node) => self.statements.push(node),
+                Err(msg) => {
+                    self.add_error(msg);
+                    self.synchronize(tokens);
+                }
+            }
         }
     }
 
-    fn expression(&mut self, tokens: &Vec<Token>) -> Expr {
+    fn expression(&mut self, tokens: &Vec<Token>) -> Result<Expr, &'static str> {
         return self.assignment(tokens);
     }
 
-    fn assignment(&mut self, tokens: &Vec<Token>) -> Expr {
-        let expr = self.or_expr(tokens);
+    fn assignment(&mut self, tokens: &Vec<Token>) -> Result<Expr, &'static str> {
+        let expr = self.or_expr(tokens)?;
         if self.check_current(TokenType::Equal, tokens) {
-            let eq = self.current.clone();
             self.advance(tokens);
-            let value = Box::new(self.assignment(tokens));
+            let value = Box::new(self.assignment(tokens)?);
 
             match expr {
-                Expr::Variable { name } => {
-                    return Expr::Assign { name, value };
-                }
+                Expr::Variable { name } => return Ok(Expr::Assign { name, value }),
                 Expr::Get { instance, token } => {
-                    return Expr::Set {
+                    return Ok(Expr::Set {
                         instance,
                         token,
                         value,
-                    };
+                    })
                 }
-                _ => {
-                    let error =
-                        ParserError::new("invalid assignment target", eq.position.0, eq.position.1);
-                    self.errors.push(error);
-                }
-            };
+                _ => return Err("invalid assignment target"),
+            }
         } else if self.does_match(
             &[
                 TokenType::PlusEq,
@@ -82,27 +91,27 @@ impl Parser {
             tokens,
         ) {
             let op = self.previous(tokens);
-            let value = self.assignment(tokens);
+            let value = self.assignment(tokens)?;
             match expr {
                 Expr::Variable { ref name } => {
                     let name = name.clone();
-                    return Expr::Assign {
+                    return Ok(Expr::Assign {
                         name,
                         value: Box::new(Expr::Binary {
                             left: Box::new(expr),
                             right: Box::new(value),
                             op,
                         }),
-                    };
+                    });
                 }
-                _ => self.add_error("expected a variable"),
+                _ => return Err("expected a variable"),
             };
         } else if self.does_match(&[TokenType::DPlus, TokenType::DMinus], tokens) {
             let op = self.previous(tokens);
             match expr {
                 Expr::Variable { ref name } => {
                     let name = name.clone();
-                    return Expr::Assign {
+                    return Ok(Expr::Assign {
                         name,
                         value: Box::new(Expr::Binary {
                             left: Box::new(expr),
@@ -112,75 +121,78 @@ impl Parser {
                             }),
                             op,
                         }),
-                    };
+                    });
                 }
-                _ => self.add_error("expected a variable"),
+                _ => return Err("expected a variable"),
             }
         }
 
-        return expr;
+        Ok(expr)
     }
 
-    fn primary(&mut self, tokens: &Vec<Token>) -> Expr {
+    fn primary(&mut self, tokens: &Vec<Token>) -> Result<Expr, &'static str> {
         if self.does_match(
             &[TokenType::True, TokenType::False, TokenType::Null],
             tokens,
         ) {
             // Boolean and null literal
             let token = self.previous(tokens);
-            Expr::Literal {
+            Ok(Expr::Literal {
                 kind: token.kind,
                 value: token.value,
-            }
+            })
         } else if self.does_match(&[TokenType::Num, TokenType::Str], tokens) {
             // string or number literal
             let token = self.previous(tokens);
-            Expr::Literal {
+            Ok(Expr::Literal {
                 kind: token.kind,
                 value: token.value,
-            }
+            })
         } else if self.does_match(&[TokenType::Id], tokens) {
             // identifier
             let token = self.previous(tokens);
-            Expr::Variable { name: token }
+            Ok(Expr::Variable { name: token })
         } else if self.does_match(&[TokenType::LParen], tokens) {
             // grouping
-            let expr = Box::new(self.expression(tokens));
-            self.expect(TokenType::RParen, "expected ')'", tokens);
-            Expr::Group { expr }
+            let expr = Box::new(self.expression(tokens)?);
+            expect!(self, TokenType::RParen, "expected ')'", tokens);
+            Ok(Expr::Group { expr })
         } else if self.does_match(&[TokenType::LBracket], tokens) {
             // list literal
-            Expr::Unknown
+            Ok(Expr::Unknown)
         } else if self.does_match(&[TokenType::LBrace], tokens) {
             // map literal
-            Expr::Unknown
+            Ok(Expr::Unknown)
         } else if self.does_match(&[TokenType::Func], tokens) {
             // anonymous function
-            let params = self.parse_params("anonymous function", tokens);
+            let params = self.parse_params(tokens)?;
             if self.check_current(TokenType::RBrace, tokens) {
-                self.function_body("anonymous function", tokens)
+                self.function_body(tokens)
             } else {
                 // if there's no block, then expects an expression
                 let token = self.previous(tokens);
-                let expr = self.expression(tokens);
+                let expr = self.expression(tokens)?;
                 // automatically returns the expression
                 let return_node = Node::STMT(Stmt::Return {
                     token,
                     values: vec![expr],
                 });
-                Expr::Func {
+                Ok(Expr::Func {
                     params,
                     body: vec![return_node],
-                }
+                })
             }
         } else {
-            self.add_error(format!("unexpected token: {:?}", &self.current).as_str());
-            self.advance(tokens);
-            Expr::Unknown
+            Err("unexpected token")
         }
     }
 
-    fn finish_call(&mut self, callee: Expr, arg: Option<Expr>, tokens: &Vec<Token>) -> Expr {
+    fn finish_call(
+        &mut self,
+        callee: Expr,
+        arg: Option<Expr>,
+        tokens: &Vec<Token>,
+    ) -> Result<Expr, &'static str> {
         let callee = Box::new(callee);
         let mut args: Vec<Box<Expr>> = vec![];
         if match arg {
@@ -192,45 +204,45 @@ impl Parser {
         }
 
         if !self.check_current(TokenType::RParen, tokens) {
-            args.push(Box::new(self.expression(tokens)));
+            args.push(Box::new(self.expression(tokens)?));
             while self.does_match(&[TokenType::Comma], tokens) {
-                args.push(Box::new(self.expression(tokens)));
+                args.push(Box::new(self.expression(tokens)?));
             }
         }
-        self.expect(TokenType::RParen, "expected ')'", tokens);
+        expect!(self, TokenType::RParen, "expected ')'", tokens);
         let token = self.previous(tokens);
 
         // check for <|
         if self.does_match(&[TokenType::LPipe], tokens) {
-            args.push(Box::new(self.expression(tokens)));
+            args.push(Box::new(self.expression(tokens)?));
         }
 
-        Expr::Call {
+        Ok(Expr::Call {
             callee,
             args,
             token,
-        }
+        })
     }
 
-    fn call(&mut self, tokens: &Vec<Token>, arg: &Option<Expr>) -> Expr {
-        let mut expr = self.primary(tokens);
+    fn call(&mut self, tokens: &Vec<Token>, arg: &Option<Expr>) -> Result<Expr, &'static str> {
+        let mut expr = self.primary(tokens)?;
         loop {
             if self.does_match(&[TokenType::LParen], tokens) {
-                expr = self.finish_call(expr, arg.clone(), tokens);
+                expr = self.finish_call(expr, arg.clone(), tokens)?;
             } else if self.does_match(&[TokenType::Dot], tokens) {
-                self.expect(TokenType::Id, "expected an identifier", tokens);
+                expect!(self, TokenType::Id, "expected an identifier", tokens);
                 let name = self.previous(tokens);
                 expr = Expr::Get {
                     instance: Box::new(expr),
                     token: name,
                 }
             } else if self.does_match(&[TokenType::RPipe], tokens) {
-                expr = self.call(tokens, &Some(expr));
+                expr = self.call(tokens, &Some(expr))?;
                 break;
             } else if self.does_match(&[TokenType::LBracket], tokens) {
                 let mut token = self.previous(tokens);
-                let key = self.expression(tokens);
-                self.expect(TokenType::RBracket, "expected ']'", tokens);
+                let key = self.expression(tokens)?;
+                expect!(self, TokenType::RBracket, "expected ']'", tokens);
 
                 token.value = String::from("__getitem__");
                 token.kind = TokenType::Id;
@@ -247,49 +259,49 @@ impl Parser {
             }
         }
 
-        return expr;
+        Ok(expr)
     }
 
-    fn unary(&mut self, tokens: &Vec<Token>) -> Expr {
+    fn unary(&mut self, tokens: &Vec<Token>) -> Result<Expr, &'static str> {
         if self.does_match(&[TokenType::Bang, TokenType::Minus], tokens) {
             let op = self.previous(tokens);
-            Expr::Unary {
-                right: Box::new(self.unary(tokens)),
+            Ok(Expr::Unary {
+                right: Box::new(self.unary(tokens)?),
                 op,
-            }
+            })
         } else {
             self.call(tokens, &None)
         }
     }
 
-    fn factor(&mut self, tokens: &Vec<Token>) -> Expr {
-        let mut expr = self.unary(tokens);
+    fn factor(&mut self, tokens: &Vec<Token>) -> Result<Expr, &'static str> {
+        let mut expr = self.unary(tokens)?;
         while self.does_match(&[TokenType::Div, TokenType::Mul, TokenType::Mod], tokens) {
             let op = self.previous(tokens);
             expr = Expr::Binary {
                 left: Box::new(expr),
-                right: Box::new(self.unary(tokens)),
+                right: Box::new(self.unary(tokens)?),
                 op,
             };
         }
-        return expr;
+        Ok(expr)
     }
 
-    fn term(&mut self, tokens: &Vec<Token>) -> Expr {
-        let mut expr = self.factor(tokens);
+    fn term(&mut self, tokens: &Vec<Token>) -> Result<Expr, &'static str> {
+        let mut expr = self.factor(tokens)?;
         while self.does_match(&[TokenType::Minus, TokenType::Plus], tokens) {
             let op = self.previous(tokens);
             expr = Expr::Binary {
                 left: Box::new(expr),
-                right: Box::new(self.factor(tokens)),
+                right: Box::new(self.factor(tokens)?),
                 op,
             };
         }
-        return expr;
+        Ok(expr)
     }
 
-    fn comparison(&mut self, tokens: &Vec<Token>) -> Expr {
-        let mut expr = self.term(tokens);
+    fn comparison(&mut self, tokens: &Vec<Token>) -> Result<Expr, &'static str> {
+        let mut expr = self.term(tokens)?;
         while self.does_match(
             &[
                 TokenType::GT,
@@ -302,60 +314,60 @@ impl Parser {
             let op = self.previous(tokens);
             expr = Expr::Binary {
                 left: Box::new(expr),
-                right: Box::new(self.term(tokens)),
+                right: Box::new(self.term(tokens)?),
                 op,
             }
         }
-        return expr;
+        Ok(expr)
     }
 
-    fn equality(&mut self, tokens: &Vec<Token>) -> Expr {
-        let mut expr = self.comparison(tokens);
+    fn equality(&mut self, tokens: &Vec<Token>) -> Result<Expr, &'static str> {
+        let mut expr = self.comparison(tokens)?;
         while self.does_match(&[TokenType::BangEq, TokenType::DEq], tokens) {
             let op = self.previous(tokens);
             expr = Expr::Binary {
                 left: Box::new(expr),
-                right: Box::new(self.comparison(tokens)),
+                right: Box::new(self.comparison(tokens)?),
                 op,
             };
         }
-        return expr;
+        Ok(expr)
     }
 
-    fn and_expr(&mut self, tokens: &Vec<Token>) -> Expr {
-        let mut expr = self.equality(tokens);
+    fn and_expr(&mut self, tokens: &Vec<Token>) -> Result<Expr, &'static str> {
+        let mut expr = self.equality(tokens)?;
         while self.does_match(&[TokenType::DAmp, TokenType::And], tokens) {
             let op = self.previous(tokens);
             expr = Expr::Logical {
                 left: Box::new(expr),
-                right: Box::new(self.equality(tokens)),
+                right: Box::new(self.equality(tokens)?),
                 op,
             };
         }
-        return expr;
+        Ok(expr)
     }
 
-    fn or_expr(&mut self, tokens: &Vec<Token>) -> Expr {
-        let mut expr = self.and_expr(tokens);
+    fn or_expr(&mut self, tokens: &Vec<Token>) -> Result<Expr, &'static str> {
+        let mut expr = self.and_expr(tokens)?;
         while self.does_match(&[TokenType::DPipe, TokenType::Or], tokens) {
             let op = self.previous(tokens);
             expr = Expr::Logical {
                 left: Box::new(expr),
-                right: Box::new(self.and_expr(tokens)),
+                right: Box::new(self.and_expr(tokens)?),
                 op,
             };
         }
-        return expr;
+        Ok(expr)
     }
 
-    fn declaration(&mut self, tokens: &Vec<Token>) -> Node {
+    fn declaration(&mut self, tokens: &Vec<Token>) -> Result<Node, &'static str> {
         if self.does_match(&[TokenType::Var], tokens) {
             self.var_declaration(tokens)
         } else if self.check_current(TokenType::Func, tokens)
             && self.check_next(TokenType::Id, tokens)
         {
             self.advance(tokens);
-            self.function("function", tokens)
+            self.function(tokens)
         } else if self.does_match(&[TokenType::Struct], tokens) {
             self.struct_declaration(tokens)
         } else {
@@ -363,13 +375,13 @@ impl Parser {
         }
     }
 
-    fn statement(&mut self, tokens: &Vec<Token>) -> Node {
+    fn statement(&mut self, tokens: &Vec<Token>) -> Result<Node, &'static str> {
         match self.current.kind {
             TokenType::LBrace => {
                 self.advance(tokens);
-                Node::STMT(Stmt::Block {
-                    statements: self.parse_block(tokens),
-                })
+                Ok(Node::STMT(Stmt::Block {
+                    statements: self.parse_block(tokens)?,
+                }))
             }
             TokenType::If => self.if_stmt(tokens),
             TokenType::While => self.while_stmt(tokens),
@@ -382,119 +394,115 @@ impl Parser {
         }
     }
 
-    fn expr_stmt(&mut self, tokens: &Vec<Token>) -> Node {
-        let node = Node::EXPR(self.expression(tokens));
-        self.expect(TokenType::SColon, "expected ';'", tokens);
-        return node;
+    fn expr_stmt(&mut self, tokens: &Vec<Token>) -> Result<Node, &'static str> {
+        let node = Node::EXPR(self.expression(tokens)?);
+        expect!(self, TokenType::SColon, "expected ';'", tokens);
+        Ok(node)
     }
 
-    fn continue_stmt(&mut self, tokens: &Vec<Token>) -> Node {
+    fn continue_stmt(&mut self, tokens: &Vec<Token>) -> Result<Node, &'static str> {
         self.advance(tokens);
-        self.expect(TokenType::SColon, "expected ';'", tokens);
-        Node::STMT(Stmt::Continue)
+        expect!(self, TokenType::SColon, "expected ';'", tokens);
+        Ok(Node::STMT(Stmt::Continue))
     }
 
-    fn import_stmt(&mut self, tokens: &Vec<Token>) -> Node {
+    fn import_stmt(&mut self, tokens: &Vec<Token>) -> Result<Node, &'static str> {
         let token = self.current.clone();
         self.advance(tokens);
-        let name = self.expression(tokens);
-        self.expect(TokenType::SColon, "expected ';'", tokens);
-        Node::STMT(Stmt::Import { name, token })
+        let name = self.expression(tokens)?;
+        expect!(self, TokenType::SColon, "expected ';'", tokens);
+        Ok(Node::STMT(Stmt::Import { name, token }))
     }
 
-    fn if_stmt(&mut self, tokens: &Vec<Token>) -> Node {
+    fn if_stmt(&mut self, tokens: &Vec<Token>) -> Result<Node, &'static str> {
         self.advance(tokens);
-        self.expect(TokenType::LParen, "expected '(' after 'if'", tokens);
-        let cond = self.expression(tokens);
-        self.expect(TokenType::RParen, "expected ')' after if condition", tokens);
-        let then = Box::new(self.statement(tokens));
+        expect!(self, TokenType::LParen, "expected '('", tokens);
+        let cond = self.expression(tokens)?;
+        expect!(self, TokenType::RParen, "expected ')'", tokens);
+        let then = Box::new(self.statement(tokens)?);
 
         let els: Option<Box<Node>> = if self.check_current(TokenType::Else, tokens)
             && self.check_next(TokenType::If, tokens)
         {
             self.advance(tokens);
-            Some(Box::new(self.if_stmt(tokens)))
+            Some(Box::new(self.if_stmt(tokens)?))
         } else if self.check_current(TokenType::Else, tokens) {
-            Some(Box::new(self.statement(tokens)))
+            Some(Box::new(self.statement(tokens)?))
         } else {
             None
         };
 
-        Node::STMT(Stmt::If {
+        Ok(Node::STMT(Stmt::If {
             condition: cond,
             then,
             els,
-        })
+        }))
     }
 
-    fn break_stmt(&mut self, tokens: &Vec<Token>) -> Node {
+    fn break_stmt(&mut self, tokens: &Vec<Token>) -> Result<Node, &'static str> {
         self.advance(tokens);
-        self.expect(TokenType::SColon, "expected ';'", tokens);
-        Node::STMT(Stmt::Break {})
+        expect!(self, TokenType::SColon, "expected ';'", tokens);
+        Ok(Node::STMT(Stmt::Break {}))
     }
 
-    fn return_stmt(&mut self, tokens: &Vec<Token>) -> Node {
+    fn return_stmt(&mut self, tokens: &Vec<Token>) -> Result<Node, &'static str> {
         let token = self.current.clone();
         self.advance(tokens);
         let mut values: Vec<Expr> = vec![];
         if !self.check_current(TokenType::SColon, tokens) {
             loop {
-                values.push(self.expression(tokens));
+                values.push(self.expression(tokens)?);
                 if !self.check_current(TokenType::Comma, tokens) {
                     break;
                 }
             }
         }
-        self.expect(TokenType::SColon, "expected ';'", tokens);
-        Node::STMT(Stmt::Return { token, values })
+        expect!(self, TokenType::SColon, "expected ';'", tokens);
+        Ok(Node::STMT(Stmt::Return { token, values }))
     }
 
-    fn while_stmt(&mut self, tokens: &Vec<Token>) -> Node {
+    fn while_stmt(&mut self, tokens: &Vec<Token>) -> Result<Node, &'static str> {
         let token = self.current.clone();
         self.advance(tokens);
-        self.expect(TokenType::LParen, "expected '(' after 'while'", tokens);
-        let cond = self.expression(tokens);
-        self.expect(
-            TokenType::RParen,
-            "expected ')' after while condition",
-            tokens,
-        );
+        expect!(self, TokenType::LParen, "expected '('", tokens);
+        let cond = self.expression(tokens)?;
+        expect!(self, TokenType::RParen, "expected ')'", tokens);
 
-        let body = Box::new(self.statement(tokens));
-        Node::STMT(Stmt::While {
+        let body = Box::new(self.statement(tokens)?);
+        Ok(Node::STMT(Stmt::While {
             condition: cond,
             body,
             token,
-        })
+        }))
     }
 
-    fn for_stmt(&mut self, tokens: &Vec<Token>) -> Node {
+    fn for_stmt(&mut self, tokens: &Vec<Token>) -> Result<Node, &'static str> {
         let token = self.current.clone();
         self.advance(tokens);
-        self.expect(TokenType::LParen, "expected '('", tokens);
+        expect!(self, TokenType::LParen, "expected '('", tokens);
 
         let mut init: Option<Node> = None;
         if self.does_match(&[TokenType::SColon], tokens) {
             // do nothing
         } else if self.does_match(&[TokenType::Var], tokens) {
-            init = Some(self.var_declaration(tokens));
+            init = Some(self.var_declaration(tokens)?);
         } else {
-            init = Some(self.expr_stmt(tokens));
+            init = Some(self.expr_stmt(tokens)?);
         }
 
         let mut condition: Option<Expr> = None;
         if !self.check_current(TokenType::SColon, tokens) {
-            condition = Some(self.expression(tokens));
+            condition = Some(self.expression(tokens)?);
         }
-        self.expect(TokenType::SColon, "expected ';'", tokens);
+        expect!(self, TokenType::SColon, "expected ';'", tokens);
 
         let mut increment: Option<Expr> = None;
         if !self.check_current(TokenType::RParen, tokens) {
-            increment = Some(self.expression(tokens));
+            increment = Some(self.expression(tokens)?);
         }
-        self.expect(TokenType::RParen, "expected ')'", tokens);
+        expect!(self, TokenType::RParen, "expected ')'", tokens);
 
-        let mut body = self.statement(tokens);
+        let mut body = self.statement(tokens)?;
 
         if let Some(increment) = increment {
             body = Node::STMT(Stmt::Block {
@@ -524,44 +532,32 @@ impl Parser {
             });
         }
 
-        return body;
+        Ok(body)
     }
 
-    fn function(&mut self, kind: &str, tokens: &Vec<Token>) -> Node {
-        self.expect(
-            TokenType::Id,
-            format!("expected {} name", kind).as_str(),
-            tokens,
-        );
+    fn function(&mut self, tokens: &Vec<Token>) -> Result<Node, &'static str> {
+        expect!(self, TokenType::Id, "expected an identifier", tokens);
         let name = self.previous(tokens);
-        let body = self.function_body(kind, tokens);
-        Node::STMT(Stmt::Func {
+        let body = self.function_body(tokens)?;
+        Ok(Node::STMT(Stmt::Func {
             token: name,
             func: body,
-        })
+        }))
     }
 
-    fn function_body(&mut self, kind: &str, tokens: &Vec<Token>) -> Expr {
-        let params = self.parse_params(kind, tokens);
-        self.expect(
-            TokenType::LBrace,
-            format!("expected '{{' before {} body", kind).as_str(),
-            tokens,
-        );
-        let body = self.parse_block(tokens);
-        Expr::Func { params, body }
+    fn function_body(&mut self, tokens: &Vec<Token>) -> Result<Expr, &'static str> {
+        let params = self.parse_params(tokens)?;
+        expect!(self, TokenType::LBrace, "expected '{'", tokens);
+        let body = self.parse_block(tokens)?;
+        Ok(Expr::Func { params, body })
     }
 
-    fn parse_params(&mut self, kind: &str, tokens: &Vec<Token>) -> Vec<Token> {
-        self.expect(
-            TokenType::LParen,
-            format!("expected '(' after {} name", kind).as_str(),
-            tokens,
-        );
+    fn parse_params(&mut self, tokens: &Vec<Token>) -> Result<Vec<Token>, &'static str> {
+        expect!(self, TokenType::LParen, "expected '('", tokens);
         let mut params: Vec<Token> = vec![];
         if !self.check_current(TokenType::RParen, tokens) {
             loop {
-                self.expect(TokenType::Id, "expected an identifier", tokens);
+                expect!(self, TokenType::Id, "expected an identifier", tokens);
                 let param = self.previous(tokens);
                 params.push(param);
 
@@ -570,21 +566,21 @@ impl Parser {
                 }
             }
         }
-        self.expect(TokenType::RParen, "expected ')' after parameters", tokens);
-        return params;
+        expect!(self, TokenType::RParen, "expected ')'", tokens);
+        Ok(params)
     }
 
-    fn parse_block(&mut self, tokens: &Vec<Token>) -> Vec<Node> {
+    fn parse_block(&mut self, tokens: &Vec<Token>) -> Result<Vec<Node>, &'static str> {
         let mut stmts: Vec<Node> = vec![];
         while !self.check_current(TokenType::RBrace, tokens) && !self.is_end(tokens) {
-            stmts.push(self.declaration(tokens));
+            stmts.push(self.declaration(tokens)?);
         }
-        self.expect(TokenType::RBrace, "expected '}' after a block", tokens);
-        return stmts;
+        expect!(self, TokenType::RBrace, "expected '}'", tokens);
+        Ok(stmts)
     }
 
-    fn var_declaration(&mut self, tokens: &Vec<Token>) -> Node {
-        self.expect(TokenType::Id, "Expected an identifier", tokens);
+    fn var_declaration(&mut self, tokens: &Vec<Token>) -> Result<Node, &'static str> {
+        expect!(self, TokenType::Id, "expected an identifier", tokens);
         let name = self.previous(tokens);
         let mut init = Expr::Literal {
             kind: TokenType::Null,
@@ -592,23 +588,23 @@ impl Parser {
         };
 
         if self.does_match(&[TokenType::Equal], tokens) {
-            init = self.expression(tokens);
+            init = self.expression(tokens)?;
         }
 
-        self.expect(TokenType::SColon, "expected ';'", tokens);
-        Node::STMT(Stmt::Variable { name, init })
+        expect!(self, TokenType::SColon, "expected ';'", tokens);
+        Ok(Node::STMT(Stmt::Variable { name, init }))
     }
 
-    fn struct_declaration(&mut self, tokens: &Vec<Token>) -> Node {
-        self.expect(TokenType::Id, "expected an identifier", tokens);
+    fn struct_declaration(&mut self, tokens: &Vec<Token>) -> Result<Node, &'static str> {
+        expect!(self, TokenType::Id, "expected an identifier", tokens);
         let token = self.previous(tokens);
-        self.expect(TokenType::LBrace, "expected '{'", tokens);
+        expect!(self, TokenType::LBrace, "expected '{'", tokens);
         let mut fields: Vec<Token> = vec![];
         let mut types: Vec<TypeInfo> = vec![];
         while !self.check_current(TokenType::RBrace, tokens) {
-            self.expect(TokenType::Id, "expected an identifier", tokens);
+            expect!(self, TokenType::Id, "expected an identifier", tokens);
             fields.push(self.previous(tokens));
-            self.expect(TokenType::Colon, "expected ':'", tokens);
+            expect!(self, TokenType::Colon, "expected ':'", tokens);
             match self.current.kind {
                 TokenType::Id => types.push(match self.current.value.to_lowercase().as_str() {
                     "string" => TypeInfo::Str,
@@ -625,16 +621,16 @@ impl Parser {
             if self.check_current(TokenType::RBrace, tokens) {
                 break;
             } else {
-                self.expect(TokenType::Comma, "expected ','", tokens);
+                expect!(self, TokenType::Comma, "expected ','", tokens);
             }
         }
-        self.expect(TokenType::RBrace, "expected '}'", tokens);
+        expect!(self, TokenType::RBrace, "expected '}'", tokens);
 
-        Node::STMT(Stmt::Struct {
+        Ok(Node::STMT(Stmt::Struct {
             token,
             fields,
             types,
-        })
+        }))
     }
 
     /// Checks if the current token is in the given types
@@ -646,15 +642,6 @@ impl Parser {
             }
         }
         false
-    }
-
-    /// Checks whether the current token is the expected type or not, and if not, adds an error
-    fn expect(&mut self, kind: TokenType, message: &str, tokens: &Vec<Token>) {
-        if self.check_current(kind, tokens) {
-            self.advance(tokens);
-        } else {
-            self.add_error(message);
-        }
     }
 
     /// Advances one token
@@ -706,10 +693,50 @@ impl Parser {
         }
     }
 
+    /// Checks if the next of the next token is the end or not
+    fn is_next_end(&self, tokens: &Vec<Token>) -> bool {
+        if tokens.len() <= self.c {
+            return false;
+        }
+        match tokens[self.c + 1].kind {
+            TokenType::EOF => true,
+            _ => false,
+        }
+    }
+
     /// Appends the error created with the given error message and the current line and column
     fn add_error(&mut self, message: &str) {
         let error = ParserError::new(message, self.current.position.0, self.current.position.1);
         self.errors.push(error);
+    }
+
+    /// Discards tokens until reaching one that can appear at that point in the rule
+    fn synchronize(&mut self, tokens: &Vec<Token>) {
+        self.advance(tokens);
+        while !self.is_end(tokens) {
+            if self.c > 0 {
+                if self.previous(tokens).kind == TokenType::SColon {
+                    return;
+                }
+            }
+
+            if self.is_next_end(tokens) {
+                return;
+            }
+
+            match tokens[self.c + 1].kind {
+                TokenType::Func
+                | TokenType::Struct
+                | TokenType::Var
+                | TokenType::Const
+                | TokenType::If
+                | TokenType::For
+                | TokenType::While
+                | TokenType::Import => return,
+                _ => {}
+            }
+            self.advance(tokens);
+        }
     }
 }
 
