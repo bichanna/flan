@@ -132,10 +132,15 @@ impl Parser {
 
     fn primary(&mut self, tokens: &Vec<Token>) -> Result<Expr, &'static str> {
         if self.does_match(
-            &[TokenType::True, TokenType::False, TokenType::Null],
+            &[
+                TokenType::True,
+                TokenType::False,
+                TokenType::Null,
+                TokenType::Underscore,
+            ],
             tokens,
         ) {
-            // Boolean and null literal
+            // Boolean, null literal, or Underscore
             let token = self.previous(tokens);
             Ok(Expr::Literal {
                 kind: token.kind,
@@ -773,6 +778,13 @@ mod tests {
     fn test_atom_expr() {
         let source = "let name = :nobu;";
         let expected = "(var name :nobu)";
+        parse!(source, expected);
+    }
+
+    #[test]
+    fn test_underscore_expr() {
+        let source = "let underscore = _;";
+        let expected = "(var underscore :_:)";
         parse!(source, expected);
     }
 }

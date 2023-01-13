@@ -208,7 +208,7 @@ impl<'a> Lexer<'a> {
                 },
                 _ => {
                     if self.current.is_alphabetic() || self.current == '_' {
-                        // an identifier or a keyword
+                        // an identifier, a keyword, or an Underscore
                         let mut var = String::new();
 
                         if (self.current.is_alphabetic() || self.current == '_')
@@ -231,9 +231,13 @@ impl<'a> Lexer<'a> {
                             self.advance();
                         }
 
-                        match Lexer::keyword(var.as_str()) {
-                            Some(kind) => self.add_no_value_token(kind),
-                            _ => self.add_token(TokenType::Id, var),
+                        if var.as_str() == "_" {
+                            self.add_no_value_token(TokenType::Underscore);
+                        } else {
+                            match Lexer::keyword(var.as_str()) {
+                                Some(kind) => self.add_no_value_token(kind),
+                                _ => self.add_token(TokenType::Id, var),
+                            }
                         }
                         self.reverse();
                     } else if self.current.is_numeric() {
