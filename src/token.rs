@@ -51,10 +51,7 @@ pub enum TokenType {
     And,      // and
     Or,       // or
     For,      // for
-    In,       // In
     While,    // while
-    Super,    // super
-    This,     // this
     Return,   // return
     Continue, // continue
     Break,    // break

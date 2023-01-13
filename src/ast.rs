@@ -45,13 +45,6 @@ pub enum Expr {
         token: Token,
         value: Box<Expr>,
     },
-    Super {
-        token: Token,
-        method: Token,
-    },
-    This {
-        token: Token,
-    },
     Func {
         params: Vec<Token>,
         body: Vec<Node>,
@@ -202,10 +195,6 @@ impl Expr {
                     value.print()
                 )
             }
-            Expr::Super { token: _, method } => {
-                format!("super.{}", method.print())
-            }
-            Expr::This { token: _ } => String::from("this"),
             Expr::Func { params, body } => {
                 format!(
                     "(lambda ({}) {})",

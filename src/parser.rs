@@ -132,18 +132,6 @@ impl Parser {
                 kind: token.kind,
                 value: token.value,
             }
-        } else if self.does_match(&[TokenType::This], tokens) {
-            // this
-            Expr::This {
-                token: self.previous(tokens),
-            }
-        } else if self.does_match(&[TokenType::Super], tokens) {
-            // super class method
-            let token = self.previous(tokens);
-            self.expect(TokenType::Dot, "expected '.'", tokens);
-            self.expect(TokenType::Id, "expected an identifier", tokens);
-            let method = self.previous(tokens);
-            Expr::Super { token, method }
         } else if self.does_match(&[TokenType::Num, TokenType::Str], tokens) {
             // string or number literal
             let token = self.previous(tokens);
