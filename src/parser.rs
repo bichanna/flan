@@ -240,20 +240,14 @@ impl Parser {
                 expr = self.call(tokens, &Some(expr))?;
                 break;
             } else if self.does_match(&[TokenType::LBracket], tokens) {
-                let mut token = self.previous(tokens);
+                let token = self.previous(tokens);
                 let key = self.expression(tokens)?;
                 expect!(self, TokenType::RBracket, "expected ']'", tokens);
-
-                token.value = String::from("__getitem__");
-                token.kind = TokenType::Id;
-                expr = Expr::Call {
-                    callee: Box::new(Expr::Get {
-                        instance: Box::new(expr),
-                        token: token.clone(),
-                    }),
-                    args: vec![Box::new(key)],
+                expr = Expr::Access {
                     token,
-                };
+                    expr: Box::new(expr),
+                    index: Box::new(key),
+                }
             } else {
                 break;
             }

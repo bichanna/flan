@@ -45,6 +45,11 @@ pub enum Expr {
         token: Token,
         value: Box<Expr>,
     },
+    Access {
+        token: Token,
+        expr: Box<Expr>,
+        index: Box<Expr>,
+    },
     Func {
         params: Vec<Token>,
         body: Vec<Node>,
@@ -194,6 +199,13 @@ impl Expr {
                     token.print(),
                     value.print()
                 )
+            }
+            Expr::Access {
+                token: _,
+                expr,
+                index,
+            } => {
+                format!("(.access {} {})", expr.print(), index.print())
             }
             Expr::Func { params, body } => {
                 format!(
