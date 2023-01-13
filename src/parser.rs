@@ -625,6 +625,7 @@ impl Parser {
                 TokenType::Id => types.push(match self.current.value.to_lowercase().as_str() {
                     "string" => TypeInfo::Str,
                     "number" => TypeInfo::Num,
+                    "bool" => TypeInfo::Bool,
                     "any" => TypeInfo::Any,
                     "list" => TypeInfo::List,
                     "map" => TypeInfo::Map,

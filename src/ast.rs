@@ -106,6 +106,7 @@ pub enum Stmt {
 pub enum TypeInfo {
     Str,
     Num,
+    Bool,
     Any,
     Map,
     List,
@@ -117,6 +118,7 @@ impl TypeInfo {
         match self {
             Self::Str => String::from("string"),
             Self::Num => String::from("number"),
+            Self::Bool => String::from("bool"),
             Self::Any => String::from("any"),
             Self::Map => String::from("map"),
             Self::List => String::from("list"),
