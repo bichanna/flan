@@ -5,6 +5,7 @@ pub enum TokenType {
     Num,      // Number
     Str,      // String
     Id,       // Identifier
+    Atom,     // Atom
     LParen,   // (
     RParen,   // )
     LBrace,   // {
@@ -84,6 +85,8 @@ impl Token {
     pub fn print(&self) -> String {
         if self.value == "" {
             format!("{:?}", self.kind)
+        } else if self.kind == TokenType::Atom {
+            format!(":{}", self.value)
         } else {
             format!("{}", self.value)
         }

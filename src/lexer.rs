@@ -57,7 +57,39 @@ impl<'a> Lexer<'a> {
                 '}' => self.add_no_value_token(TokenType::RBrace),
                 '[' => self.add_no_value_token(TokenType::LBracket),
                 ']' => self.add_no_value_token(TokenType::RBracket),
-                ':' => self.add_no_value_token(TokenType::Colon),
+                ':' => {
+                    if self.next_char().is_alphabetic() || self.next_char() == '_' {
+                        self.advance();
+                        // an atom
+                        let mut atom = String::new();
+
+                        if (self.current.is_alphabetic() || self.current == '_')
+                            && !self.current.is_numeric()
+                        {
+                            atom.push(self.current);
+                            self.advance();
+                        }
+
+                        while !self.is_end()
+                            && (self.current.is_alphanumeric() || self.current == '_')
+                        {
+                            atom.push(self.current);
+                            self.advance();
+                        }
+
+                        match atom.as_str() {
+                            "true" => self.add_no_value_token(TokenType::True),
+                            "false" => self.add_no_value_token(TokenType::False),
+                            _ => match Lexer::keyword(atom.as_str()) {
+                                Some(kind) => self.add_no_value_token(kind),
+                                _ => self.add_token(TokenType::Atom, atom),
+                            },
+                        }
+                        self.reverse();
+                    } else {
+                        self.add_no_value_token(TokenType::Colon);
+                    }
+                }
                 ';' => self.add_no_value_token(TokenType::SColon),
                 '@' => self.add_no_value_token(TokenType::At),
                 '^' => self.add_no_value_token(TokenType::Caret),
@@ -422,5 +454,24 @@ println(name!, _age);
 
         assert_eq!(lexer.errors.len(), 0);
         assert_eq!(lexer.tokens.len(), 18);
+    }
+
+    #[test]
+    fn test_atom_lex() {
+        let source = String::from(":true :false :ok :error");
+        let mut lexer = Lexer::new(&source);
+        lexer.tokenize();
+
+        assert_eq!(lexer.errors.len(), 0);
+        assert_eq!(
+            lexer.tokens,
+            vec![
+                Token::new(TokenType::True, String::new(), 1, 6),
+                Token::new(TokenType::False, String::new(), 1, 13),
+                Token::new(TokenType::Atom, String::from("ok"), 1, 17),
+                Token::new(TokenType::Atom, String::from("error"), 1, 23),
+                Token::new(TokenType::EOF, String::new(), 1, 22),
+            ]
+        );
     }
 }

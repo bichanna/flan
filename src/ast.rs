@@ -158,6 +158,7 @@ impl Expr {
             }
             Expr::Literal { kind, value } => match kind {
                 TokenType::Str => format!("\"{}\"", value),
+                TokenType::Atom => format!(":{}", value),
                 TokenType::Num | TokenType::False | TokenType::True | TokenType::Null => {
                     format!("{:?}", kind)
                 }

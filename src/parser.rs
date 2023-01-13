@@ -141,8 +141,8 @@ impl Parser {
                 kind: token.kind,
                 value: token.value,
             })
-        } else if self.does_match(&[TokenType::Num, TokenType::Str], tokens) {
-            // string or number literal
+        } else if self.does_match(&[TokenType::Num, TokenType::Str, TokenType::Atom], tokens) {
+            // string, number literal, or atom
             let token = self.previous(tokens);
             Ok(Expr::Literal {
                 kind: token.kind,
@@ -706,7 +706,12 @@ impl Parser {
 
     /// Discards tokens until reaching one that can appear at that point in the rule
     fn synchronize(&mut self, tokens: &Vec<Token>) {
-        self.advance(tokens);
+        if !self.is_end(tokens) {
+            self.advance(tokens);
+        } else {
+            return;
+        }
+
         while !self.is_end(tokens) {
             if self.c > 0 {
                 if self.previous(tokens).kind == TokenType::SColon {
@@ -761,6 +766,13 @@ mod tests {
         let source = r#"struct Person { name: string, age: number, friends: list, book_reviews: map, others: any }"#;
         let expected =
             "(struct Person name:string age:number friends:list book_reviews:map others:any)";
+        parse!(source, expected);
+    }
+
+    #[test]
+    fn test_atom_expr() {
+        let source = "let name = :nobu;";
+        let expected = "(var name :nobu)";
         parse!(source, expected);
     }
 }
