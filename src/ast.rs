@@ -97,7 +97,7 @@ pub enum Stmt {
     },
     Return {
         token: Token,
-        values: Vec<Expr>,
+        value: Expr,
     },
     Break,
     Continue,
@@ -313,8 +313,8 @@ impl Stmt {
             Stmt::Func { token, func } => {
                 format!("(func {} {})", token.print(), func.print())
             }
-            Stmt::Return { token: _, values } => {
-                format!("(return {})", bulk_print!(values, " "))
+            Stmt::Return { token: _, value } => {
+                format!("(return {})", value.print())
             }
             Stmt::Break => String::from("(break)"),
             Stmt::Continue => String::from("(continue)"),

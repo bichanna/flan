@@ -202,16 +202,14 @@ impl Parser {
                 let token = self.previous(tokens);
                 let expr = self.expression(tokens)?;
                 // automatically returns the expression
-                let return_node = Node::STMT(Stmt::Return {
-                    token,
-                    values: vec![expr],
-                });
+                let return_node = Node::STMT(Stmt::Return { token, value: expr });
                 Ok(Expr::Func {
                     params,
                     body: vec![return_node],
                 })
             }
         } else {
+            println!("{:#?}", &self.current);
             Err("unexpected token")
         }
     }
@@ -520,17 +518,21 @@ impl Parser {
     fn return_stmt(&mut self, tokens: &Vec<Token>) -> Result<Node, &'static str> {
         let token = self.current.clone();
         self.advance(tokens);
-        let mut values: Vec<Expr> = vec![];
+        let mut values: Vec<Box<Expr>> = vec![];
         if !self.check_current(TokenType::SColon, tokens) {
             loop {
-                values.push(self.expression(tokens)?);
+                values.push(Box::new(self.expression(tokens)?));
                 if !self.check_current(TokenType::Comma, tokens) {
                     break;
                 }
+                expect!(self, TokenType::Comma, "expected ','", tokens);
             }
         }
         expect!(self, TokenType::SColon, "expected ';'", tokens);
-        Ok(Node::STMT(Stmt::Return { token, values }))
+        Ok(Node::STMT(Stmt::Return {
+            token,
+            value: Expr::ListLiteral { values },
+        }))
     }
 
     fn while_stmt(&mut self, tokens: &Vec<Token>) -> Result<Node, &'static str> {
@@ -872,6 +874,13 @@ mod tests {
     fn list_and_map_expr() {
         let source = r#"[1, 2, "abc", {:name: "Nobuharu", "age": 16}];"#;
         let expected = r#"(list Num Num "abc" (map :name:"Nobuharu" "age":Num))"#;
+        parse!(source, expected);
+    }
+
+    #[test]
+    fn return_stmt() {
+        let source = "return 12, \"Hello, world!\";";
+        let expected = "(return (list Num \"Hello, world!\"))";
         parse!(source, expected);
     }
 }
