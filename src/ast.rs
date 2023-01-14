@@ -50,6 +50,11 @@ pub enum Expr {
         expr: Box<Expr>,
         index: Box<Expr>,
     },
+    StructInit {
+        struct_name: Box<Expr>,
+        fields: Vec<Token>,
+        args: Vec<Box<Expr>>,
+    },
     Func {
         params: Vec<Token>,
         body: Vec<Node>,
@@ -182,6 +187,26 @@ impl Expr {
                 let mut builder = format!("({}", callee.print());
                 if args.len() > 0 {
                     builder += &format!(" {})", bulk_print!(args, " "));
+                } else {
+                    builder += ")";
+                }
+                builder
+            }
+            Expr::StructInit {
+                struct_name,
+                fields,
+                args,
+            } => {
+                let mut builder = format!("({}", struct_name.print());
+                if args.len() > 0 {
+                    builder += " ";
+                    builder += &fields
+                        .into_iter()
+                        .zip(args.into_iter())
+                        .map(|(f, a)| format!("{}:{}", f.print(), a.print()))
+                        .collect::<Vec<String>>()
+                        .join(" ");
+                    builder += ")";
                 } else {
                     builder += ")";
                 }

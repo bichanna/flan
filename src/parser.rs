@@ -229,11 +229,60 @@ impl Parser {
         })
     }
 
+    fn finish_struct_init(
+        &mut self,
+        struct_name: Expr,
+        tokens: &Vec<Token>,
+    ) -> Result<Expr, &'static str> {
+        let struct_name = Box::new(struct_name);
+        let mut args: Vec<Box<Expr>> = vec![];
+        let mut fields: Vec<Token> = vec![];
+
+        if !self.check_current(TokenType::RBrace, tokens) {
+            loop {
+                if self.check_current(TokenType::RBrace, tokens) {
+                    break;
+                }
+
+                self.advance(tokens);
+                let field = self.previous(tokens);
+                if self.does_match(&[TokenType::Comma], tokens) {
+                    fields.push(field.clone());
+                    args.push(Box::new(Expr::Variable { name: field }));
+                    continue;
+                } else if self.check_current(TokenType::RBrace, tokens) {
+                    fields.push(field.clone());
+                    args.push(Box::new(Expr::Variable { name: field }));
+                    break;
+                }
+
+                expect!(self, TokenType::Colon, "expected ':'", tokens);
+                let expr = self.expression(tokens)?;
+                args.push(Box::new(expr));
+                fields.push(field);
+
+                if self.check_current(TokenType::RBrace, tokens) {
+                    break;
+                }
+                expect!(self, TokenType::Comma, "expected ','", tokens);
+            }
+        }
+        expect!(self, TokenType::RBrace, "expected '}'", tokens);
+
+        Ok(Expr::StructInit {
+            struct_name,
+            fields,
+            args,
+        })
+    }
+
     fn call(&mut self, tokens: &Vec<Token>, arg: &Option<Expr>) -> Result<Expr, &'static str> {
         let mut expr = self.primary(tokens)?;
         loop {
             if self.does_match(&[TokenType::LParen], tokens) {
                 expr = self.finish_call(expr, arg.clone(), tokens)?;
+            } else if self.does_match(&[TokenType::LBrace], tokens) {
+                expr = self.finish_struct_init(expr, tokens)?;
             } else if self.does_match(&[TokenType::Dot], tokens) {
                 expect!(self, TokenType::Id, "expected an identifier", tokens);
                 let name = self.previous(tokens);
@@ -771,6 +820,13 @@ mod tests {
         let source = r#"struct Person { name: string, age: number, friends: list, book_reviews: map, others: any }"#;
         let expected =
             "(struct Person name:string age:number friends:list book_reviews:map others:any)";
+        parse!(source, expected);
+    }
+
+    #[test]
+    fn test_struct_init() {
+        let source = r#"let nobu = Person{ name: "Nobuharu", age, others: 12345, };"#;
+        let expected = r#"(var nobu (Person name:"Nobuharu" age:age others:Num))"#;
         parse!(source, expected);
     }
 
