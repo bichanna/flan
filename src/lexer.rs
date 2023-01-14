@@ -358,6 +358,7 @@ impl<'a> Lexer<'a> {
     fn keyword(value: &str) -> Option<TokenType> {
         match value.to_lowercase().as_str() {
             "func" => Some(TokenType::Func),
+            "lazy" => Some(TokenType::Lazy),
             "struct" => Some(TokenType::Struct),
             "let" => Some(TokenType::Var),
             "const" => Some(TokenType::Const),

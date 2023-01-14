@@ -45,6 +45,7 @@ pub enum TokenType {
     DPipe,      // ||
 
     Func,     // func
+    Lazy,     // lazy
     Struct,   // struct
     Var,      // let
     Const,    // const

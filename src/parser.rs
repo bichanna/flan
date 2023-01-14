@@ -209,7 +209,7 @@ impl Parser {
                 })
             }
         } else {
-            println!("{:#?}", &self.current);
+            // println!("{:#?}", &self.current);
             Err("unexpected token")
         }
     }
@@ -453,6 +453,7 @@ impl Parser {
                     statements: self.parse_block(tokens)?,
                 }))
             }
+            TokenType::Lazy => self.lazy_stmt(tokens),
             TokenType::If => self.if_stmt(tokens),
             TokenType::While => self.while_stmt(tokens),
             TokenType::For => self.for_stmt(tokens),
@@ -468,6 +469,24 @@ impl Parser {
         let node = Node::EXPR(self.expression(tokens)?);
         expect!(self, TokenType::SColon, "expected ';'", tokens);
         Ok(node)
+    }
+
+    fn lazy_stmt(&mut self, tokens: &Vec<Token>) -> Result<Node, &'static str> {
+        self.advance(tokens);
+        let token = self.previous(tokens);
+        self.advance(tokens);
+        let name = self.previous(tokens);
+        expect!(self, TokenType::Equal, "expected '='", tokens);
+        let expr = self.expression(tokens)?;
+        expect!(self, TokenType::SColon, "expected ';'", tokens);
+
+        Ok(Node::STMT(Stmt::Variable {
+            name,
+            init: Expr::Func {
+                params: vec![],
+                body: vec![Node::STMT(Stmt::Return { token, value: expr })],
+            },
+        }))
     }
 
     fn continue_stmt(&mut self, tokens: &Vec<Token>) -> Result<Node, &'static str> {
@@ -881,6 +900,13 @@ mod tests {
     fn return_stmt() {
         let source = "return 12, \"Hello, world!\";";
         let expected = "(return (list Num \"Hello, world!\"))";
+        parse!(source, expected);
+    }
+
+    #[test]
+    fn lazy_stmt() {
+        let source = "lazy age = 16;";
+        let expected = "(var age (lambda () (return Num)))";
         parse!(source, expected);
     }
 }
