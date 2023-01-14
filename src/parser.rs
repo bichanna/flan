@@ -164,10 +164,34 @@ impl Parser {
             Ok(Expr::Group { expr })
         } else if self.does_match(&[TokenType::LBracket], tokens) {
             // list literal
-            Ok(Expr::Unknown)
+            let mut values: Vec<Box<Expr>> = vec![];
+            while !self.check_current(TokenType::RBracket, tokens) && !self.is_end(tokens) {
+                values.push(Box::new(self.expression(tokens)?));
+
+                if self.check_current(TokenType::RBracket, tokens)
+                    || !self.does_match(&[TokenType::Comma], tokens)
+                {
+                    break;
+                }
+            }
+            expect!(self, TokenType::RBracket, "expected ']'", tokens);
+            Ok(Expr::ListLiteral { values })
         } else if self.does_match(&[TokenType::LBrace], tokens) {
             // map literal
-            Ok(Expr::Unknown)
+            let mut keys: Vec<Box<Expr>> = vec![];
+            let mut values: Vec<Box<Expr>> = vec![];
+            while !self.check_current(TokenType::RBrace, tokens) && !self.is_end(tokens) {
+                keys.push(Box::new(self.expression(tokens)?));
+                expect!(self, TokenType::Colon, "expected ':'", tokens);
+                values.push(Box::new(self.expression(tokens)?));
+                if self.check_current(TokenType::RBrace, tokens)
+                    || !self.does_match(&[TokenType::Comma], tokens)
+                {
+                    break;
+                }
+            }
+            expect!(self, TokenType::RBrace, "expected '}'", tokens);
+            Ok(Expr::MapLiteral { keys, values })
         } else if self.does_match(&[TokenType::Func], tokens) {
             // anonymous function
             let params = self.parse_params(tokens)?;
@@ -841,6 +865,13 @@ mod tests {
     fn test_underscore_expr() {
         let source = "let underscore = _;";
         let expected = "(var underscore :_:)";
+        parse!(source, expected);
+    }
+
+    #[test]
+    fn list_and_map_expr() {
+        let source = r#"[1, 2, "abc", {:name: "Nobuharu", "age": 16}];"#;
+        let expected = r#"(list Num Num "abc" (map :name:"Nobuharu" "age":Num))"#;
         parse!(source, expected);
     }
 }

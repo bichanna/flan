@@ -19,6 +19,13 @@ pub enum Expr {
         kind: TokenType,
         value: String,
     },
+    ListLiteral {
+        values: Vec<Box<Expr>>,
+    },
+    MapLiteral {
+        keys: Vec<Box<Expr>>,
+        values: Vec<Box<Expr>>,
+    },
     Logical {
         left: Box<Expr>,
         right: Box<Expr>,
@@ -170,6 +177,27 @@ impl Expr {
                 }
                 _ => panic!("invalidddddddd"),
             },
+            Expr::ListLiteral { values } => {
+                if values.len() > 0 {
+                    format!("(list {})", bulk_print!(values, " "))
+                } else {
+                    String::from("(list)")
+                }
+            }
+            Expr::MapLiteral { keys, values } => {
+                if keys.len() > 0 {
+                    format!(
+                        "(map {})",
+                        keys.into_iter()
+                            .zip(values.into_iter())
+                            .map(|(k, v)| format!("{}:{}", k.print(), v.print()))
+                            .collect::<Vec<String>>()
+                            .join(" ")
+                    )
+                } else {
+                    String::from("(map)")
+                }
+            }
             Expr::Logical { left, right, op } => {
                 format!("({} {} {})", op.print(), left.print(), right.print())
             }
