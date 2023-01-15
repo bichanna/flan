@@ -197,11 +197,12 @@ impl Parser {
             expect!(self, TokenType::RBracket, "expected ']'", tokens);
             Ok(Expr::ListLiteral { values })
         } else if self.does_match(&[TokenType::LBrace], tokens) {
-            // map literal
-            let mut keys: Vec<Box<Expr>> = vec![];
+            // object
+            let mut keys: Vec<Token> = vec![];
             let mut values: Vec<Box<Expr>> = vec![];
             while !self.check_current(TokenType::RBrace, tokens) && !self.is_end(tokens) {
-                keys.push(Box::new(self.expression(tokens)?));
+                expect!(self, TokenType::Id, "expected an identifier", tokens);
+                keys.push(self.previous(tokens).clone());
                 expect!(self, TokenType::Colon, "expected ':'", tokens);
                 values.push(Box::new(self.expression(tokens)?));
                 if self.check_current(TokenType::RBrace, tokens)
@@ -211,7 +212,7 @@ impl Parser {
                 }
             }
             expect!(self, TokenType::RBrace, "expected '}'", tokens);
-            Ok(Expr::MapLiteral { keys, values })
+            Ok(Expr::ObjectLiteral { keys, values })
         } else if self.does_match(&[TokenType::Func], tokens) {
             // anonymous function
             let params = self.parse_params(tokens)?;
@@ -805,9 +806,9 @@ mod tests {
     }
 
     #[test]
-    fn list_and_map_expr() {
-        let source = r#"[1, 2, "abc", {:name: "Nobuharu", "age": 16}];"#;
-        let expected = r#"(list 1 2 "abc" (map :name:"Nobuharu" "age":16))"#;
+    fn list_and_object_expr() {
+        let source = r#"[1, 2, "abc", {name: "Nobuharu", age: 16}];"#;
+        let expected = r#"(list 1 2 "abc" (object name:"Nobuharu" age:16))"#;
         parse!(source, expected);
     }
 

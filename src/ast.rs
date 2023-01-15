@@ -40,8 +40,8 @@ pub enum Expr {
     ListLiteral {
         values: Vec<Box<Expr>>,
     },
-    MapLiteral {
-        keys: Vec<Box<Expr>>,
+    ObjectLiteral {
+        keys: Vec<Token>,
         values: Vec<Box<Expr>>,
     },
     Logical {
@@ -172,10 +172,10 @@ impl Expr {
                     String::from("(list)")
                 }
             }
-            Expr::MapLiteral { keys, values } => {
+            Expr::ObjectLiteral { keys, values } => {
                 if keys.len() > 0 {
                     format!(
-                        "(map {})",
+                        "(object {})",
                         keys.into_iter()
                             .zip(values.into_iter())
                             .map(|(k, v)| format!("{}:{}", k.print(), v.print()))
@@ -183,7 +183,7 @@ impl Expr {
                             .join(" ")
                     )
                 } else {
-                    String::from("(map)")
+                    String::from("(object)")
                 }
             }
             Expr::Logical { left, right, op } => {
