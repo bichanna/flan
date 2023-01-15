@@ -107,10 +107,15 @@ impl Parser {
                 _ => return Err("expected a variable"),
             };
         } else if self.does_match(&[TokenType::DPlus, TokenType::DMinus], tokens) {
-            let op = self.previous(tokens);
+            let mut op = self.previous(tokens);
             match expr {
                 Expr::Variable { ref name } => {
                     let name = name.clone();
+                    op.kind = if op.kind == TokenType::DPlus {
+                        TokenType::Plus
+                    } else {
+                        TokenType::Minus
+                    };
                     return Ok(Expr::Assign {
                         name,
                         value: Box::new(Expr::Binary {
@@ -787,7 +792,7 @@ mod tests {
     #[test]
     fn test_for_stmt() {
         let source = r#"for (let i = 0; i < 10; i++) { println(i); }"#;
-        let expected = "(block (var i 0) (while ((LT i 10)) (block (block (println i)) (assign i (DPlus i 1)))))";
+        let expected = "(block (var i 0) (while ((LT i 10)) (block (block (println i)) (assign i (Plus i 1)))))";
         parse!(source, expected);
     }
 
