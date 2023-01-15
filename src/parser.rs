@@ -846,6 +846,7 @@ impl Parser {
                 TokenType::Func
                 | TokenType::Struct
                 | TokenType::Var
+                | TokenType::Lazy
                 | TokenType::Const
                 | TokenType::If
                 | TokenType::For
