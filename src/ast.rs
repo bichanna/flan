@@ -75,11 +75,6 @@ pub enum Expr {
         expr: Box<Expr>,
         index: Box<Expr>,
     },
-    StructInit {
-        struct_name: Box<Expr>,
-        fields: Vec<Token>,
-        args: Vec<Box<Expr>>,
-    },
     Func {
         params: Vec<Token>,
         body: Vec<Node>,
@@ -123,38 +118,6 @@ pub enum Stmt {
         name: Expr,
         token: Token,
     },
-    Struct {
-        token: Token,
-        fields: Vec<Token>,
-        types: Vec<TypeInfo>,
-    },
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum TypeInfo {
-    Str,
-    Atom,
-    Num,
-    Bool,
-    Any,
-    Map,
-    List,
-    Id(Token),
-}
-
-impl TypeInfo {
-    pub fn print(&self) -> String {
-        match self {
-            Self::Str => String::from("string"),
-            Self::Atom => String::from("atom"),
-            Self::Num => String::from("number"),
-            Self::Bool => String::from("bool"),
-            Self::Any => String::from("any"),
-            Self::Map => String::from("map"),
-            Self::List => String::from("list"),
-            Self::Id(t) => t.print(),
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -245,26 +208,6 @@ impl Expr {
                 }
                 builder
             }
-            Expr::StructInit {
-                struct_name,
-                fields,
-                args,
-            } => {
-                let mut builder = format!("({}", struct_name.print());
-                if args.len() > 0 {
-                    builder += " ";
-                    builder += &fields
-                        .into_iter()
-                        .zip(args.into_iter())
-                        .map(|(f, a)| format!("{}:{}", f.print(), a.print()))
-                        .collect::<Vec<String>>()
-                        .join(" ");
-                    builder += ")";
-                } else {
-                    builder += ")";
-                }
-                builder
-            }
             Expr::Get { instance, token } => {
                 format!("{}.{}", instance.print(), token.print())
             }
@@ -345,24 +288,6 @@ impl Stmt {
             Stmt::Continue => String::from("(continue)"),
             Stmt::Import { name, token: _ } => {
                 format!("(import {})", name.print())
-            }
-            Stmt::Struct {
-                token,
-                fields,
-                types,
-            } => {
-                let mut builder = format!("(struct {}", token.print());
-                let fields = fields
-                    .iter()
-                    .zip(types.iter())
-                    .map(|(key, value)| format!("{}:{}", key.print(), value.print()))
-                    .collect::<Vec<String>>();
-
-                if fields.len() > 0 {
-                    builder += " ";
-                    builder += &fields.join(" ");
-                }
-                builder + ")"
             }
         }
     }
