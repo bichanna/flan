@@ -1,5 +1,5 @@
 use crate::bulk_print;
-use crate::token::{Token, TokenType};
+use crate::token::Token;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
@@ -15,9 +15,27 @@ pub enum Expr {
         right: Box<Expr>,
         op: Token,
     },
-    Literal {
-        kind: TokenType,
+    StringLiteral {
+        token: Token,
         value: String,
+    },
+    NumberLiteral {
+        token: Token,
+        value: f64,
+    },
+    BoolLiteral {
+        token: Token,
+        payload: bool,
+    },
+    AtomLiteral {
+        token: Token,
+        value: String,
+    },
+    Underscore {
+        token: Token,
+    },
+    Null {
+        token: Token,
     },
     ListLiteral {
         values: Vec<Box<Expr>>,
@@ -168,15 +186,20 @@ impl Expr {
             Expr::Unary { right, op } => {
                 format!("({} {})", op.print(), right.print())
             }
-            Expr::Literal { kind, value } => match kind {
-                TokenType::Str => format!("\"{}\"", value),
-                TokenType::Atom => format!(":{}", value),
-                TokenType::Underscore => String::from(":_:"),
-                TokenType::Num | TokenType::False | TokenType::True | TokenType::Null => {
-                    format!("{:?}", kind)
-                }
-                _ => panic!("invalidddddddd"),
-            },
+            Expr::StringLiteral { token: _, value } => {
+                format!("\"{}\"", value)
+            }
+            Expr::NumberLiteral { token: _, value } => {
+                format!("{}", value)
+            }
+            Expr::BoolLiteral { token: _, payload } => {
+                format!("{}", payload)
+            }
+            Expr::AtomLiteral { token: _, value } => {
+                format!(":{}", value)
+            }
+            Expr::Underscore { token: _ } => String::from(":_:"),
+            Expr::Null { token: _ } => String::from("null"),
             Expr::ListLiteral { values } => {
                 if values.len() > 0 {
                     format!("(list {})", bulk_print!(values, " "))

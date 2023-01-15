@@ -115,9 +115,9 @@ impl Parser {
                         name,
                         value: Box::new(Expr::Binary {
                             left: Box::new(expr),
-                            right: Box::new(Expr::Literal {
-                                kind: TokenType::Num,
-                                value: String::from("1"),
+                            right: Box::new(Expr::NumberLiteral {
+                                token: op.clone(),
+                                value: 1.0,
                             }),
                             op,
                         }),
@@ -131,26 +131,46 @@ impl Parser {
     }
 
     fn primary(&mut self, tokens: &Vec<Token>) -> Result<Expr, &'static str> {
-        if self.does_match(
-            &[
-                TokenType::True,
-                TokenType::False,
-                TokenType::Null,
-                TokenType::Underscore,
-            ],
-            tokens,
-        ) {
-            // Boolean, null literal, or Underscore
+        if self.does_match(&[TokenType::True, TokenType::False], tokens) {
+            // Boolean
             let token = self.previous(tokens);
-            Ok(Expr::Literal {
-                kind: token.kind,
+            Ok(Expr::BoolLiteral {
+                token: token.clone(),
+                payload: if token.kind == TokenType::True {
+                    true
+                } else {
+                    false
+                },
+            })
+        } else if self.does_match(&[TokenType::Underscore], tokens) {
+            // Underscore
+            let token = self.previous(tokens);
+            Ok(Expr::Underscore { token })
+        } else if self.does_match(&[TokenType::Null], tokens) {
+            // Null
+            let token = self.previous(tokens);
+            Ok(Expr::Null { token })
+        } else if self.does_match(&[TokenType::Num], tokens) {
+            // Number
+            let token = self.previous(tokens);
+            let value = token.value.parse::<f64>();
+            if let Ok(value) = value {
+                Ok(Expr::NumberLiteral { token, value })
+            } else {
+                Err("invalid number")
+            }
+        } else if self.does_match(&[TokenType::Str], tokens) {
+            // String
+            let token = self.previous(tokens);
+            Ok(Expr::StringLiteral {
+                token: token.clone(),
                 value: token.value,
             })
-        } else if self.does_match(&[TokenType::Num, TokenType::Str, TokenType::Atom], tokens) {
-            // string, number literal, or atom
+        } else if self.does_match(&[TokenType::Atom], tokens) {
+            // Atom
             let token = self.previous(tokens);
-            Ok(Expr::Literal {
-                kind: token.kind,
+            Ok(Expr::AtomLiteral {
+                token: token.clone(),
                 value: token.value,
             })
         } else if self.does_match(&[TokenType::Id], tokens) {
@@ -607,9 +627,9 @@ impl Parser {
         if let Some(condition) = condition {
             new_condition = condition;
         } else {
-            new_condition = Expr::Literal {
-                kind: TokenType::True,
-                value: String::new(),
+            new_condition = Expr::BoolLiteral {
+                token: token.clone(),
+                payload: true,
             };
         }
 
@@ -675,9 +695,8 @@ impl Parser {
     fn var_declaration(&mut self, tokens: &Vec<Token>) -> Result<Node, &'static str> {
         expect!(self, TokenType::Id, "expected an identifier", tokens);
         let name = self.previous(tokens);
-        let mut init = Expr::Literal {
-            kind: TokenType::Null,
-            value: String::new(),
+        let mut init = Expr::Null {
+            token: name.clone(),
         };
 
         if self.does_match(&[TokenType::Equal], tokens) {
@@ -856,7 +875,7 @@ mod tests {
     #[test]
     fn test_for_stmt() {
         let source = r#"for (let i = 0; i < 10; i++) { println(i); }"#;
-        let expected = "(block (var i Num) (while ((LT i Num)) (block (block (println i)) (assign i (DPlus i Num)))))";
+        let expected = "(block (var i 0) (while ((LT i 10)) (block (block (println i)) (assign i (DPlus i 1)))))";
         parse!(source, expected);
     }
 
@@ -871,7 +890,7 @@ mod tests {
     #[test]
     fn test_struct_init() {
         let source = r#"let nobu = Person{ name: "Nobuharu", age, others: 12345, };"#;
-        let expected = r#"(var nobu (Person name:"Nobuharu" age:age others:Num))"#;
+        let expected = r#"(var nobu (Person name:"Nobuharu" age:age others:12345))"#;
         parse!(source, expected);
     }
 
@@ -892,21 +911,21 @@ mod tests {
     #[test]
     fn list_and_map_expr() {
         let source = r#"[1, 2, "abc", {:name: "Nobuharu", "age": 16}];"#;
-        let expected = r#"(list Num Num "abc" (map :name:"Nobuharu" "age":Num))"#;
+        let expected = r#"(list 1 2 "abc" (map :name:"Nobuharu" "age":16))"#;
         parse!(source, expected);
     }
 
     #[test]
     fn return_stmt() {
         let source = "return 12, \"Hello, world!\";";
-        let expected = "(return (list Num \"Hello, world!\"))";
+        let expected = "(return (list 12 \"Hello, world!\"))";
         parse!(source, expected);
     }
 
     #[test]
     fn lazy_stmt() {
         let source = "lazy age = 16;";
-        let expected = "(var age (lambda () (return Num)))";
+        let expected = "(var age (lambda () (return 16)))";
         parse!(source, expected);
     }
 }
