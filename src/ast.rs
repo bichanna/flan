@@ -133,6 +133,7 @@ pub enum Stmt {
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeInfo {
     Str,
+    Atom,
     Num,
     Bool,
     Any,
@@ -145,6 +146,7 @@ impl TypeInfo {
     pub fn print(&self) -> String {
         match self {
             Self::Str => String::from("string"),
+            Self::Atom => String::from("atom"),
             Self::Num => String::from("number"),
             Self::Bool => String::from("bool"),
             Self::Any => String::from("any"),

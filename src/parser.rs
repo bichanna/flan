@@ -720,6 +720,7 @@ impl Parser {
             match self.current.kind {
                 TokenType::Id => types.push(match self.current.value.to_lowercase().as_str() {
                     "string" => TypeInfo::Str,
+                    "atom" => TypeInfo::Atom,
                     "number" => TypeInfo::Num,
                     "bool" => TypeInfo::Bool,
                     "any" => TypeInfo::Any,
@@ -881,9 +882,9 @@ mod tests {
 
     #[test]
     fn test_struct_stmt() {
-        let source = r#"struct Person { name: string, age: number, friends: list, book_reviews: map, others: any }"#;
+        let source = r#"struct Person { name: string, age: number, friends: list, book_reviews: map, others: any, status: atom }"#;
         let expected =
-            "(struct Person name:string age:number friends:list book_reviews:map others:any)";
+            "(struct Person name:string age:number friends:list book_reviews:map others:any status:atom)";
         parse!(source, expected);
     }
 
