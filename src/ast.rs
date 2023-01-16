@@ -79,6 +79,10 @@ pub enum Expr {
         params: Vec<Token>,
         body: Vec<Node>,
     },
+    Import {
+        name: Box<Expr>,
+        token: Token,
+    },
     Unknown,
 }
 
@@ -114,10 +118,6 @@ pub enum Stmt {
     },
     Break,
     Continue,
-    Import {
-        name: Expr,
-        token: Token,
-    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -237,6 +237,9 @@ impl Expr {
                     bulk_print!(body, " "),
                 )
             }
+            Expr::Import { name, token: _ } => {
+                format!("(import {})", name.print())
+            }
             Expr::Unknown => String::from("unknown"),
         }
     }
@@ -286,9 +289,6 @@ impl Stmt {
             }
             Stmt::Break => String::from("(break)"),
             Stmt::Continue => String::from("(continue)"),
-            Stmt::Import { name, token: _ } => {
-                format!("(import {})", name.print())
-            }
         }
     }
 }

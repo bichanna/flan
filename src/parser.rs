@@ -234,6 +234,16 @@ impl Parser {
                     body: vec![return_node],
                 })
             }
+        } else if self.does_match(&[TokenType::Import], tokens) {
+            // import
+            let token = self.previous(tokens);
+            expect!(self, TokenType::LParen, "expected '('", tokens);
+            let name = self.expression(tokens)?;
+            expect!(self, TokenType::RParen, "expected ')'", tokens);
+            Ok(Expr::Import {
+                name: Box::new(name),
+                token,
+            })
         } else {
             // println!("{:#?}", &self.current);
             Err("unexpected token")
@@ -434,7 +444,6 @@ impl Parser {
             TokenType::For => self.for_stmt(tokens),
             TokenType::Return => self.return_stmt(tokens),
             TokenType::Break => self.break_stmt(tokens),
-            TokenType::Import => self.import_stmt(tokens),
             TokenType::Continue => self.continue_stmt(tokens),
             _ => self.expr_stmt(tokens),
         }
@@ -468,14 +477,6 @@ impl Parser {
         self.advance(tokens);
         expect!(self, TokenType::SColon, "expected ';'", tokens);
         Ok(Node::STMT(Stmt::Continue))
-    }
-
-    fn import_stmt(&mut self, tokens: &Vec<Token>) -> Result<Node, &'static str> {
-        let token = self.current.clone();
-        self.advance(tokens);
-        let name = self.expression(tokens)?;
-        expect!(self, TokenType::SColon, "expected ';'", tokens);
-        Ok(Node::STMT(Stmt::Import { name, token }))
     }
 
     fn if_stmt(&mut self, tokens: &Vec<Token>) -> Result<Node, &'static str> {
@@ -828,6 +829,13 @@ mod tests {
     fn lazy_stmt() {
         let source = "lazy age = 16;";
         let expected = "(var age (lambda () (return 16)))";
+        parse!(source, expected);
+    }
+
+    #[test]
+    fn import_expr() {
+        let source = r#"let std = import("std");"#;
+        let expected = r#"(var std (import "std"))"#;
         parse!(source, expected);
     }
 }
