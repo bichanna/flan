@@ -53,8 +53,9 @@ pub enum Expr {
         name: Token,
     },
     Assign {
-        name: Token,
-        value: Box<Expr>,
+        init: bool,
+        left: Box<Expr>,
+        right: Box<Expr>,
     },
     Call {
         callee: Box<Expr>,
@@ -104,10 +105,6 @@ pub struct MatchBranch {
 pub enum Stmt {
     Expr {
         expr: Expr,
-    },
-    Variable {
-        name: Token,
-        init: Expr,
     },
     If {
         condition: Expr,
@@ -203,8 +200,13 @@ impl Expr {
             Expr::Variable { name } => {
                 format!("{}", name.print())
             }
-            Expr::Assign { name, value } => {
-                format!("(assign {} {})", name.print(), value.print())
+            Expr::Assign { left, right, init } => {
+                format!(
+                    "(assign{} {} {})",
+                    if *init { "I" } else { "" },
+                    left.print(),
+                    right.print()
+                )
             }
             Expr::Call {
                 callee,
@@ -289,9 +291,6 @@ impl Stmt {
     fn print(&self) -> String {
         match self {
             Stmt::Expr { expr } => String::from(expr.print()),
-            Stmt::Variable { name, init } => {
-                format!("(var {} {})", name.print(), init.print())
-            }
             Stmt::If {
                 condition,
                 then,

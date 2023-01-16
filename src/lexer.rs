@@ -87,7 +87,12 @@ impl<'a> Lexer<'a> {
                         }
                         self.reverse();
                     } else {
-                        self.add_no_value_token(TokenType::Colon);
+                        if self.next_char() == '=' {
+                            self.add_no_value_token(TokenType::ColonEq);
+                            self.advance();
+                        } else {
+                            self.add_no_value_token(TokenType::Colon);
+                        }
                     }
                 }
                 ';' => self.add_no_value_token(TokenType::SColon),
@@ -362,9 +367,6 @@ impl<'a> Lexer<'a> {
     fn keyword(value: &str) -> Option<TokenType> {
         match value.to_lowercase().as_str() {
             "func" => Some(TokenType::Func),
-            "lazy" => Some(TokenType::Lazy),
-            "let" => Some(TokenType::Var),
-            "const" => Some(TokenType::Const),
             "if" => Some(TokenType::If),
             "else" => Some(TokenType::Else),
             "match" => Some(TokenType::Match),

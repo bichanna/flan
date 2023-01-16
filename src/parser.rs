@@ -65,12 +65,28 @@ impl Parser {
 
     fn assignment(&mut self, tokens: &Vec<Token>) -> Result<Expr, &'static str> {
         let expr = self.or_expr(tokens)?;
-        if self.check_current(TokenType::Equal, tokens) {
+        if self.check_current(TokenType::Equal, tokens)
+            || self.check_current(TokenType::ColonEq, tokens)
+        {
+            let init = if self.current.kind == TokenType::ColonEq {
+                true
+            } else {
+                false
+            };
+
             self.advance(tokens);
             let value = Box::new(self.assignment(tokens)?);
 
             match expr {
-                Expr::Variable { name } => return Ok(Expr::Assign { name, value }),
+                Expr::Variable { name: _ }
+                | Expr::ListLiteral { values: _ }
+                | Expr::ObjectLiteral { keys: _, values: _ } => {
+                    return Ok(Expr::Assign {
+                        init,
+                        left: Box::new(expr),
+                        right: value,
+                    })
+                }
                 Expr::Get { instance, token } => {
                     return Ok(Expr::Set {
                         instance,
@@ -93,11 +109,11 @@ impl Parser {
             let op = self.previous(tokens);
             let value = self.assignment(tokens)?;
             match expr {
-                Expr::Variable { ref name } => {
-                    let name = name.clone();
+                Expr::Variable { name: _ } => {
                     return Ok(Expr::Assign {
-                        name,
-                        value: Box::new(Expr::Binary {
+                        init: false,
+                        left: Box::new(expr.clone()),
+                        right: Box::new(Expr::Binary {
                             left: Box::new(expr),
                             right: Box::new(value),
                             op,
@@ -109,16 +125,16 @@ impl Parser {
         } else if self.does_match(&[TokenType::DPlus, TokenType::DMinus], tokens) {
             let mut op = self.previous(tokens);
             match expr {
-                Expr::Variable { ref name } => {
-                    let name = name.clone();
+                Expr::Variable { name: _ } => {
                     op.kind = if op.kind == TokenType::DPlus {
                         TokenType::Plus
                     } else {
                         TokenType::Minus
                     };
                     return Ok(Expr::Assign {
-                        name,
-                        value: Box::new(Expr::Binary {
+                        init: false,
+                        left: Box::new(expr.clone()),
+                        right: Box::new(Expr::Binary {
                             left: Box::new(expr),
                             right: Box::new(Expr::NumberLiteral {
                                 token: op.clone(),
@@ -455,11 +471,7 @@ impl Parser {
     }
 
     fn declaration(&mut self, tokens: &Vec<Token>) -> Result<Node, &'static str> {
-        if self.does_match(&[TokenType::Var], tokens) {
-            self.var_declaration(tokens)
-        } else if self.check_current(TokenType::Func, tokens)
-            && self.check_next(TokenType::Id, tokens)
-        {
+        if self.check_current(TokenType::Func, tokens) && self.check_next(TokenType::Id, tokens) {
             self.advance(tokens);
             self.function(tokens)
         } else {
@@ -475,7 +487,6 @@ impl Parser {
                     nodes: self.parse_block(tokens)?,
                 }))
             }
-            TokenType::Lazy => self.lazy_stmt(tokens),
             TokenType::If => self.if_stmt(tokens),
             TokenType::While => self.while_stmt(tokens),
             TokenType::For => self.for_stmt(tokens),
@@ -490,24 +501,6 @@ impl Parser {
         let node = Node::EXPR(self.expression(tokens)?);
         expect!(self, TokenType::SColon, "expected ';'", tokens);
         Ok(node)
-    }
-
-    fn lazy_stmt(&mut self, tokens: &Vec<Token>) -> Result<Node, &'static str> {
-        self.advance(tokens);
-        let token = self.previous(tokens);
-        self.advance(tokens);
-        let name = self.previous(tokens);
-        expect!(self, TokenType::Equal, "expected '='", tokens);
-        let expr = self.expression(tokens)?;
-        expect!(self, TokenType::SColon, "expected ';'", tokens);
-
-        Ok(Node::STMT(Stmt::Variable {
-            name,
-            init: Expr::Func {
-                params: vec![],
-                body: vec![Node::STMT(Stmt::Return { token, value: expr })],
-            },
-        }))
     }
 
     fn continue_stmt(&mut self, tokens: &Vec<Token>) -> Result<Node, &'static str> {
@@ -590,8 +583,6 @@ impl Parser {
         let mut init: Option<Node> = None;
         if self.does_match(&[TokenType::SColon], tokens) {
             // do nothing
-        } else if self.does_match(&[TokenType::Var], tokens) {
-            init = Some(self.var_declaration(tokens)?);
         } else {
             init = Some(self.expr_stmt(tokens)?);
         }
@@ -683,21 +674,6 @@ impl Parser {
         }
         expect!(self, TokenType::RBrace, "expected '}'", tokens);
         Ok(stmts)
-    }
-
-    fn var_declaration(&mut self, tokens: &Vec<Token>) -> Result<Node, &'static str> {
-        expect!(self, TokenType::Id, "expected an identifier", tokens);
-        let name = self.previous(tokens);
-        let mut init = Expr::Null {
-            token: name.clone(),
-        };
-
-        if self.does_match(&[TokenType::Equal], tokens) {
-            init = self.expression(tokens)?;
-        }
-
-        expect!(self, TokenType::SColon, "expected ';'", tokens);
-        Ok(Node::STMT(Stmt::Variable { name, init }))
     }
 
     /// Checks if the current token is in the given types
@@ -798,9 +774,7 @@ impl Parser {
 
             match tokens[self.c + 1].kind {
                 TokenType::Func
-                | TokenType::Var
-                | TokenType::Lazy
-                | TokenType::Const
+                | TokenType::Id
                 | TokenType::If
                 | TokenType::For
                 | TokenType::While
@@ -822,29 +796,29 @@ mod tests {
 
     #[test]
     fn test_anonymous_func() {
-        let source = r#"let add = func (x, y) x + y;"#;
-        let expected = "(var add (lambda (x y) (return (Plus x y))))";
+        let source = r#"add := func (x, y) x + y;"#;
+        let expected = "(assignI add (lambda (x y) (return (Plus x y))))";
         parse!(source, expected);
     }
 
     #[test]
     fn test_for_stmt() {
-        let source = r#"for (let i = 0; i < 10; i++) { println(i); }"#;
-        let expected = "(block (var i 0) (while ((LT i 10)) (block (block (println i)) (assign i (Plus i 1)))))";
+        let source = r#"for (i := 0; i < 10; i++) { println(i); }"#;
+        let expected = "(block (assignI i 0) (while ((LT i 10)) (block (block (println i)) (assign i (Plus i 1)))))";
         parse!(source, expected);
     }
 
     #[test]
     fn test_atom_expr() {
-        let source = "let name = :nobu;";
-        let expected = "(var name :nobu)";
+        let source = "name := :nobu;";
+        let expected = "(assignI name :nobu)";
         parse!(source, expected);
     }
 
     #[test]
     fn test_underscore_expr() {
-        let source = "let underscore = _;";
-        let expected = "(var underscore :_:)";
+        let source = "underscore := _;";
+        let expected = "(assignI underscore :_:)";
         parse!(source, expected);
     }
 
@@ -863,16 +837,9 @@ mod tests {
     }
 
     #[test]
-    fn lazy_stmt() {
-        let source = "lazy age = 16;";
-        let expected = "(var age (lambda () (return 16)))";
-        parse!(source, expected);
-    }
-
-    #[test]
     fn import_expr() {
-        let source = r#"let std = import("std");"#;
-        let expected = r#"(var std (import "std"))"#;
+        let source = r#"std := import("std");"#;
+        let expected = r#"(assignI std (import "std"))"#;
         parse!(source, expected);
     }
 
@@ -881,6 +848,13 @@ mod tests {
         let source = r#"match (name) { "nobu" -> println("cool!"), _ -> { println("hello"); } };"#;
         let expected =
             r#"(match name "nobu" -> (println "cool!") :_: -> (block (println "hello")))"#;
+        parse!(source, expected);
+    }
+
+    #[test]
+    fn assign_expr() {
+        let source = r#"[name, _] := ["Nobu", 16];"#;
+        let expected = r#"(assignI (list name :_:) (list "Nobu" 16))"#;
         parse!(source, expected);
     }
 }

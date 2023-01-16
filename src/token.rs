@@ -15,6 +15,7 @@ pub enum TokenType {
     RBracket,   // ]
     Colon,      // :
     SColon,     // ;
+    ColonEq,    // :=
     Plus,       // +
     DPlus,      // ++
     PlusEq,     // +=
@@ -46,9 +47,6 @@ pub enum TokenType {
     DPipe,      // ||
 
     Func,     // func
-    Lazy,     // lazy
-    Var,      // let
-    Const,    // const
     If,       // if
     Else,     // else
     Match,    // match
