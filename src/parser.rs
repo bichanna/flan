@@ -1,6 +1,6 @@
 use std::process;
 
-use crate::ast::{Expr, Node, Stmt};
+use crate::ast::{Expr, MatchBranch, Node, Stmt};
 use crate::error::ParserError;
 use crate::token::{Token, TokenType};
 
@@ -243,6 +243,43 @@ impl Parser {
             Ok(Expr::Import {
                 name: Box::new(name),
                 token,
+            })
+        } else if self.does_match(&[TokenType::Match], tokens) {
+            // match expression
+            let token = self.previous(tokens);
+            expect!(self, TokenType::LParen, "expected '('", tokens);
+            let condition = self.expression(tokens)?;
+            expect!(self, TokenType::RParen, "expected ')'", tokens);
+            expect!(self, TokenType::LBrace, "expected '{'", tokens);
+
+            let mut branches: Vec<MatchBranch> = vec![];
+            while !self.check_current(TokenType::RBrace, tokens) {
+                let expr = self.expression(tokens)?;
+                expect!(self, TokenType::MinusGT, "expected '->'", tokens);
+
+                let body = if self.does_match(&[TokenType::LBrace], tokens) {
+                    Node::STMT(Stmt::Block {
+                        statements: self.parse_block(tokens)?,
+                    })
+                } else {
+                    Node::EXPR(self.expression(tokens)?)
+                };
+
+                branches.push(MatchBranch {
+                    target: Box::new(expr),
+                    body,
+                });
+
+                if !self.does_match(&[TokenType::Comma], tokens) {
+                    break;
+                }
+            }
+            expect!(self, TokenType::RBrace, "expected '}'", tokens);
+
+            Ok(Expr::Match {
+                token,
+                condition: Box::new(condition),
+                branches,
             })
         } else {
             // println!("{:#?}", &self.current);
@@ -836,6 +873,14 @@ mod tests {
     fn import_expr() {
         let source = r#"let std = import("std");"#;
         let expected = r#"(var std (import "std"))"#;
+        parse!(source, expected);
+    }
+
+    #[test]
+    fn match_expr() {
+        let source = r#"match (name) { "nobu" -> println("cool!"), _ -> { println("hello"); } };"#;
+        let expected =
+            r#"(match name "nobu" -> (println "cool!") :_: -> (block (println "hello")))"#;
         parse!(source, expected);
     }
 }

@@ -83,7 +83,18 @@ pub enum Expr {
         name: Box<Expr>,
         token: Token,
     },
+    Match {
+        token: Token,
+        condition: Box<Expr>,
+        branches: Vec<MatchBranch>,
+    },
     Unknown,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct MatchBranch {
+    pub target: Box<Expr>,
+    pub body: Node,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -239,6 +250,25 @@ impl Expr {
             }
             Expr::Import { name, token: _ } => {
                 format!("(import {})", name.print())
+            }
+            Expr::Match {
+                token: _,
+                condition,
+                branches,
+            } => {
+                let mut builder = format!("(match {}", condition.print());
+                if branches.len() > 0 {
+                    builder += " ";
+                    builder += &branches
+                        .into_iter()
+                        .map(|x| format!("{} -> {}", x.target.print(), x.body.print()))
+                        .collect::<Vec<String>>()
+                        .join(" ");
+                    builder += ")";
+                } else {
+                    builder += ")";
+                }
+                builder
             }
             Expr::Unknown => String::from("unknown"),
         }
