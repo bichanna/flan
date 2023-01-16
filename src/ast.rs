@@ -88,6 +88,9 @@ pub enum Expr {
         condition: Box<Expr>,
         branches: Vec<MatchBranch>,
     },
+    Block {
+        nodes: Vec<Node>,
+    },
     Unknown,
 }
 
@@ -110,9 +113,6 @@ pub enum Stmt {
         condition: Expr,
         then: Box<Node>,
         els: Option<Box<Node>>,
-    },
-    Block {
-        statements: Vec<Node>,
     },
     While {
         condition: Expr,
@@ -270,6 +270,16 @@ impl Expr {
                 }
                 builder
             }
+            Expr::Block { nodes } => {
+                format!("(block{})", {
+                    let stmts = bulk_print!(nodes, " ");
+                    if stmts == "" {
+                        String::new()
+                    } else {
+                        String::from(" ") + &stmts
+                    }
+                })
+            }
             Expr::Unknown => String::from("unknown"),
         }
     }
@@ -293,16 +303,6 @@ impl Stmt {
                 }
                 builder += ")";
                 builder
-            }
-            Stmt::Block { statements } => {
-                format!("(block{})", {
-                    let stmts = bulk_print!(statements, " ");
-                    if stmts == "" {
-                        String::new()
-                    } else {
-                        String::from(" ") + &stmts
-                    }
-                })
             }
             Stmt::While {
                 condition,

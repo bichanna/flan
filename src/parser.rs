@@ -258,8 +258,8 @@ impl Parser {
                 expect!(self, TokenType::MinusGT, "expected '->'", tokens);
 
                 let body = if self.does_match(&[TokenType::LBrace], tokens) {
-                    Node::STMT(Stmt::Block {
-                        statements: self.parse_block(tokens)?,
+                    Node::EXPR(Expr::Block {
+                        nodes: self.parse_block(tokens)?,
                     })
                 } else {
                     Node::EXPR(self.expression(tokens)?)
@@ -471,8 +471,8 @@ impl Parser {
         match self.current.kind {
             TokenType::LBrace => {
                 self.advance(tokens);
-                Ok(Node::STMT(Stmt::Block {
-                    statements: self.parse_block(tokens)?,
+                Ok(Node::EXPR(Expr::Block {
+                    nodes: self.parse_block(tokens)?,
                 }))
             }
             TokenType::Lazy => self.lazy_stmt(tokens),
@@ -611,8 +611,8 @@ impl Parser {
         let mut body = self.statement(tokens)?;
 
         if let Some(increment) = increment {
-            body = Node::STMT(Stmt::Block {
-                statements: vec![body, Node::EXPR(increment)],
+            body = Node::EXPR(Expr::Block {
+                nodes: vec![body, Node::EXPR(increment)],
             })
         }
 
@@ -633,8 +633,8 @@ impl Parser {
         });
 
         if let Some(init) = init {
-            body = Node::STMT(Stmt::Block {
-                statements: vec![init, body],
+            body = Node::EXPR(Expr::Block {
+                nodes: vec![init, body],
             });
         }
 
