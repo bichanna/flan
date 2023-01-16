@@ -115,6 +115,10 @@ impl<'a> Lexer<'a> {
                         self.add_no_value_token(TokenType::MinusEq);
                         self.advance();
                     }
+                    '>' => {
+                        self.add_no_value_token(TokenType::MinusGT);
+                        self.advance();
+                    }
                     _ => self.add_no_value_token(TokenType::Minus),
                 },
                 '*' => match self.next_char() {
@@ -363,6 +367,7 @@ impl<'a> Lexer<'a> {
             "const" => Some(TokenType::Const),
             "if" => Some(TokenType::If),
             "else" => Some(TokenType::Else),
+            "match" => Some(TokenType::Match),
             "and" => Some(TokenType::And),
             "or" => Some(TokenType::Or),
             "for" => Some(TokenType::For),

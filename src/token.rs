@@ -19,6 +19,7 @@ pub enum TokenType {
     DPlus,      // ++
     PlusEq,     // +=
     Minus,      // -
+    MinusGT,    // ->
     DMinus,     // --
     MinusEq,    // -=
     Mul,        // *
@@ -50,6 +51,7 @@ pub enum TokenType {
     Const,    // const
     If,       // if
     Else,     // else
+    Match,    // match
     And,      // and
     Or,       // or
     For,      // for
