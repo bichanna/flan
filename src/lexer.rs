@@ -226,7 +226,7 @@ impl<'a> Lexer<'a> {
                         }
 
                         // include ! if there's any
-                        if self.current == '!' {
+                        if self.current == '!' || self.current == '?' || self.current == '*' {
                             var.push(self.current);
                             self.advance();
                         }
