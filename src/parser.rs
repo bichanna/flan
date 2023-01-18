@@ -293,9 +293,7 @@ impl Parser {
         } else if self.does_match(&[TokenType::Match], tokens) {
             // match expression
             let token = self.previous(tokens);
-            expect!(self, TokenType::LParen, "expected '('", tokens);
             let condition = self.expression(tokens)?;
-            expect!(self, TokenType::RParen, "expected ')'", tokens);
             expect!(self, TokenType::LBrace, "expected '{'", tokens);
 
             let mut branches: Vec<MatchBranch> = vec![];
@@ -647,7 +645,7 @@ mod tests {
 
     #[test]
     fn match_expr() {
-        let source = r#"match (name) { "nobu" -> println("cool!"), _ -> { println("hello") } }"#;
+        let source = r#"match name { "nobu" -> println("cool!"), _ -> { println("hello") } }"#;
         let expected =
             r#"(match name "nobu" -> (println "cool!") :_: -> (block (println "hello")))"#;
         parse!(source, expected);
