@@ -5,15 +5,15 @@ Sorry for the shitty code :) This is my first serious Rust project.
 
 The language will look like this:
 ```
-{printfln: println} := import("fmt");
-{each} := import("std");
+{printfln: println} := import("fmt")
+{each} := import("std")
 
-names := ["Nobu", "Sol", "Thomas", "Damian", "Ryan", "Zen", "Esfir"];
-each(names) <| func(name) println("Hello, %{}!", name);
+names := ["Nobu", "Sol", "Thomas", "Damian", "Ryan", "Zen", "Esfir"]
+each(names) <| func(name) println("Hello, %{}!", name)
 
 
 // fizzbuzz
-std := import("std");
+std := import("std")
 
 func fizzbuzz(n) match ([n % 3, n % 5]) {
     [0, 0] -> "FizzBuzz",
@@ -23,6 +23,6 @@ func fizzbuzz(n) match ([n % 3, n % 5]) {
 };
 
 std.range(1, 101) |> std.each() <| func(n) {
-    std.println(fizzbuzz(n));
-};
+    std.println(fizzbuzz(n))
+}
 ```
