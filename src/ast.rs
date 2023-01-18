@@ -77,8 +77,9 @@ pub enum Expr {
         index: Box<Expr>,
     },
     Func {
+        name: Option<Token>,
         params: Vec<Token>,
-        body: Vec<Node>,
+        body: Box<Expr>,
     },
     Import {
         name: Box<Expr>,
@@ -90,7 +91,7 @@ pub enum Expr {
         branches: Vec<MatchBranch>,
     },
     Block {
-        nodes: Vec<Node>,
+        exprs: Vec<Box<Expr>>,
     },
     Unknown,
 }
@@ -98,57 +99,19 @@ pub enum Expr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct MatchBranch {
     pub target: Box<Expr>,
-    pub body: Node,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Stmt {
-    Expr {
-        expr: Expr,
-    },
-    If {
-        condition: Expr,
-        then: Box<Node>,
-        els: Option<Box<Node>>,
-    },
-    While {
-        condition: Expr,
-        body: Box<Node>,
-        token: Token,
-    },
-    Func {
-        token: Token,
-        func: Expr,
-    },
-    Return {
-        token: Token,
-        value: Expr,
-    },
-    Break,
-    Continue,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Node {
-    EXPR(Expr),
-    STMT(Stmt),
-}
-
-impl Node {
-    pub fn pretty_print(nodes: &Vec<Node>) -> String {
-        bulk_print!(nodes, "\n")
-    }
-
-    fn print(&self) -> String {
-        match self {
-            Node::EXPR(expr) => expr.print(),
-            Node::STMT(stmt) => stmt.print(),
-        }
-    }
+    pub body: Box<Expr>,
 }
 
 impl Expr {
-    pub fn print(&self) -> String {
+    pub fn pretty_print(exprs: &Vec<Expr>) -> String {
+        exprs
+            .into_iter()
+            .map(|expr| expr.print())
+            .collect::<Vec<String>>()
+            .join("\n")
+    }
+
+    fn print(&self) -> String {
         match self {
             Expr::Binary { left, right, op } => {
                 format!("({} {} {})", op.print(), left.print(), right.print())
@@ -243,12 +206,17 @@ impl Expr {
             } => {
                 format!("(.access {} {})", expr.print(), index.print())
             }
-            Expr::Func { params, body } => {
-                format!(
-                    "(lambda ({}) {})",
-                    bulk_print!(params, " "),
-                    bulk_print!(body, " "),
-                )
+            Expr::Func { name, params, body } => {
+                if let Some(name) = name {
+                    format!(
+                        "(func {} ({}) {})",
+                        name.print(),
+                        bulk_print!(params, " "),
+                        body.print()
+                    )
+                } else {
+                    format!("(lambda ({}) {})", bulk_print!(params, " "), body.print(),)
+                }
             }
             Expr::Import { name, token: _ } => {
                 format!("(import {})", name.print())
@@ -272,52 +240,17 @@ impl Expr {
                 }
                 builder
             }
-            Expr::Block { nodes } => {
+            Expr::Block { exprs } => {
                 format!("(block{})", {
-                    let stmts = bulk_print!(nodes, " ");
-                    if stmts == "" {
+                    let expr = bulk_print!(exprs, " ");
+                    if expr == "" {
                         String::new()
                     } else {
-                        String::from(" ") + &stmts
+                        String::from(" ") + &expr
                     }
                 })
             }
             Expr::Unknown => String::from("unknown"),
-        }
-    }
-}
-
-impl Stmt {
-    fn print(&self) -> String {
-        match self {
-            Stmt::Expr { expr } => String::from(expr.print()),
-            Stmt::If {
-                condition,
-                then,
-                els,
-            } => {
-                let mut builder = format!("(if ({}) {}", condition.print(), then.print());
-                if let Some(els) = els {
-                    builder += els.print().as_str();
-                }
-                builder += ")";
-                builder
-            }
-            Stmt::While {
-                condition,
-                body,
-                token: _,
-            } => {
-                format!("(while ({}) {})", condition.print(), body.print())
-            }
-            Stmt::Func { token, func } => {
-                format!("(func {} {})", token.print(), func.print())
-            }
-            Stmt::Return { token: _, value } => {
-                format!("(return {})", value.print())
-            }
-            Stmt::Break => String::from("(break)"),
-            Stmt::Continue => String::from("(continue)"),
         }
     }
 }

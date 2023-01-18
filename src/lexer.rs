@@ -367,16 +367,10 @@ impl<'a> Lexer<'a> {
     fn keyword(value: &str) -> Option<TokenType> {
         match value.to_lowercase().as_str() {
             "func" => Some(TokenType::Func),
-            "if" => Some(TokenType::If),
             "else" => Some(TokenType::Else),
             "match" => Some(TokenType::Match),
-            "and" => Some(TokenType::And),
             "or" => Some(TokenType::Or),
-            "for" => Some(TokenType::For),
-            "while" => Some(TokenType::While),
-            "return" => Some(TokenType::Return),
-            "continue" => Some(TokenType::Continue),
-            "break" => Some(TokenType::Break),
+            "and" => Some(TokenType::And),
             "true" => Some(TokenType::True),
             "false" => Some(TokenType::False),
             "null" => Some(TokenType::Null),
@@ -453,9 +447,9 @@ mod tests {
     #[test]
     fn test_lexer() {
         let source = r#"
-let name! = "Nobuharu Shimazu";
-let _age = 16;
-println(name!, _age);
+name! := "Nobuharu Shimazu"
+_age := 16
+println(name!, _age)
 // Some comment
 /* comment!! /* block */ */
 "#;
@@ -464,7 +458,7 @@ println(name!, _age);
         lexer.tokenize();
 
         assert_eq!(lexer.errors.len(), 0);
-        assert_eq!(lexer.tokens.len(), 18);
+        assert_eq!(lexer.tokens.len(), 13);
     }
 
     #[test]

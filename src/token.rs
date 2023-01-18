@@ -46,21 +46,15 @@ pub enum TokenType {
     DAmp,       // &&
     DPipe,      // ||
 
-    Func,     // func
-    If,       // if
-    Else,     // else
-    Match,    // match
-    And,      // and
-    Or,       // or
-    For,      // for
-    While,    // while
-    Return,   // return
-    Continue, // continue
-    Break,    // break
-    True,     // true
-    False,    // false
-    Null,     // null
-    Import,   // import
+    Func,   // func
+    Else,   // else
+    Match,  // match
+    Or,     // or
+    And,    // and
+    True,   // true
+    False,  // false
+    Null,   // null
+    Import, // import
 
     EOF,
 }

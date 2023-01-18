@@ -22,7 +22,7 @@ macro_rules! parse {
         parser.parse(&lexer.tokens);
         parser.report_errors("<input>", &source);
 
-        let result = Node::pretty_print(&parser.statements);
+        let result = Expr::pretty_print(&parser.exprs);
         assert_eq!(result, $expected);
     };
 }
