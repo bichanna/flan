@@ -6,7 +6,7 @@ Sorry for the shitty code :) This is my first serious Rust project.
 The language will look like this:
 ```
 {printfln: println} := import("fmt")
-{each} := import("std")
+{each: each} := import("std")
 
 names := ["Nobu", "Sol", "Thomas", "Damian", "Ryan", "Zen", "Esfir"]
 each(names) <| func(name) println("Hello, %{}!", name)
@@ -23,6 +23,6 @@ func fizzbuzz(n) match ([n % 3, n % 5]) {
 };
 
 std.range(1, 101) |> std.each() <| func(n) {
-    std.println(fizzbuzz(n))
+    println(fizzbuzz(n))
 }
 ```
