@@ -9,7 +9,7 @@ The language will look like this:
 {each: each} := import("std")
 
 names := ["Nobu", "Sol", "Thomas", "Damian", "Ryan", "Zen", "Esfir"]
-each(names) <| func(name) println("Hello, %{}!", name)
+each(names) <| func(name) println("Hello, %s!", name)
 
 
 // fizzbuzz
@@ -20,7 +20,7 @@ func fizzbuzz(n) match ([n % 3, n % 5]) {
     [0, _] -> "Fizz",
     [_, 0] -> "Buzz",
     _ -> string(n),
-};
+}
 
 std.range(1, 101) |> std.each() <| func(n) {
     println(fizzbuzz(n))

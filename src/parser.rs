@@ -94,7 +94,9 @@ impl Parser {
                         value,
                     })
                 }
-                _ => return Err("invalid assignment target"),
+                _ => {
+                    return Err("invalid assignment target");
+                }
             }
         } else if self.does_match(
             &[
@@ -266,7 +268,8 @@ impl Parser {
         } else if self.does_match(&[TokenType::Func], tokens) {
             // function
             let name: Option<Token> = if self.check_current(TokenType::Id, tokens) {
-                Some(self.current.clone())
+                self.advance(tokens);
+                Some(self.previous(tokens))
             } else {
                 None
             };
