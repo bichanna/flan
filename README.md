@@ -1,9 +1,9 @@
 # Feo
-The Feo Programming Language
+**WIP: This project is still in early development.**
 
-Sorry for the shitty code :) This is my first serious Rust project.
+Feo is a dynamically- and strongly-typed, minimal, mildly-functional programming language that compiles to bytecode for the [Feo VM](https://github.com/bichanna/fvm)
 
-The language will look like this:
+The language looks like this:
 ```
 {printfln: println} := import("fmt")
 {each: each} := import("std")
