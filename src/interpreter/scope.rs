@@ -30,7 +30,7 @@ impl<'a> Scope<'a> {
             self.vars.insert(name, v);
             None
         } else {
-            if let Some(parent) = &self.parent {
+            if let Some(parent) = &mut self.parent {
                 parent.update(name, v)
             } else {
                 Some(format!("{} is undefined", name))
