@@ -1,6 +1,7 @@
 use super::value::Value;
 use std::collections::HashMap;
 
+#[derive(Debug, Clone)]
 pub struct Scope<'a> {
     pub parent: Option<Box<Scope<'a>>>,
     pub vars: HashMap<&'a str, Value>,
