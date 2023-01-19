@@ -87,7 +87,11 @@ impl Parser {
                         right: value,
                     })
                 }
-                Expr::Get { instance, token } => {
+                Expr::Get {
+                    instance,
+                    value,
+                    token,
+                } => {
                     return Ok(Expr::Set {
                         instance,
                         token,
@@ -280,16 +284,6 @@ impl Parser {
                 params,
                 body: Box::new(body),
             })
-        } else if self.does_match(&[TokenType::Import], tokens) {
-            // import
-            let token = self.previous(tokens);
-            expect!(self, TokenType::LParen, "expected '('", tokens);
-            let name = self.expression(tokens)?;
-            expect!(self, TokenType::RParen, "expected ')'", tokens);
-            Ok(Expr::Import {
-                name: Box::new(name),
-                token,
-            })
         } else if self.does_match(&[TokenType::Match], tokens) {
             // match expression
             let token = self.previous(tokens);
@@ -365,26 +359,57 @@ impl Parser {
         let mut expr = self.primary(tokens)?;
         loop {
             if self.does_match(&[TokenType::LParen], tokens) {
+                // function call
                 expr = self.finish_call(expr, arg.clone(), tokens)?;
             } else if self.does_match(&[TokenType::Dot], tokens) {
-                expect!(self, TokenType::Id, "expected an identifier", tokens);
-                let name = self.previous(tokens);
+                // object access
+                let token = self.previous(tokens);
+                let value = self.expression(tokens)?;
                 expr = Expr::Get {
                     instance: Box::new(expr),
-                    token: name,
+                    value: Box::new(value),
+                    token,
                 }
             } else if self.does_match(&[TokenType::RPipe], tokens) {
+                // pipe
                 expr = self.call(tokens, &Some(expr))?;
                 break;
             } else if self.does_match(&[TokenType::LBracket], tokens) {
+                // index
                 let token = self.previous(tokens);
                 let key = self.expression(tokens)?;
                 expect!(self, TokenType::RBracket, "expected ']'", tokens);
-                expr = Expr::Access {
+                expr = Expr::Get {
                     token,
-                    expr: Box::new(expr),
-                    index: Box::new(key),
+                    instance: Box::new(expr),
+                    value: Box::new(key),
                 }
+            } else if self.does_match(&[TokenType::Question], tokens) {
+                // short-hand match
+                let token = self.previous(tokens);
+                let true_value = self.expression(tokens)?;
+                expect!(self, TokenType::Colon, "expected ':'", tokens);
+                let false_value = self.expression(tokens)?;
+
+                let true_branch = MatchBranch {
+                    target: Box::new(Expr::BoolLiteral {
+                        token: token.clone(),
+                        payload: true,
+                    }),
+                    body: Box::new(true_value),
+                };
+                let false_branch = MatchBranch {
+                    target: Box::new(Expr::Underscore {
+                        token: token.clone(),
+                    }),
+                    body: Box::new(false_value),
+                };
+
+                expr = Expr::Match {
+                    token,
+                    condition: Box::new(expr),
+                    branches: vec![true_branch, false_branch],
+                };
             } else {
                 break;
             }
@@ -593,7 +618,7 @@ impl Parser {
             }
 
             match tokens[self.c + 1].kind {
-                TokenType::Func | TokenType::Id | TokenType::Import => return,
+                TokenType::Func | TokenType::Id => return,
                 _ => {}
             }
             self.advance(tokens);
@@ -607,6 +632,39 @@ mod tests {
     use super::*;
     use crate::lexer::Lexer;
     use crate::parse;
+
+    #[test]
+    fn test_parser() {
+        let source = r#"{printfln: println} := import("fmt")
+{each: each} := import("std")
+
+names := ["Nobu", "Sol", "Thomas", "Damian", "Ryan", "Zen", "Esfir"]
+each(names) <| func(name) println("Hello, %{}!", name)
+
+
+// fizzbuzz
+std := import("std")
+
+func fizzbuzz(n) match ([n % 3, n % 5]) {
+    [0, 0] -> "FizzBuzz",
+    [0, _] -> "Fizz",
+    [_, 0] -> "Buzz",
+    _ -> string(n),
+}
+
+std.range(1, 101) |> std.each() <| func(n) {
+    std.println(fizzbuzz(n))
+}"#;
+        let expected = r#"(assignI (object printfln:println) (import "fmt"))
+(assignI (object each:each) (import "std"))
+(assignI names (list "Nobu" "Sol" "Thomas" "Damian" "Ryan" "Zen" "Esfir"))
+(each names (lambda (name) (println "Hello, %{}!" name)))
+(assignI std (import "std"))
+(func fizzbuzz (n) (match ((list (Mod n 3) (Mod n 5))) (list 0 0) -> "FizzBuzz" (list 0 :_:) -> "Fizz" (list :_: 0) -> "Buzz" :_: -> (string n)))
+std.std.(each (lambda (n) (block std.(println (fizzbuzz n)))))"#;
+
+        parse!(source, expected);
+    }
 
     #[test]
     fn test_anonymous_func() {
@@ -637,13 +695,6 @@ mod tests {
     }
 
     #[test]
-    fn import_expr() {
-        let source = r#"std := import("std")"#;
-        let expected = r#"(assignI std (import "std"))"#;
-        parse!(source, expected);
-    }
-
-    #[test]
     fn match_expr() {
         let source = r#"match name { "nobu" -> println("cool!"), _ -> { println("hello") } }"#;
         let expected =
@@ -655,6 +706,13 @@ mod tests {
     fn assign_expr() {
         let source = r#"[name, _] := ["Nobu", 16]"#;
         let expected = r#"(assignI (list name :_:) (list "Nobu" 16))"#;
+        parse!(source, expected);
+    }
+
+    #[test]
+    fn short_hand_match_expr() {
+        let source = r#"name := cool? ? "nobu" : "sol""#;
+        let expected = r#"(assignI name (match cool? true -> "nobu" :_: -> "sol"))"#;
         parse!(source, expected);
     }
 }

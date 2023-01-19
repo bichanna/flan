@@ -57,6 +57,7 @@ impl<'a> Lexer<'a> {
                 '}' => self.add_no_value_token(TokenType::RBrace),
                 '[' => self.add_no_value_token(TokenType::LBracket),
                 ']' => self.add_no_value_token(TokenType::RBracket),
+                '?' => self.add_no_value_token(TokenType::Question),
                 ':' => {
                     if self.next_char().is_alphabetic() || self.next_char() == '_' {
                         self.advance();
@@ -374,7 +375,6 @@ impl<'a> Lexer<'a> {
             "true" => Some(TokenType::True),
             "false" => Some(TokenType::False),
             "null" => Some(TokenType::Null),
-            "import" => Some(TokenType::Import),
             _ => None,
         }
     }

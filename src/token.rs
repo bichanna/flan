@@ -43,18 +43,18 @@ pub enum TokenType {
     DEq,        // ==
     Equal,      // =
     Dot,        // .
+    Question,   // ?
     DAmp,       // &&
     DPipe,      // ||
 
-    Func,   // func
-    Else,   // else
-    Match,  // match
-    Or,     // or
-    And,    // and
-    True,   // true
-    False,  // false
-    Null,   // null
-    Import, // import
+    Func,  // func
+    Else,  // else
+    Match, // match
+    Or,    // or
+    And,   // and
+    True,  // true
+    False, // false
+    Null,  // null
 
     EOF,
 }

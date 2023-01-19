@@ -64,6 +64,7 @@ pub enum Expr {
     },
     Get {
         instance: Box<Expr>,
+        value: Box<Expr>,
         token: Token,
     },
     Set {
@@ -71,19 +72,10 @@ pub enum Expr {
         token: Token,
         value: Box<Expr>,
     },
-    Access {
-        token: Token,
-        expr: Box<Expr>,
-        index: Box<Expr>,
-    },
     Func {
         name: Option<Token>,
         params: Vec<Token>,
         body: Box<Expr>,
-    },
-    Import {
-        name: Box<Expr>,
-        token: Token,
     },
     Match {
         token: Token,
@@ -184,8 +176,12 @@ impl Expr {
                 }
                 builder
             }
-            Expr::Get { instance, token } => {
-                format!("{}.{}", instance.print(), token.print())
+            Expr::Get {
+                instance,
+                value,
+                token: _,
+            } => {
+                format!("{}.{}", instance.print(), value.print())
             }
             Expr::Set {
                 instance,
@@ -199,13 +195,6 @@ impl Expr {
                     value.print()
                 )
             }
-            Expr::Access {
-                token: _,
-                expr,
-                index,
-            } => {
-                format!("(.access {} {})", expr.print(), index.print())
-            }
             Expr::Func { name, params, body } => {
                 if let Some(name) = name {
                     format!(
@@ -217,9 +206,6 @@ impl Expr {
                 } else {
                     format!("(lambda ({}) {})", bulk_print!(params, " "), body.print(),)
                 }
-            }
-            Expr::Import { name, token: _ } => {
-                format!("(import {})", name.print())
             }
             Expr::Match {
                 token: _,
