@@ -1,12 +1,13 @@
 #[derive(Debug, Clone, PartialEq)]
-enum Value {
+pub enum Value {
     Empty,
     Null,
     Str(String),
     Num(f64),
+    Bool(bool),
     Atom(String),
     List(Vec<Box<Value>>),
-    Map((Vec<Box<Value>>, Vec<Box<Value>>)),
+    Object((Vec<String>, Vec<Box<Value>>)),
 }
 
 impl Value {
@@ -29,6 +30,7 @@ impl Value {
                     v.clone()
                 }
             }
+            Value::Bool(v) => format!("{}", v),
             Value::Num(v) => format!("{}", v),
             Value::Atom(v) => String::from(":") + &v,
             Value::List(l) => format!(
@@ -38,12 +40,12 @@ impl Value {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Value::Map(m) => format!(
+            Value::Object(m) => format!(
                 "{}",
                 m.0.to_owned()
                     .into_iter()
                     .zip(m.1.to_owned().into_iter())
-                    .map(|(k, v)| format!("{}: {}", k.string(true), v.string(true)))
+                    .map(|(k, v)| format!("{}: {}", k, v.string(true)))
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
