@@ -15,7 +15,7 @@ each(names) <| func(name) println("Hello, %s!", name)
 // fizzbuzz
 std := import("std")
 
-func fizzbuzz(n) match ([n % 3, n % 5]) {
+func fizzbuzz(n) match [n % 3, n % 5] {
     [0, 0] -> "FizzBuzz",
     [0, _] -> "Fizz",
     [_, 0] -> "Buzz",
