@@ -4,7 +4,7 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Scope<'a> {
     pub parent: Option<Box<Scope<'a>>>,
-    pub vars: HashMap<&'a str, Value>,
+    pub vars: HashMap<&'a str, Value<'a>>,
 }
 
 impl<'a> Scope<'a> {
@@ -18,14 +18,14 @@ impl<'a> Scope<'a> {
         }
     }
 
-    pub fn put(&mut self, name: &'a str, v: Value) {
+    pub fn put(&mut self, name: &'a str, v: Value<'a>) {
         if self.vars.contains_key(name) {
             self.vars.remove(name);
         }
         self.vars.insert(name, v);
     }
 
-    pub fn update(&mut self, name: &'a str, v: Value) -> Option<String> {
+    pub fn update(&mut self, name: &'a str, v: Value<'a>) -> Option<String> {
         if self.vars.contains_key(name) {
             self.vars.remove(name);
             self.vars.insert(name, v);

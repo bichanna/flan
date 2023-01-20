@@ -103,7 +103,7 @@ impl Expr {
             .join("\n")
     }
 
-    fn print(&self) -> String {
+    pub fn print(&self) -> String {
         match self {
             Expr::Binary { left, right, op } => {
                 format!("({} {} {})", op.print(), left.print(), right.print())
