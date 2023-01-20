@@ -2,6 +2,7 @@ use super::engine::Engine;
 use super::scope::Scope;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::env::current_dir;
 use std::rc::Rc;
 
 pub struct Context<'a> {
@@ -24,6 +25,11 @@ impl<'a> Context<'a> {
                 vars: HashMap::new(),
             },
         }
+    }
+
+    pub fn new_cwd() -> Self {
+        let root_path = current_dir();
+        Self::new(root_path)
     }
 
     pub fn child_context(&mut self, root_path: &'a str) -> Self {
