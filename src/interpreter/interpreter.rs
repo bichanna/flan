@@ -1,10 +1,12 @@
 use super::engine::Engine;
 use super::scope::Scope;
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 pub struct Context<'a> {
     // shared interpreter state
-    pub engine: &'a mut Engine<'a>,
+    pub engine: Rc<RefCell<Engine<'a>>>,
     // directory containing the root file of this context, used for loading other modules with
     // relative paths
     pub root_path: &'a str,
@@ -13,10 +15,10 @@ pub struct Context<'a> {
 }
 
 impl<'a> Context<'a> {
-    pub fn new(root_path: &'a str, engine: &'a mut Engine<'a>) -> Self {
+    pub fn new(root_path: &'a str) -> Self {
         Self {
             root_path,
-            engine,
+            engine: Rc::new(RefCell::new(Engine::new())),
             scope: Scope {
                 parent: None,
                 vars: HashMap::new(),
@@ -24,9 +26,9 @@ impl<'a> Context<'a> {
         }
     }
 
-    pub fn child_context(&mut self, root_path: &'a str, engine: &'a mut Engine<'a>) -> Self {
+    pub fn child_context(&mut self, root_path: &'a str) -> Self {
         Self {
-            engine,
+            engine: self.engine.to_owned(),
             root_path,
             scope: Scope {
                 parent: None,
@@ -42,3 +44,6 @@ impl<'a> Context<'a> {
         }
     }
 }
+
+// Actual interpreter implementation
+impl<'a> Context<'a> {}
