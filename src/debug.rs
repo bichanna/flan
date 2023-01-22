@@ -13,16 +13,22 @@ macro_rules! bulk_print {
 macro_rules! parse {
     ($source:expr, $expected:expr) => {
         let source = String::from($source);
+        // for tokenizing
+        let (ts, tr) = crossbeam_channel::unbounded();
+        // for parsing
+        let (ps, pr) = crossbeam_channel::bounded::<Vec<Expr>>(1);
 
-        let mut lexer = Lexer::new(&source);
-        lexer.tokenize();
-        lexer.report_errors("<input>");
+        std::thread::scope(|s| {
+            s.spawn(|| {
+                Lexer::new(&source, "input", &ts);
+            });
 
-        let mut parser = Parser::new(&lexer.tokens);
-        parser.parse(&lexer.tokens);
-        parser.report_errors("<input>", &source);
+            s.spawn(|| {
+                Parser::new(&source, "input", &tr, &ps);
+            });
+        });
 
-        let result = Expr::pretty_print(&parser.exprs);
+        let result = Expr::pretty_print(&pr.recv().unwrap());
         assert_eq!(result, $expected);
     };
 }
