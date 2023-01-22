@@ -1,6 +1,6 @@
 use std::process;
 
-use crossbeam_channel::Receiver;
+use crossbeam_channel::{Receiver, Sender};
 
 use crate::ast::{Expr, MatchBranch};
 use crate::error::ParserError;
@@ -25,19 +25,27 @@ macro_rules! expect {
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(recv: &'a Receiver<Token>) -> Self {
-        let current = recv.recv().unwrap();
-        Parser {
+    pub fn new(
+        source: &'a String,
+        filename: &'a str,
+        token_recv: &'a Receiver<Token>,
+        output_sender: &'a Sender<Vec<Expr>>,
+    ) {
+        let current = token_recv.recv().unwrap();
+        let mut parser = Parser {
             current: current.clone(),
             previous: current.clone(),
-            recv,
+            recv: token_recv,
             errors: vec![],
             exprs: vec![],
-        }
+        };
+        parser.parse();
+        parser.report_errors(filename, source);
+        output_sender.send(parser.exprs).unwrap();
     }
 
     /// Reports errors if any
-    pub fn report_errors(&self, filename: &str, source: &String) {
+    fn report_errors(&self, filename: &str, source: &String) {
         if self.errors.len() > 0 {
             for err in &self.errors {
                 println!("{}", err.format(filename));
@@ -51,7 +59,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Parses tokens to AST
-    pub fn parse(&mut self) {
+    fn parse(&mut self) {
         while !self.is_end() {
             let expr = self.expression();
             match expr {

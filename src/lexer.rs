@@ -15,8 +15,8 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
-    pub fn new<'b>(source: &'a String, sender: &'a Sender<Token>) -> Self {
-        Lexer {
+    pub fn new<'b>(source: &'a String, filename: &'a str, sender: &'a Sender<Token>) -> Self {
+        let mut lexer = Lexer {
             errors: vec![],
             source,
             sender,
@@ -24,11 +24,14 @@ impl<'a> Lexer<'a> {
             col: 1,
             c: 0,
             current: ' ',
-        }
+        };
+        lexer.tokenize();
+        lexer.report_errors(filename);
+        lexer
     }
 
     /// Reports errors if any
-    pub fn report_errors(&self, filename: &str) {
+    fn report_errors(&self, filename: &str) {
         if self.errors.len() > 0 {
             for err in &self.errors {
                 println!("{}", err.format(filename));
@@ -42,7 +45,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Tokenizes the source
-    pub fn tokenize(&mut self) {
+    fn tokenize(&mut self) {
         self.current = self.source.chars().nth(self.c).unwrap();
 
         while !self.is_end() {
@@ -459,8 +462,7 @@ println(name!, _age)
 "#;
         let source = &String::from(source);
         let (s, r) = unbounded();
-        let mut lexer = Lexer::new(source, &s);
-        lexer.tokenize();
+        let lexer = Lexer::new(source, "input", &s);
 
         assert_eq!(lexer.errors.len(), 0);
         assert_eq!(r.len(), 13);
