@@ -13,13 +13,14 @@ macro_rules! bulk_print {
 macro_rules! parse {
     ($source:expr, $expected:expr) => {
         let source = String::from($source);
+        let (s, r) = crossbeam_channel::unbounded();
 
-        let mut lexer = Lexer::new(&source);
+        let mut lexer = Lexer::new(&source, &s);
         lexer.tokenize();
         lexer.report_errors("<input>");
 
-        let mut parser = Parser::new(&lexer.tokens);
-        parser.parse(&lexer.tokens);
+        let mut parser = Parser::new(&r);
+        parser.parse();
         parser.report_errors("<input>", &source);
 
         let result = Expr::pretty_print(&parser.exprs);

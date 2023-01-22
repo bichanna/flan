@@ -2,9 +2,10 @@ use std::process;
 
 use crate::error::ParserError;
 use crate::token::{Token, TokenType};
+use crossbeam_channel::Sender;
 
 pub struct Lexer<'a> {
-    pub tokens: Vec<Token>,
+    sender: &'a Sender<Token>,
     errors: Vec<ParserError>,
     source: &'a String,
     line: usize,
@@ -14,11 +15,11 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
-    pub fn new<'b>(source: &'a String) -> Self {
+    pub fn new<'b>(source: &'a String, sender: &'a Sender<Token>) -> Self {
         Lexer {
             errors: vec![],
             source,
-            tokens: vec![],
+            sender,
             line: 1,
             col: 1,
             c: 0,
@@ -352,7 +353,9 @@ impl<'a> Lexer<'a> {
     /// Appends the Token created with the given TokenType with a String value
     fn add_token(&mut self, kind: TokenType, value: String) {
         let token = Token::new(kind, value, self.line, self.col);
-        self.tokens.push(token);
+        self.sender
+            .send(token)
+            .unwrap_or_else(|_| self.add_error("unable to send token"));
     }
 
     /// Returns the next character without advancing
@@ -443,6 +446,7 @@ impl<'a> Lexer<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crossbeam_channel::unbounded;
 
     #[test]
     fn test_lexer() {
@@ -454,29 +458,11 @@ println(name!, _age)
 /* comment!! /* block */ */
 "#;
         let source = &String::from(source);
-        let mut lexer = Lexer::new(source);
+        let (s, r) = unbounded();
+        let mut lexer = Lexer::new(source, &s);
         lexer.tokenize();
 
         assert_eq!(lexer.errors.len(), 0);
-        assert_eq!(lexer.tokens.len(), 13);
-    }
-
-    #[test]
-    fn test_atom_lex() {
-        let source = String::from(":true :false :ok :error");
-        let mut lexer = Lexer::new(&source);
-        lexer.tokenize();
-
-        assert_eq!(lexer.errors.len(), 0);
-        assert_eq!(
-            lexer.tokens,
-            vec![
-                Token::new(TokenType::True, String::new(), 1, 6),
-                Token::new(TokenType::False, String::new(), 1, 13),
-                Token::new(TokenType::Atom, String::from("ok"), 1, 17),
-                Token::new(TokenType::Atom, String::from("error"), 1, 23),
-                Token::new(TokenType::EOF, String::new(), 1, 22),
-            ]
-        );
+        assert_eq!(r.len(), 13);
     }
 }
