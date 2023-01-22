@@ -50,11 +50,7 @@ impl<'a> Lexer<'a> {
 
         while !self.is_end() {
             match self.current {
-                '\n' => {
-                    self.line += 1;
-                    self.col = 1;
-                }
-                '\t' | ' ' => {}
+                '\t' | ' ' | '\n' => {}
                 '(' => self.add_no_value_token(TokenType::LParen),
                 ')' => self.add_no_value_token(TokenType::RParen),
                 '{' => self.add_no_value_token(TokenType::LBrace),
@@ -309,10 +305,6 @@ impl<'a> Lexer<'a> {
                                     c => value.push(c),
                                 };
                             } else {
-                                if self.current == '\n' {
-                                    self.line += 1;
-                                    self.col = 1;
-                                }
                                 value.push(self.current);
                             }
                             self.advance();
@@ -331,10 +323,7 @@ impl<'a> Lexer<'a> {
     fn skip_block_comment(&mut self) {
         let mut nesting = 1;
         while nesting > 0 {
-            if self.current == '\n' {
-                self.line += 1;
-                self.col = 1;
-            } else if self.is_end() {
+            if self.is_end() {
                 self.add_error("an unterminated block comment");
                 break;
             } else if self.current == '*' && self.next_char() == '/' {
@@ -416,6 +405,10 @@ impl<'a> Lexer<'a> {
         if !self.is_strict_end() {
             self.col += 1;
             self.c += 1;
+            if self.current == '\n' {
+                self.line += 1;
+                self.col = 1;
+            }
             self.current = self.source.chars().nth(self.c).unwrap();
         } else {
             self.c = self.source.len();
