@@ -1,7 +1,6 @@
 [package]
 name = "feo"
 description = "A mildly functional, minimal programming language compiled to FVM bytecode"
-license = "MIT"
 license-file = "LICENSE.txt"
 keywords = ["language"]
 categories = ["compilers"]

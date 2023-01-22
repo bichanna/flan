@@ -2,7 +2,8 @@ use core::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TokenType {
-    Num,        // Number
+    Int,        // Integer
+    Float,      // Float
     Str,        // String
     Id,         // Identifier
     Atom,       // Atom

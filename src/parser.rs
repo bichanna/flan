@@ -150,9 +150,9 @@ impl<'a> Parser<'a> {
                         left: Box::new(expr.clone()),
                         right: Box::new(Expr::Binary {
                             left: Box::new(expr),
-                            right: Box::new(Expr::NumberLiteral {
+                            right: Box::new(Expr::IntegerLiteral {
                                 token: op.clone(),
-                                value: 1.0,
+                                value: 1,
                             }),
                             op,
                         }),
@@ -185,14 +185,23 @@ impl<'a> Parser<'a> {
             // Null
             let token = self.previous();
             Ok(Expr::Null { token })
-        } else if self.does_match(&[TokenType::Num]) {
+        } else if self.does_match(&[TokenType::Int, TokenType::Float]) {
             // Number
             let token = self.previous();
-            let value = token.value.parse::<f64>();
-            if let Ok(value) = value {
-                Ok(Expr::NumberLiteral { token, value })
+            if token.kind == TokenType::Int {
+                let value = token.value.parse::<i64>();
+                if let Ok(value) = value {
+                    Ok(Expr::IntegerLiteral { token, value })
+                } else {
+                    Err("invalid number")
+                }
             } else {
-                Err("invalid number")
+                let value = token.value.parse::<f64>();
+                if let Ok(value) = value {
+                    Ok(Expr::FloatLiteral { token, value })
+                } else {
+                    Err("invalid number")
+                }
             }
         } else if self.does_match(&[TokenType::Str]) {
             // String

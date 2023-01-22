@@ -257,10 +257,9 @@ impl<'a> Lexer<'a> {
                     } else if self.current.is_numeric() {
                         // a number
                         let mut number = String::new();
+                        let mut had_dot = false;
 
                         if self.current.is_numeric() {
-                            let mut had_dot = false;
-
                             while !self.is_end() && self.current.is_numeric() {
                                 number.push(self.current);
                                 self.advance();
@@ -284,7 +283,11 @@ impl<'a> Lexer<'a> {
                             }
                         }
 
-                        self.add_token(TokenType::Num, number);
+                        if had_dot {
+                            self.add_token(TokenType::Float, number);
+                        } else {
+                            self.add_token(TokenType::Int, number)
+                        }
                         self.reverse();
                     } else if self.current == '"' {
                         // a string

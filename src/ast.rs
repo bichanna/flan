@@ -19,9 +19,13 @@ pub enum Expr {
         token: Token,
         value: String,
     },
-    NumberLiteral {
+    FloatLiteral {
         token: Token,
         value: f64,
+    },
+    IntegerLiteral {
+        token: Token,
+        value: i64,
     },
     BoolLiteral {
         token: Token,
@@ -117,7 +121,10 @@ impl Expr {
             Expr::StringLiteral { token: _, value } => {
                 format!("\"{}\"", value)
             }
-            Expr::NumberLiteral { token: _, value } => {
+            Expr::IntegerLiteral { token: _, value } => {
+                format!("{}", value)
+            }
+            Expr::FloatLiteral { token: _, value } => {
                 format!("{}", value)
             }
             Expr::BoolLiteral { token: _, payload } => {
