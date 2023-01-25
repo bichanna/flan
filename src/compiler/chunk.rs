@@ -8,13 +8,15 @@ pub enum OpCode {
 
 #[derive(Clone, PartialEq)]
 pub struct Chunk {
-    opcodes: Vec<u8>,
+    pub name: &'static str,
+    pub opcodes: Vec<u8>,
     lines: Vec<(usize, Position)>,
 }
 
 impl Chunk {
-    pub fn new() -> Self {
+    pub fn new(name: &'static str) -> Self {
         Self {
+            name,
             opcodes: vec![],
             lines: vec![],
         }
