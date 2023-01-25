@@ -5,11 +5,12 @@ Feo is a dynamically- and strongly-typed, minimal, mildly-functional programming
 
 The language looks like this:
 ```
-{printfln: println} := import("fmt")
+// printing out names
+{printfln: printfln} := import("fmt")
 {each: each} := import("std")
 
 names := ["Nobu", "Sol", "Thomas", "Damian", "Ryan", "Zen", "Esfir"]
-each(names) <| func(name) println("Hello, %s!", name)
+each(names) <| func(name) printfln("Hello, %s!", name)
 
 
 // fizzbuzz
@@ -24,5 +25,12 @@ func fizzbuzz(n) match [n % 3, n % 5] {
 
 std.range(1, 101) |> std.each() <| func(n) {
     println(fizzbuzz(n))
+}
+
+// fibonacci
+func fib(n) n <= 1 : n ? fib(n-1) + fib(n-2)
+
+std.range(0, 10) |> std.each() <| func(i) {
+    printfln("fib(%s) = %s", i, fib(i))
 }
 ```
