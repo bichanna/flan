@@ -7,10 +7,15 @@ use super::error::ParserError;
 use super::token::{Token, TokenType};
 
 pub struct Parser<'a> {
+    /// The current token being parsed, received from the channel
     current: Token,
+    /// The previous token received from the channel
     previous: Token,
+    /// The channel that receives tokens concurrently
     recv: &'a Receiver<Token>,
+    /// Errors encountered while parsing
     errors: Vec<ParserError>,
+    /// A list of parsed expressions
     pub exprs: Vec<Expr>,
 }
 

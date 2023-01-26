@@ -5,12 +5,19 @@ use super::token::{Token, TokenType};
 use crossbeam_channel::Sender;
 
 pub struct Lexer<'a> {
+    /// The channel that sends tokens concurrently
     sender: &'a Sender<Token>,
+    /// Errors encountered while tokenizing
     errors: Vec<ParserError>,
+    /// The source code being tokenized
     source: &'a String,
+    /// Current line number
     line: usize,
+    /// Current column number
     col: usize,
+    /// Counter for indexing the source code
     c: usize,
+    /// Current character
     current: char,
 }
 
