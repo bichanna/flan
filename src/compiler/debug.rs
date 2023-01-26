@@ -1,7 +1,7 @@
-use super::chunk::Chunk;
-use super::OpCode;
+use super::opcode::OpCode;
+use super::Compiler;
 
-impl std::fmt::Debug for Chunk {
+impl std::fmt::Debug for Compiler {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "=== {} ===", self.name)?;
 
@@ -14,7 +14,7 @@ impl std::fmt::Debug for Chunk {
     }
 }
 
-impl Chunk {
+impl Compiler {
     /// Disassembles one instruction
     fn disasemble_instruction(&self, offset: usize) -> usize {
         print!("{:04} ", offset);
