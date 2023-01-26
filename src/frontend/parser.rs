@@ -2,9 +2,9 @@ use std::process;
 
 use crossbeam_channel::{Receiver, Sender};
 
-use crate::ast::{Expr, MatchBranch};
-use crate::error::ParserError;
-use crate::token::{Token, TokenType};
+use super::ast::{Expr, MatchBranch};
+use super::error::ParserError;
+use super::token::{Token, TokenType};
 
 pub struct Parser<'a> {
     current: Token,
@@ -624,7 +624,7 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lexer::Lexer;
+    use crate::frontend::lexer::Lexer;
     use crate::parse;
 
     #[test]

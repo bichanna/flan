@@ -1,5 +1,5 @@
+use super::token::Token;
 use crate::bulk_print;
-use crate::token::Token;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {

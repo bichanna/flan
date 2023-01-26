@@ -1,7 +1,7 @@
 use std::process;
 
-use crate::error::ParserError;
-use crate::token::{Token, TokenType};
+use super::error::ParserError;
+use super::token::{Token, TokenType};
 use crossbeam_channel::Sender;
 
 pub struct Lexer<'a> {
