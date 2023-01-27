@@ -1,3 +1,5 @@
+use byteorder::{ByteOrder, LittleEndian};
+
 use super::opcode::{pos_str, OpCode};
 use super::Compiler;
 
@@ -30,6 +32,9 @@ impl Compiler {
             match instruction {
                 OpCode::Return => self.debug_print_simple_instruction("OP_RETURN", offset),
                 OpCode::Constant => self.debug_print_constant_instruction("OP_CONSTANT", offset),
+                OpCode::ConstantLong => {
+                    self.debug_print_lconstant_instruction("OP_LCONSTANT", offset)
+                }
             }
         } else {
             println!("Unknown opcode {:?}", instruction);
@@ -51,5 +56,17 @@ impl Compiler {
             self.values[constant as usize].print()
         );
         offset + 2
+    }
+
+    fn debug_print_lconstant_instruction(&self, name: &str, offset: usize) -> usize {
+        let constant =
+            LittleEndian::read_u16(&[self.bytecode[offset + 1], self.bytecode[offset + 2]]);
+        println!(
+            "{:-16} {:>4} '{:#?}'",
+            name,
+            constant,
+            self.values[constant as usize].print()
+        );
+        offset + 3
     }
 }

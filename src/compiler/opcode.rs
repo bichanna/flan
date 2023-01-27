@@ -9,6 +9,7 @@ pub fn pos_str(pos: &Position) -> String {
 pub enum OpCode {
     Return,
     Constant,
+    ConstantLong,
 }
 
 impl OpCode {
@@ -16,6 +17,7 @@ impl OpCode {
         match byte {
             0 => Some(Self::Return),
             1 => Some(Self::Constant),
+            2 => Some(Self::ConstantLong),
             _ => None,
         }
     }

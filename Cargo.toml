@@ -11,3 +11,4 @@ repository = "https://github.com/bichanna/feo"
 
 [dependencies]
 crossbeam-channel = "0.5"
+byteorder = "1"

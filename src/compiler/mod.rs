@@ -4,6 +4,8 @@ pub mod value;
 
 use std::collections::HashMap;
 
+use byteorder::{ByteOrder, LittleEndian};
+
 use self::opcode::{OpCode, Position};
 use self::value::Value;
 
@@ -35,15 +37,33 @@ impl Compiler {
         self.write_byte(byte, pos);
     }
 
-    /// Writes a byte to the bytecode vector
-    pub fn write_byte(&mut self, byte: u8, pos: Position) {
-        self.bytecode.push(byte);
-        self.positions.insert(self.bytecode.len() - 1, pos);
-    }
-
     /// Add a constant to the values vector and adds the index to the bytecode vector
     pub fn write_constant(&mut self, value: Value, pos: Position) {
         self.values.push(value);
-        self.write_byte((self.values.len() - 1) as u8, pos)
+        if self.values.len() > 255 {
+            // use OP_LCONSTANT
+            let byte = OpCode::ConstantLong as u8;
+            self.write_byte(byte, pos);
+
+            // convert the constant index into two u8's and writes the bytes to the bytecode vector
+            let mut bytes = [0u8; 2];
+            LittleEndian::write_u16(&mut bytes, (self.values.len() - 1) as u16);
+            for byte in bytes {
+                self.write_byte(byte, pos);
+            }
+        } else {
+            // use OP_CONSTANT
+            let byte = OpCode::Constant as u8;
+            self.write_byte(byte, pos);
+
+            self.write_byte((self.values.len() - 1) as u8, pos)
+        }
+    }
+
+    /// Writes a byte to the bytecode vector
+    fn write_byte(&mut self, byte: u8, pos: Position) {
+        self.bytecode.push(byte);
+        // self.positions.insert(self.bytecode.len() - 1, pos);
+        self.positions.entry(self.bytecode.len() - 1).or_insert(pos);
     }
 }
