@@ -1,8 +1,11 @@
 pub mod debug;
 pub mod opcode;
+pub mod value;
+
+use std::collections::HashMap;
 
 use self::opcode::{OpCode, Position};
-use crate::vm::value::Value;
+use self::value::Value;
 
 #[derive(Clone, PartialEq)]
 pub struct Compiler {
@@ -12,8 +15,8 @@ pub struct Compiler {
     pub bytecode: Vec<u8>,
     /// For simplicity's sake, we'll put all constants in here
     pub values: Vec<Value>,
-
-    lines: Vec<(usize, Position)>,
+    /// Position information used for runtime errors
+    pub positions: HashMap<usize, Position>,
 }
 
 impl Compiler {
@@ -21,24 +24,26 @@ impl Compiler {
         Self {
             name,
             bytecode: vec![],
-            lines: vec![],
+            positions: HashMap::new(),
             values: vec![],
         }
     }
 
-    /// Adds an opcode to the opcodes vector
-    pub fn write_chunk(&mut self, opcode: OpCode) {
+    /// Writes an opcode to the bytecode vector
+    pub fn write_opcode(&mut self, opcode: OpCode, pos: Position) {
         let byte = opcode as u8;
-        self.write_byte(byte);
+        self.write_byte(byte, pos);
     }
 
-    pub fn write_byte(&mut self, byte: u8) {
+    /// Writes a byte to the bytecode vector
+    pub fn write_byte(&mut self, byte: u8, pos: Position) {
         self.bytecode.push(byte);
+        self.positions.insert(self.bytecode.len() - 1, pos);
     }
 
     /// Add a constant to the values vector and adds the index to the bytecode vector
-    pub fn write_constant(&mut self, value: Value) {
+    pub fn write_constant(&mut self, value: Value, pos: Position) {
         self.values.push(value);
-        self.write_byte((self.values.len() - 1) as u8)
+        self.write_byte((self.values.len() - 1) as u8, pos)
     }
 }
