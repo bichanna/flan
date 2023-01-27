@@ -1,4 +1,4 @@
-use super::opcode::OpCode;
+use super::opcode::{pos_str, OpCode};
 use super::Compiler;
 
 impl std::fmt::Debug for Compiler {
@@ -18,6 +18,12 @@ impl Compiler {
     /// Disassembles one instruction
     fn disasemble_instruction(&self, offset: usize) -> usize {
         print!("{:04} ", offset);
+
+        if offset > 0 && self.positions.get(&offset) == self.positions.get(&(offset - 1)) {
+            print!("     | ");
+        } else {
+            print!("{:>6} ", pos_str(self.positions.get(&offset).unwrap()));
+        }
 
         let instruction = OpCode::u8_to_opcode(self.bytecode[offset]);
         if let Some(instruction) = instruction {

@@ -1,5 +1,9 @@
 pub type Position = (usize, usize);
 
+pub fn pos_str(pos: &Position) -> String {
+    format!("{},{}", pos.0, pos.1)
+}
+
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum OpCode {
