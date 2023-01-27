@@ -17,11 +17,11 @@ pub struct Compiler<'a> {
     /// The AST nodes that are to be compiled to bytecode
     exprs: &'a Vec<Expr>,
     /// The compiled bytecode
-    bytecode: Vec<u8>,
+    pub bytecode: Vec<u8>,
     /// For simplicity's sake, we'll put all constants in here
-    values: Vec<Value>,
+    pub values: Vec<Value>,
     /// Position information used for runtime errors
-    positions: HashMap<usize, Position>,
+    pub positions: HashMap<usize, Position>,
 }
 
 impl<'a> Compiler<'a> {
@@ -34,6 +34,8 @@ impl<'a> Compiler<'a> {
             values: vec![],
         }
     }
+
+    pub fn compile(&mut self) {}
 
     /// Writes an opcode to the bytecode vector
     pub fn write_opcode(&mut self, opcode: OpCode, pos: Position) {
