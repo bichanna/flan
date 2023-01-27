@@ -8,23 +8,27 @@ use byteorder::{ByteOrder, LittleEndian};
 
 use self::opcode::{OpCode, Position};
 use self::value::Value;
+use crate::frontend::ast::Expr;
 
 #[derive(Clone, PartialEq)]
-pub struct Compiler {
+pub struct Compiler<'a> {
     /// The name of this Compiler, used for debugging
-    pub name: &'static str,
+    name: &'static str,
+    /// The AST nodes that are to be compiled to bytecode
+    exprs: &'a Vec<Expr>,
     /// The compiled bytecode
-    pub bytecode: Vec<u8>,
+    bytecode: Vec<u8>,
     /// For simplicity's sake, we'll put all constants in here
-    pub values: Vec<Value>,
+    values: Vec<Value>,
     /// Position information used for runtime errors
-    pub positions: HashMap<usize, Position>,
+    positions: HashMap<usize, Position>,
 }
 
-impl Compiler {
-    pub fn new(name: &'static str) -> Self {
+impl<'a> Compiler<'a> {
+    pub fn new<'b>(name: &'static str, exprs: &'a Vec<Expr>) -> Self {
         Self {
             name,
+            exprs,
             bytecode: vec![],
             positions: HashMap::new(),
             values: vec![],

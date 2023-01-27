@@ -3,7 +3,7 @@ use byteorder::{ByteOrder, LittleEndian};
 use super::opcode::{pos_str, OpCode};
 use super::Compiler;
 
-impl std::fmt::Debug for Compiler {
+impl<'a> std::fmt::Debug for Compiler<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "=== {} ===", self.name)?;
 
@@ -16,7 +16,7 @@ impl std::fmt::Debug for Compiler {
     }
 }
 
-impl Compiler {
+impl<'a> Compiler<'a> {
     /// Disassembles one instruction
     fn disasemble_instruction(&self, offset: usize) -> usize {
         print!("{:04} ", offset);
