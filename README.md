@@ -1,7 +1,7 @@
 # Feo
 **WIP: This project is still in early development.**
 
-Feo is a dynamically- and strongly-typed, minimal, mildly-functional programming language that compiles to bytecode for the [Feo VM](https://github.com/bichanna/fvm)
+Feo is a dynamically- and strongly-typed, minimal, mildly-functional programming language that compiles to bytecode.
 
 The language looks like this:
 ```
