@@ -1,10 +1,13 @@
+pub mod object;
+pub mod value;
+
 use std::collections::HashMap;
 use std::ptr;
 
 use byteorder::{ByteOrder, LittleEndian};
 
+use self::value::Value;
 use crate::compiler::opcode::{OpCode, Position};
-use crate::compiler::value::Value;
 
 // Constants
 const STACK_MAX: usize = 256;
@@ -14,6 +17,25 @@ macro_rules! read_byte {
         $self.ip = unsafe { $self.ip.add(1) };
         unsafe { *$self.ip }
     }};
+}
+
+macro_rules! push_or_err {
+    ($self: expr, $value: expr) => {
+        match $value {
+            Ok(v) => $self.push(v),
+            Err(_msg) => {
+                // TODO: Report error
+            }
+        }
+    };
+}
+
+macro_rules! binary_op {
+    ($self: expr, $op: tt) => {
+        let right = $self.pop();
+        let left = $self.pop();
+        push_or_err!($self, left $op right);
+    };
 }
 
 pub struct VM<'a> {
@@ -70,6 +92,21 @@ impl<'a> VM<'a> {
                 OpCode::ConstantLong => {
                     let value = self.read_constant(true);
                     self.push(value);
+                }
+                OpCode::Negate => {
+                    push_or_err!(self, -self.pop());
+                }
+                OpCode::Add => {
+                    binary_op!(self, +);
+                }
+                OpCode::Sub => {
+                    binary_op!(self, -);
+                }
+                OpCode::Mult => {
+                    binary_op!(self, *);
+                }
+                OpCode::Div => {
+                    binary_op!(self, /);
                 }
             }
 

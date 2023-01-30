@@ -1,32 +1,27 @@
 use std::collections::HashMap;
 
-#[derive(Clone, Copy)]
-pub enum Value {
-    Null,
-    Empty,
-    Bool(bool),
-    Int(i64),
-    Float(f64),
-    Object(Object),
-}
-
-impl Value {
-    pub fn print(&self) -> String {
-        match self {
-            Value::Null => "null".to_string(),
-            Value::Empty => "_".to_string(),
-            Value::Bool(v) => format!("{}", v),
-            Value::Int(v) => format!("{}", v),
-            Value::Float(v) => format!("{}", v),
-            Value::Object(obj) => obj.print(),
-        }
-    }
-}
+use super::value::Value;
 
 #[derive(Copy, Clone)]
 pub struct Object {
-    obj_type: ObjectType,
+    pub obj_type: ObjectType,
     obj: ObjectUnion,
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union ObjectUnion {
+    string: *mut String,
+    object: *mut HashMap<String, Box<Value>>,
+    list: *mut Vec<Box<Value>>,
+}
+
+#[derive(Copy, Clone)]
+pub enum ObjectType {
+    List,
+    String,
+    Atom,
+    Object,
 }
 
 impl Object {
@@ -68,20 +63,4 @@ impl Object {
             }
         }
     }
-}
-
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub union ObjectUnion {
-    string: *mut String,
-    object: *mut HashMap<String, Box<Value>>,
-    list: *mut Vec<Box<Value>>,
-}
-
-#[derive(Copy, Clone)]
-pub enum ObjectType {
-    List,
-    String,
-    Atom,
-    Object,
 }
