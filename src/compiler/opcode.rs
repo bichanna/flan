@@ -10,6 +10,11 @@ pub enum OpCode {
     Return,
     Constant,
     ConstantLong,
+    Negate,
+    Add,
+    Sub,
+    Mult,
+    Div,
 }
 
 impl OpCode {
@@ -18,6 +23,11 @@ impl OpCode {
             0 => Some(Self::Return),
             1 => Some(Self::Constant),
             2 => Some(Self::ConstantLong),
+            3 => Some(Self::Negate),
+            4 => Some(Self::Add),
+            5 => Some(Self::Sub),
+            6 => Some(Self::Mult),
+            7 => Some(Self::Div),
             _ => None,
         }
     }

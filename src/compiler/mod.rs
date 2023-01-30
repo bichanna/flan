@@ -1,14 +1,13 @@
 pub mod debug;
 pub mod opcode;
-pub mod value;
 
 use std::collections::HashMap;
 
 use byteorder::{ByteOrder, LittleEndian};
 
 use self::opcode::{OpCode, Position};
-use self::value::Value;
 use crate::frontend::ast::Expr;
+use crate::vm::value::Value;
 
 pub struct Compiler<'a> {
     /// The name of this Compiler, used for debugging

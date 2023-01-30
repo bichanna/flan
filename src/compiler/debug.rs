@@ -35,6 +35,11 @@ impl<'a> Compiler<'a> {
                 OpCode::ConstantLong => {
                     self.debug_print_lconstant_instruction("OP_LCONSTANT", offset)
                 }
+                OpCode::Negate => self.debug_print_simple_instruction("OP_NEGATE", offset),
+                OpCode::Add => self.debug_print_simple_instruction("OP_ADD", offset),
+                OpCode::Sub => self.debug_print_simple_instruction("OP_SUB", offset),
+                OpCode::Mult => self.debug_print_simple_instruction("OP_MULT", offset),
+                OpCode::Div => self.debug_print_simple_instruction("OP_DIV", offset),
             }
         } else {
             println!("Unknown opcode {:?}", instruction);
