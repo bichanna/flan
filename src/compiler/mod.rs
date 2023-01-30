@@ -10,7 +10,6 @@ use self::opcode::{OpCode, Position};
 use self::value::Value;
 use crate::frontend::ast::Expr;
 
-#[derive(Clone, PartialEq)]
 pub struct Compiler<'a> {
     /// The name of this Compiler, used for debugging
     name: &'static str,
