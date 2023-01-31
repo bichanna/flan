@@ -95,8 +95,15 @@ impl<'a> Parser<'a> {
 
             match expr {
                 Expr::Variable { name: _ }
-                | Expr::ListLiteral { values: _ }
-                | Expr::ObjectLiteral { keys: _, values: _ } => {
+                | Expr::ListLiteral {
+                    token: _,
+                    values: _,
+                }
+                | Expr::ObjectLiteral {
+                    token: _,
+                    keys: _,
+                    values: _,
+                } => {
                     return Ok(Expr::Assign {
                         init,
                         left: Box::new(expr),
@@ -233,6 +240,7 @@ impl<'a> Parser<'a> {
             Ok(Expr::Group { expr })
         } else if self.does_match(&[TokenType::LBracket]) {
             // list literal
+            let token = self.previous();
             let mut values: Vec<Box<Expr>> = vec![];
             while !self.check_current(TokenType::RBracket) && !self.is_end() {
                 values.push(Box::new(self.expression()?));
@@ -243,15 +251,17 @@ impl<'a> Parser<'a> {
                 }
             }
             expect!(self, TokenType::RBracket, "expected ']'");
-            Ok(Expr::ListLiteral { values })
+            Ok(Expr::ListLiteral { token, values })
         } else if self.does_match(&[TokenType::LBrace]) {
             // object or block
+            let token = self.previous();
 
             if self.check_current(TokenType::RBrace) {
                 // empty {} is always considered an
                 // object; an empty block is illegal
                 self.advance();
                 Ok(Expr::ObjectLiteral {
+                    token,
                     keys: vec![],
                     values: vec![],
                 })
@@ -291,7 +301,11 @@ impl<'a> Parser<'a> {
                     }
 
                     expect!(self, TokenType::RBrace, "expected '}'");
-                    Ok(Expr::ObjectLiteral { keys, values })
+                    Ok(Expr::ObjectLiteral {
+                        token,
+                        keys,
+                        values,
+                    })
                 } else {
                     // it's a block!
                     let mut exprs: Vec<Box<Expr>> = vec![];

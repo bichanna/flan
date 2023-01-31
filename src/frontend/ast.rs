@@ -42,9 +42,11 @@ pub enum Expr {
         token: Token,
     },
     ListLiteral {
+        token: Token,
         values: Vec<Box<Expr>>,
     },
     ObjectLiteral {
+        token: Token,
         keys: Vec<Token>,
         values: Vec<Box<Expr>>,
     },
@@ -135,14 +137,18 @@ impl Expr {
             }
             Expr::Underscore { token: _ } => String::from(":_:"),
             Expr::Null { token: _ } => String::from("null"),
-            Expr::ListLiteral { values } => {
+            Expr::ListLiteral { token: _, values } => {
                 if values.len() > 0 {
                     format!("(list {})", bulk_print!(values, " "))
                 } else {
                     String::from("(list)")
                 }
             }
-            Expr::ObjectLiteral { keys, values } => {
+            Expr::ObjectLiteral {
+                token: _,
+                keys,
+                values,
+            } => {
                 if keys.len() > 0 {
                     format!(
                         "(object {})",
