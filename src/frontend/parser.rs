@@ -13,10 +13,10 @@ pub struct Parser<'a> {
     previous: Token,
     /// The channel that receives tokens concurrently
     recv: &'a Receiver<Token>,
+    /// The channel to send AST nodes concurrently
+    sender: &'a Sender<Expr>,
     /// Errors encountered while parsing
     errors: Vec<ParserError>,
-    /// A list of parsed expressions
-    pub exprs: Vec<Expr>,
 }
 
 macro_rules! expect {
@@ -34,19 +34,18 @@ impl<'a> Parser<'a> {
         source: &'a String,
         filename: &'a str,
         token_recv: &'a Receiver<Token>,
-        output_sender: &'a Sender<Vec<Expr>>,
+        output_sender: &'a Sender<Expr>,
     ) {
         let current = token_recv.recv().unwrap();
         let mut parser = Parser {
             current: current.clone(),
             previous: current.clone(),
             recv: token_recv,
+            sender: output_sender,
             errors: vec![],
-            exprs: vec![],
         };
         parser.parse();
         parser.report_errors(filename, source);
-        output_sender.send(parser.exprs).unwrap();
     }
 
     /// Reports errors if any
@@ -68,13 +67,14 @@ impl<'a> Parser<'a> {
         while !self.is_end() {
             let expr = self.expression();
             match expr {
-                Ok(expr) => self.exprs.push(expr),
+                Ok(expr) => self.sender.send(expr).unwrap(),
                 Err(msg) => {
                     self.add_error(msg);
                     self.synchronize();
                 }
             }
         }
+        self.sender.send(Expr::End).unwrap();
     }
 
     fn expression(&mut self) -> Result<Expr, &'static str> {
@@ -278,7 +278,7 @@ impl<'a> Parser<'a> {
                         _ => return Err("expected an identifier"),
                     }
 
-                    let mut keys: Vec<Token> = vec![token];
+                    let mut keys: Vec<Token> = vec![token.clone()];
                     let mut values: Vec<Box<Expr>> = vec![];
 
                     if self.previous().kind != TokenType::Colon {

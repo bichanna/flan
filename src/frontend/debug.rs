@@ -16,7 +16,7 @@ macro_rules! parse {
         // for tokenizing
         let (ts, tr) = crossbeam_channel::unbounded();
         // for parsing
-        let (ps, pr) = crossbeam_channel::bounded::<Vec<Expr>>(1);
+        let (ps, pr) = crossbeam_channel::unbounded();
 
         std::thread::scope(|s| {
             s.spawn(|| {
@@ -28,7 +28,17 @@ macro_rules! parse {
             });
         });
 
-        let result = Expr::pretty_print(&pr.recv().unwrap());
+        let mut exprs: Vec<Expr> = vec![];
+        loop {
+            let expr = pr.recv().unwrap();
+            match expr {
+                Expr::End => break,
+                _ => {}
+            }
+            exprs.push(expr);
+        }
+
+        let result = Expr::pretty_print(&exprs);
         assert_eq!(result, $expected);
     };
 }

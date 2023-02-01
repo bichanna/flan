@@ -91,7 +91,7 @@ pub enum Expr {
     Block {
         exprs: Vec<Box<Expr>>,
     },
-    Unknown,
+    End,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -249,7 +249,7 @@ impl Expr {
                     }
                 })
             }
-            Expr::Unknown => String::from("unknown"),
+            Expr::End => "".to_string(),
         }
     }
 }
