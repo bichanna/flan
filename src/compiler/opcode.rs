@@ -15,6 +15,7 @@ pub enum OpCode {
     Sub,
     Mult,
     Div,
+    Mod,
 }
 
 impl OpCode {
@@ -28,6 +29,7 @@ impl OpCode {
             5 => Some(Self::Sub),
             6 => Some(Self::Mult),
             7 => Some(Self::Div),
+            8 => Some(Self::Mod),
             _ => None,
         }
     }

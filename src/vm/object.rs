@@ -5,15 +5,15 @@ use super::value::Value;
 #[derive(Copy, Clone)]
 pub struct Object {
     pub obj_type: ObjectType,
-    obj: ObjectUnion,
+    pub obj: ObjectUnion,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union ObjectUnion {
-    string: *mut String,
-    object: *mut HashMap<String, Box<Value>>,
-    list: *mut Vec<Box<Value>>,
+    pub string: *mut String,
+    pub object: *mut HashMap<String, Box<Value>>,
+    pub list: *mut Vec<Box<Value>>,
 }
 
 #[derive(Copy, Clone)]

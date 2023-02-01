@@ -143,3 +143,24 @@ impl std::ops::Neg for Value {
         }
     }
 }
+
+/// Mod
+impl std::ops::Rem for Value {
+    type Output = Result<Value, String>;
+
+    fn rem(self, rhs: Value) -> Self::Output {
+        match self {
+            Self::Int(l) => match rhs {
+                Self::Int(r) => Ok(Self::Int(l % r)),
+                Self::Float(r) => Ok(Self::Float(l as f64 % r)),
+                _ => Err(format!("cannot {} % by {}", self.type_(), rhs.type_())),
+            },
+            Self::Float(l) => match rhs {
+                Self::Int(r) => Ok(Self::Float(l % r as f64)),
+                Self::Float(r) => Ok(Self::Float(l % r)),
+                _ => Err(format!("cannot {} % by {}", self.type_(), rhs.type_())),
+            },
+            _ => Err(format!("cannot {} % by {}", self.type_(), rhs.type_())),
+        }
+    }
+}

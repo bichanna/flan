@@ -108,6 +108,9 @@ impl<'a> VM<'a> {
                 OpCode::Div => {
                     binary_op!(self, /);
                 }
+                OpCode::Mod => {
+                    binary_op!(self, %);
+                }
             }
 
             instruction = OpCode::u8_to_opcode(read_byte!(self)).unwrap();
