@@ -87,9 +87,9 @@ impl Compiler {
             } => {
                 let obj = Object {
                     obj_type: ObjectType::String,
-                    obj: ObjectUnion {
+                    obj: &mut ObjectUnion {
                         string: value as *mut String,
-                    },
+                    } as *mut ObjectUnion,
                 };
                 let value = Value::Object(obj);
                 self.write_constant(value, token.position);
@@ -100,9 +100,9 @@ impl Compiler {
             } => {
                 let obj = Object {
                     obj_type: ObjectType::Atom,
-                    obj: ObjectUnion {
+                    obj: &mut ObjectUnion {
                         string: value as *mut String,
-                    },
+                    } as *mut ObjectUnion,
                 };
                 let value = Value::Object(obj);
                 self.write_constant(value, token.position);

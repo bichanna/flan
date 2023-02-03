@@ -1,4 +1,4 @@
-use super::object::{Object, ObjectType};
+use super::object::{Object, ObjectType, ObjectUnion};
 
 #[derive(Clone, Copy)]
 pub enum Value {
@@ -54,6 +54,29 @@ impl std::ops::Add<Value> for Value {
                 Self::Int(r) => Ok(Self::Float(l + r as f64)),
                 Self::Float(r) => Ok(Self::Float(l + r)),
                 _ => Err(format!("cannot add float and {}", rhs.type_())),
+            },
+            Self::Object(l) => match l.obj_type {
+                ObjectType::String => match rhs {
+                    Self::Object(r) => match r.obj_type {
+                        ObjectType::String => {
+                            // Concatenate two strings
+                            let mut new_str = unsafe { (*(*l.obj).string).clone() }
+                                + (&(unsafe { (*(*r.obj).string).clone() }));
+
+                            let obj = Object {
+                                obj_type: ObjectType::String,
+                                obj: &mut ObjectUnion {
+                                    string: &mut new_str as *mut String,
+                                } as *mut ObjectUnion,
+                            };
+
+                            Ok(Self::Object(obj))
+                        }
+                        _ => Err(format!("cannot add string and {}", rhs.type_())),
+                    },
+                    _ => Err(format!("cannot add string and {}", rhs.type_())),
+                },
+                _ => Err(format!("cannot add string and {}", rhs.type_())),
             },
             _ => Err(format!("cannot add {} and {}", self.type_(), rhs.type_())),
         }
