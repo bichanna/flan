@@ -10,7 +10,7 @@ The language looks like this:
 {each: each} := import("std")
 
 names := ["Nobu", "Sol", "Thomas", "Damian", "Ryan", "Zen", "Esfir"]
-each(names) <| func(name) printfln("Hello, %s!", name)
+each(names) <| func(name) printfln("Hello, {}!", name)
 
 
 // fizzbuzz
