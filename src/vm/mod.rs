@@ -6,7 +6,6 @@ use std::ptr;
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use self::object::Object;
 use self::value::Value;
 use crate::compiler::opcode::{OpCode, Position};
 
@@ -52,8 +51,6 @@ pub struct VM<'a> {
     source: &'a String,
     /// Instruction pointer, holds the current instruction being executed
     ip: *const u8,
-    /// For garbage collecting
-    objects: Vec<Object>,
     /// This stack can be safely accessed without bound checking
     stack: Box<[Value; STACK_MAX]>,
     stack_top: *mut Value,
@@ -74,7 +71,6 @@ impl<'a> VM<'a> {
             ip: bytecode[0] as *const u8,
             filename,
             source,
-            objects: vec![],
             stack: Box::new([Value::Null; STACK_MAX]),
             stack_top: ptr::null_mut(),
         }
@@ -93,18 +89,10 @@ impl<'a> VM<'a> {
                 OpCode::Constant => {
                     let value = self.read_constant(false);
                     self.push(value);
-                    match value {
-                        Value::Object(obj) => self.objects.push(obj),
-                        _ => {}
-                    }
                 }
                 OpCode::ConstantLong => {
                     let value = self.read_constant(true);
                     self.push(value);
-                    match value {
-                        Value::Object(obj) => self.objects.push(obj),
-                        _ => {}
-                    }
                 }
                 OpCode::Negate => {
                     push_or_err!(self, -self.pop());
@@ -129,8 +117,11 @@ impl<'a> VM<'a> {
             instruction = OpCode::u8_to_opcode(read_byte!(self)).unwrap();
         }
 
-        for obj in &self.objects {
-            obj.free();
+        for value in self.values {
+            match value {
+                Value::Object(obj) => obj.free(),
+                _ => {}
+            }
         }
     }
 
