@@ -162,19 +162,8 @@ impl std::ops::Neg for Value {
         match self {
             Self::Int(l) => Ok(Self::Int(-l)),
             Self::Float(l) => Ok(Self::Float(-l)),
-            _ => Err(format!("cannot negate {}", self.type_())),
-        }
-    }
-}
-
-/// Not (boolean negation)
-impl std::ops::Not for Value {
-    type Output = Result<Value, String>;
-
-    fn not(self) -> Self::Output {
-        match self {
             Self::Bool(l) => Ok(Self::Bool(!l)),
-            _ => Err(format!("cannot negate {} as Boolean", self.type_())),
+            _ => Err(format!("cannot negate {}", self.type_())),
         }
     }
 }

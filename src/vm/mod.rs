@@ -95,11 +95,7 @@ impl<'a> VM<'a> {
                     self.push(value);
                 }
                 OpCode::Negate => {
-                    let popped = self.pop();
-                    match popped {
-                        Value::Bool(_) => push_or_err!(self, !popped),
-                        _ => push_or_err!(self, -popped),
-                    }
+                    push_or_err!(self, -self.pop());
                 }
                 OpCode::Add => {
                     binary_op!(self, +);
