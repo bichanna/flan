@@ -75,7 +75,7 @@ impl Compiler {
                 self.compile_expr(right);
                 match op.kind {
                     TokenType::Minus => self.write_opcode(OpCode::Sub, op.position),
-                    TokenType::Bang => {} // TODO: bang!
+                    TokenType::Bang => self.write_opcode(OpCode::Negate, op.position),
                     _ => {
                         // TODO: report error
                     }
