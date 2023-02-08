@@ -41,6 +41,9 @@ impl Compiler {
                 OpCode::Mult => self.debug_print_simple_instruction("OP_MULT", offset),
                 OpCode::Div => self.debug_print_simple_instruction("OP_DIV", offset),
                 OpCode::Mod => self.debug_print_simple_instruction("OP_MOD", offset),
+                OpCode::DefineGlobalVar => {
+                    self.debug_print_simple_instruction("OP_DEFINE_GLOBAL", offset)
+                }
             }
         } else {
             println!("Unknown opcode {:?}", instruction);

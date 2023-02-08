@@ -6,6 +6,7 @@ use std::ptr;
 
 use byteorder::{ByteOrder, LittleEndian};
 
+use self::object::ObjectType;
 use self::value::Value;
 use crate::compiler::opcode::{OpCode, Position};
 
@@ -54,6 +55,8 @@ pub struct VM<'a> {
     /// This stack can be safely accessed without bound checking
     stack: Box<[Value; STACK_MAX]>,
     stack_top: *mut Value,
+    /// All global variables
+    globals: HashMap<String, Value>,
 }
 
 impl<'a> VM<'a> {
@@ -73,6 +76,7 @@ impl<'a> VM<'a> {
             source,
             stack: Box::new([Value::Null; STACK_MAX]),
             stack_top: ptr::null_mut(),
+            globals: HashMap::new(),
         }
     }
 
@@ -112,6 +116,9 @@ impl<'a> VM<'a> {
                 OpCode::Mod => {
                     binary_op!(self, %);
                 }
+                OpCode::DefineGlobalVar => {
+                    self.define_global();
+                }
             }
 
             instruction = OpCode::u8_to_opcode(read_byte!(self)).unwrap();
@@ -121,6 +128,117 @@ impl<'a> VM<'a> {
             match value {
                 Value::Object(obj) => obj.free(),
                 _ => {}
+            }
+        }
+    }
+
+    /// Defines globals
+    fn define_global(&mut self) {
+        let right = self.pop();
+        let left = self.pop();
+        match left {
+            Value::Object(left_obj) => match left_obj.obj_type {
+                ObjectType::Identifier => {
+                    // used for plain variable
+                    // TODO: check for variables already defined and return error
+                    self.globals
+                        .insert(unsafe { (*(*left_obj.obj).string).clone() }, right);
+
+                    self.push(right);
+                }
+                ObjectType::List => match right {
+                    Value::Object(right_obj) => match right_obj.obj_type {
+                        ObjectType::List => {
+                            let left = unsafe { (*(*left_obj.obj).list).clone() };
+                            let right = unsafe { (*(*right_obj.obj).list).clone() };
+
+                            // check if both of them are the same length
+                            if left.len() != right.len() {
+                                // TODO: report error
+                            }
+
+                            for (i, id) in left.into_iter().enumerate() {
+                                match *id {
+                                    Value::Empty => continue,
+                                    Value::Object(obj) => match obj.obj_type {
+                                        ObjectType::Atom => {
+                                            // TODO: check for variables already
+                                            // defined and return error
+                                            self.globals.insert(
+                                                unsafe { (*(*obj.obj).string).clone() },
+                                                *right[i],
+                                            );
+                                        }
+                                        _ => {
+                                            // TODO: report error
+                                        }
+                                    },
+                                    _ => {
+                                        // TODO: report error
+                                    }
+                                }
+                            }
+                        }
+                        _ => {
+                            // TODO: report error
+                        }
+                    },
+                    _ => {
+                        // TODO: report error
+                    }
+                },
+                ObjectType::Object => match right {
+                    Value::Object(right_obj) => match right_obj.obj_type {
+                        ObjectType::Object => {
+                            let left = unsafe { (*(*left_obj.obj).object).clone() };
+                            let right = unsafe { (*(*right_obj.obj).object).clone() };
+
+                            for (key, value) in left.into_iter() {
+                                if key == "_" {
+                                    continue;
+                                }
+
+                                match &*value {
+                                    Value::Object(obj) => match obj.obj_type {
+                                        ObjectType::Identifier => {
+                                            match right.get(&key) {
+                                                Some(to_be_assigned) => {
+                                                    // TODO: check if the variable is already
+                                                    // defined or not
+                                                    self.globals.insert(
+                                                        unsafe { (*(*obj.obj).string).clone() },
+                                                        **to_be_assigned,
+                                                    );
+                                                }
+                                                None => {
+                                                    // TODO: report error
+                                                }
+                                            }
+                                        }
+                                        _ => {
+                                            // TODO: report error
+                                        }
+                                    },
+                                    _ => {
+                                        // TODO: report error
+                                    }
+                                }
+                            }
+                        }
+                        _ => {
+                            // TODO: report error
+                        }
+                    },
+                    _ => {
+                        // TODO: report error
+                    }
+                },
+                _ => {
+                    // can't happen, nothing happens
+                }
+            },
+            _ => {
+                // TODO: report error
             }
         }
     }

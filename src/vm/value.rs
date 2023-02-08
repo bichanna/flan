@@ -34,6 +34,7 @@ impl Value {
                 ObjectType::Atom => "atom".to_string(),
                 ObjectType::List => "list".to_string(),
                 ObjectType::Object => "object".to_string(),
+                ObjectType::Identifier => "identifier".to_string(),
             },
         }
     }
