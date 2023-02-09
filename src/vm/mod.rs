@@ -119,6 +119,9 @@ impl<'a> VM<'a> {
                 OpCode::DefineGlobalVar => {
                     self.define_global();
                 }
+                OpCode::GetGlobalVar => {
+                    self.get_global_var();
+                }
             }
 
             instruction = OpCode::u8_to_opcode(read_byte!(self)).unwrap();
@@ -128,6 +131,30 @@ impl<'a> VM<'a> {
             match value {
                 Value::Object(obj) => obj.free(),
                 _ => {}
+            }
+        }
+    }
+
+    /// Gets global variable and pushes it to the stack
+    fn get_global_var(&mut self) {
+        let value = self.pop();
+        match value {
+            Value::Object(obj) => match obj.obj_type {
+                ObjectType::Identifier => {
+                    let variable_name = unsafe { (*(*obj.obj).string).clone() };
+                    match self.globals.get(&variable_name) {
+                        Some(value) => self.push(*value),
+                        None => {
+                            // TODO: report error
+                        }
+                    }
+                }
+                _ => {
+                    // TODO: report error
+                }
+            },
+            _ => {
+                // TODO: report error
             }
         }
     }

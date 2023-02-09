@@ -44,6 +44,9 @@ impl Compiler {
                 OpCode::DefineGlobalVar => {
                     self.debug_print_simple_instruction("OP_DEFINE_GLOBAL", offset)
                 }
+                OpCode::GetGlobalVar => {
+                    self.debug_print_simple_instruction("OP_GET_GLOBAL", offset)
+                }
             }
         } else {
             println!("Unknown opcode {:?}", instruction);

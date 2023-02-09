@@ -140,6 +140,18 @@ impl Compiler {
                     // TODO: handle this
                 }
             }
+            Expr::Variable { name } => {
+                let obj = Object {
+                    obj_type: ObjectType::Identifier,
+                    obj: &mut ObjectUnion {
+                        string: &mut name.value as *mut String,
+                    },
+                };
+                let value = Value::Object(obj);
+
+                self.write_constant(value, true, name.position);
+                self.write_opcode(OpCode::GetGlobalVar, name.position);
+            }
             _ => {}
         }
     }
