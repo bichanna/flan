@@ -60,6 +60,7 @@ pub enum Expr {
     },
     Assign {
         init: bool,
+        token: Token,
         left: Box<Expr>,
         right: Box<Expr>,
     },
@@ -168,7 +169,12 @@ impl Expr {
             Expr::Variable { name } => {
                 format!("{}", name.print())
             }
-            Expr::Assign { left, right, init } => {
+            Expr::Assign {
+                token: _,
+                left,
+                right,
+                init,
+            } => {
                 format!(
                     "(assign{} {} {})",
                     if *init { "I" } else { "" },

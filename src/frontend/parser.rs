@@ -94,17 +94,18 @@ impl<'a> Parser<'a> {
             let value = Box::new(self.assignment()?);
 
             match expr {
-                Expr::Variable { name: _ }
+                Expr::Variable { name: ref token }
                 | Expr::ListLiteral {
-                    token: _,
+                    ref token,
                     values: _,
                 }
                 | Expr::ObjectLiteral {
-                    token: _,
+                    ref token,
                     keys: _,
                     values: _,
                 } => {
                     return Ok(Expr::Assign {
+                        token: token.clone(),
                         init,
                         left: Box::new(expr),
                         right: value,
@@ -135,8 +136,9 @@ impl<'a> Parser<'a> {
             let op = self.previous();
             let value = self.assignment()?;
             match expr {
-                Expr::Variable { name: _ } => {
+                Expr::Variable { name: ref token } => {
                     return Ok(Expr::Assign {
+                        token: token.clone(),
                         init: false,
                         left: Box::new(expr.clone()),
                         right: Box::new(Expr::Binary {
@@ -151,13 +153,14 @@ impl<'a> Parser<'a> {
         } else if self.does_match(&[TokenType::DPlus, TokenType::DMinus]) {
             let mut op = self.previous();
             match expr {
-                Expr::Variable { name: _ } => {
+                Expr::Variable { name: ref token } => {
                     op.kind = if op.kind == TokenType::DPlus {
                         TokenType::Plus
                     } else {
                         TokenType::Minus
                     };
                     return Ok(Expr::Assign {
+                        token: token.clone(),
                         init: false,
                         left: Box::new(expr.clone()),
                         right: Box::new(Expr::Binary {

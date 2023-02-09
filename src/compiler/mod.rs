@@ -126,8 +126,29 @@ impl Compiler {
                 // TODO: implement this
             }
             Expr::Group { expr } => self.compile_expr(expr),
+            Expr::Assign {
+                token,
+                init,
+                ref left,
+                ref right,
+            } => {
+                if *init {
+                    let left_value = self.convert_to_value((**left).clone()).unwrap();
+                    let right_value = self.convert_to_value((**right).clone()).unwrap();
+                    self.define_variable(right_value, left_value, token.position);
+                } else {
+                    // TODO: handle this
+                }
+            }
             _ => {}
         }
+    }
+
+    /// Writes bytecode that defines a global variable
+    fn define_variable(&mut self, right: Value, left: Value, pos: Position) {
+        self.write_constant(left, true, pos);
+        self.write_constant(right, true, pos);
+        self.write_opcode(OpCode::DefineGlobalVar, pos);
     }
 
     /// Writes an opcode to the bytecode vector
@@ -168,5 +189,77 @@ impl Compiler {
         self.bytecode.push(byte);
         self.positions.insert(self.bytecode.len() - 1, pos);
         // self.positions.entry(self.bytecode.len() - 1).or_insert(pos);
+    }
+
+    /// Converts an Expr to Value
+    fn convert_to_value(&self, expr: Expr) -> Option<Value> {
+        match expr {
+            Expr::IntegerLiteral { token: _, value } => Some(Value::Int(value)),
+            Expr::FloatLiteral { token: _, value } => Some(Value::Float(value)),
+            Expr::BoolLiteral { token: _, payload } => Some(Value::Bool(payload)),
+            Expr::Null { token: _ } => Some(Value::Null),
+            Expr::Underscore { token: _ } => Some(Value::Empty),
+            Expr::StringLiteral {
+                token: _,
+                mut value,
+            } => {
+                let obj = Object {
+                    obj_type: ObjectType::String,
+                    obj: &mut ObjectUnion {
+                        string: &mut value as *mut String,
+                    },
+                };
+                Some(Value::Object(obj))
+            }
+            Expr::AtomLiteral {
+                token: _,
+                mut value,
+            } => {
+                let obj = Object {
+                    obj_type: ObjectType::Atom,
+                    obj: &mut ObjectUnion {
+                        string: &mut value as *mut String,
+                    },
+                };
+                Some(Value::Object(obj))
+            }
+            Expr::ListLiteral { token: _, values } => {
+                let mut list: Vec<Box<Value>> = vec![];
+
+                for value in values {
+                    let value = self.convert_to_value(*value).unwrap();
+                    list.push(Box::new(value));
+                }
+
+                let obj = Object {
+                    obj_type: ObjectType::List,
+                    obj: &mut ObjectUnion {
+                        list: &mut list as *mut Vec<Box<Value>>,
+                    },
+                };
+                Some(Value::Object(obj))
+            }
+            Expr::ObjectLiteral {
+                token: _,
+                keys,
+                values,
+            } => {
+                let mut map: HashMap<String, Box<Value>> = HashMap::new();
+
+                for (key, value) in keys.into_iter().zip(values.into_iter()) {
+                    let value = self.convert_to_value(*value).unwrap();
+                    map.insert(key.value, Box::new(value));
+                }
+
+                let obj = Object {
+                    obj_type: ObjectType::Object,
+                    obj: &mut ObjectUnion {
+                        object: &mut map as *mut HashMap<String, Box<Value>>,
+                    },
+                };
+                Some(Value::Object(obj))
+            }
+            _ => None,
+        }
     }
 }
