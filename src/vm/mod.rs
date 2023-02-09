@@ -80,6 +80,7 @@ impl<'a> VM<'a> {
         }
     }
 
+    /// The heart of the VM
     pub fn run(&mut self) {
         let mut instruction = OpCode::u8_to_opcode(unsafe { *self.ip }).unwrap();
         self.stack_top = &mut self.stack[0] as *mut Value;

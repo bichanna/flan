@@ -112,18 +112,41 @@ impl Compiler {
             }
             Expr::Underscore { token } => self.write_constant(Value::Empty, true, token.position),
             Expr::Null { token } => self.write_constant(Value::Null, true, token.position),
-            Expr::ListLiteral {
-                token: _,
-                values: _,
-            } => {
-                // TODO: implement this
+            Expr::ListLiteral { token, values } => {
+                let mut list: Vec<Box<Value>> = vec![];
+                for value in values {
+                    let value = self.convert_to_value((**value).to_owned()).unwrap();
+                    list.push(Box::new(value));
+                }
+
+                let obj = Object {
+                    obj_type: ObjectType::List,
+                    obj: &mut ObjectUnion {
+                        list: &mut list as *mut Vec<Box<Value>>,
+                    } as *mut ObjectUnion,
+                };
+                let value = Value::Object(obj);
+                self.write_constant(value, true, token.position);
             }
             Expr::ObjectLiteral {
-                token: _,
-                keys: _,
-                values: _,
+                token,
+                keys,
+                values,
             } => {
-                // TODO: implement this
+                let mut map: HashMap<String, Box<Value>> = HashMap::new();
+                for (k, v) in keys.into_iter().zip(values.into_iter()) {
+                    let value = self.convert_to_value((**v).to_owned()).unwrap();
+                    map.insert(k.value.to_owned(), Box::new(value));
+                }
+
+                let obj = Object {
+                    obj_type: ObjectType::Object,
+                    obj: &mut ObjectUnion {
+                        object: &mut map as *mut HashMap<String, Box<Value>>,
+                    },
+                };
+                let value = Value::Object(obj);
+                self.write_constant(value, true, token.position)
             }
             Expr::Group { expr } => self.compile_expr(expr),
             Expr::Assign {
@@ -133,8 +156,8 @@ impl Compiler {
                 ref right,
             } => {
                 if *init {
-                    let left_value = self.convert_to_value((**left).clone()).unwrap();
-                    let right_value = self.convert_to_value((**right).clone()).unwrap();
+                    let left_value = self.convert_to_value((**left).to_owned()).unwrap();
+                    let right_value = self.convert_to_value((**right).to_owned()).unwrap();
                     self.define_variable(right_value, left_value, token.position);
                 } else {
                     // TODO: handle this
