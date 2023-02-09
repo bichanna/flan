@@ -118,10 +118,13 @@ impl<'a> VM<'a> {
                     binary_op!(self, %);
                 }
                 OpCode::DefineGlobalVar => {
-                    self.define_global();
+                    self.set_global(true);
                 }
                 OpCode::GetGlobalVar => {
                     self.get_global_var();
+                }
+                OpCode::SetGlobalVar => {
+                    self.set_global(false);
                 }
             }
 
@@ -161,17 +164,25 @@ impl<'a> VM<'a> {
     }
 
     /// Defines globals
-    fn define_global(&mut self) {
+    fn set_global(&mut self, set: bool) {
         let right = self.pop();
         let left = self.pop();
         match left {
             Value::Object(left_obj) => match left_obj.obj_type {
                 ObjectType::Identifier => {
-                    // used for plain variable
-                    // TODO: check for variables already defined and return error
-                    self.globals
-                        .insert(unsafe { (*(*left_obj.obj).string).clone() }, right);
-
+                    let key = unsafe { (*(*left_obj.obj).string).to_owned() };
+                    if !set {
+                        // used for plain variable
+                        // TODO: check for variables already defined and return error
+                        self.globals.insert(key, right);
+                    } else {
+                        let result = self.globals.contains_key(&key);
+                        if result {
+                            self.globals.insert(key, right);
+                        } else {
+                            // TODO: report error
+                        }
+                    }
                     self.push(right);
                 }
                 ObjectType::List => match right {
@@ -190,12 +201,21 @@ impl<'a> VM<'a> {
                                     Value::Empty => continue,
                                     Value::Object(obj) => match obj.obj_type {
                                         ObjectType::Atom => {
-                                            // TODO: check for variables already
-                                            // defined and return error
-                                            self.globals.insert(
-                                                unsafe { (*(*obj.obj).string).clone() },
-                                                *right[i],
-                                            );
+                                            let key =
+                                                unsafe { (*(*left_obj.obj).string).to_owned() };
+                                            if !set {
+                                                // used for plain variable
+                                                // TODO: check for variables already defined and return error
+                                                self.globals.insert(key, *right[i]);
+                                            } else {
+                                                let result = self.globals.contains_key(&key);
+                                                if result {
+                                                    self.globals.insert(key, *right[i]);
+                                                } else {
+                                                    // TODO: report error
+                                                }
+                                            }
+                                            self.push(*right[i]);
                                         }
                                         _ => {
                                             // TODO: report error
@@ -231,12 +251,24 @@ impl<'a> VM<'a> {
                                         ObjectType::Identifier => {
                                             match right.get(&key) {
                                                 Some(to_be_assigned) => {
-                                                    // TODO: check if the variable is already
-                                                    // defined or not
-                                                    self.globals.insert(
-                                                        unsafe { (*(*obj.obj).string).clone() },
-                                                        **to_be_assigned,
-                                                    );
+                                                    let key = unsafe {
+                                                        (*(*left_obj.obj).string).to_owned()
+                                                    };
+                                                    if !set {
+                                                        // used for plain variable
+                                                        // TODO: check for variables already defined and return error
+                                                        self.globals.insert(key, **to_be_assigned);
+                                                    } else {
+                                                        let result =
+                                                            self.globals.contains_key(&key);
+                                                        if result {
+                                                            self.globals
+                                                                .insert(key, **to_be_assigned);
+                                                        } else {
+                                                            // TODO: report error
+                                                        }
+                                                    }
+                                                    self.push(**to_be_assigned);
                                                 }
                                                 None => {
                                                     // TODO: report error

@@ -155,12 +155,14 @@ impl Compiler {
                 ref left,
                 ref right,
             } => {
+                let left_value = self.convert_to_value((**left).to_owned()).unwrap();
+                let right_value = self.convert_to_value((**right).to_owned()).unwrap();
+                self.write_constant(left_value, true, token.position);
+                self.write_constant(right_value, true, token.position);
                 if *init {
-                    let left_value = self.convert_to_value((**left).to_owned()).unwrap();
-                    let right_value = self.convert_to_value((**right).to_owned()).unwrap();
-                    self.define_variable(right_value, left_value, token.position);
+                    self.write_opcode(OpCode::DefineGlobalVar, token.position);
                 } else {
-                    // TODO: handle this
+                    self.write_opcode(OpCode::SetGlobalVar, token.position);
                 }
             }
             Expr::Variable { name } => {
@@ -177,13 +179,6 @@ impl Compiler {
             }
             _ => {}
         }
-    }
-
-    /// Writes bytecode that defines a global variable
-    fn define_variable(&mut self, right: Value, left: Value, pos: Position) {
-        self.write_constant(left, true, pos);
-        self.write_constant(right, true, pos);
-        self.write_opcode(OpCode::DefineGlobalVar, pos);
     }
 
     /// Writes an opcode to the bytecode vector
