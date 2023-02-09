@@ -92,6 +92,10 @@ pub enum Expr {
     Block {
         exprs: Vec<Box<Expr>>,
     },
+    Unsafe {
+        token: Token,
+        expr: Box<Expr>,
+    },
     End,
 }
 
@@ -254,6 +258,9 @@ impl Expr {
                         String::from(" ") + &expr
                     }
                 })
+            }
+            Expr::Unsafe { token: _, expr } => {
+                format!("(unsafe {})", expr.print())
             }
             Expr::End => "".to_string(),
         }

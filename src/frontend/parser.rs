@@ -363,6 +363,14 @@ impl<'a> Parser<'a> {
                 condition: Box::new(condition),
                 branches,
             })
+        } else if self.does_match(&[TokenType::Unsafe]) {
+            // unsafe expression
+            let token = self.previous();
+            let expr = self.expression()?;
+            Ok(Expr::Unsafe {
+                token,
+                expr: Box::new(expr),
+            })
         } else {
             // println!("{:#?}", &self.current);
             Err("unexpected token")
@@ -729,6 +737,13 @@ std.std.(each (lambda (n) (block std.(println (fizzbuzz n)))))"#;
     fn short_hand_match_expr() {
         let source = r#"name := cool? ? "nobu" : "sol""#;
         let expected = r#"(assignI name (match cool? true -> "nobu" :_: -> "sol"))"#;
+        parse!(source, expected);
+    }
+
+    #[test]
+    fn unsafe_expr() {
+        let source = r#"result := unsafe ( 100 / 0 )"#;
+        let expected = r#"(assignI result (unsafe (Div 100 0)))"#;
         parse!(source, expected);
     }
 }
