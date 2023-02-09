@@ -73,13 +73,7 @@ impl Compiler {
                 ref op,
             } => {
                 self.compile_expr(right);
-                match op.kind {
-                    TokenType::Minus => self.write_opcode(OpCode::Sub, op.position),
-                    TokenType::Bang => self.write_opcode(OpCode::Negate, op.position),
-                    _ => {
-                        // TODO: report error
-                    }
-                }
+                self.write_opcode(OpCode::Negate, op.position);
             }
             Expr::StringLiteral {
                 token,
@@ -92,7 +86,7 @@ impl Compiler {
                     } as *mut ObjectUnion,
                 };
                 let value = Value::Object(obj);
-                self.write_constant(value, token.position);
+                self.write_constant(value, true, token.position);
             }
             Expr::AtomLiteral {
                 token,
@@ -105,19 +99,19 @@ impl Compiler {
                     } as *mut ObjectUnion,
                 };
                 let value = Value::Object(obj);
-                self.write_constant(value, token.position);
+                self.write_constant(value, true, token.position);
             }
             Expr::IntegerLiteral { token, value } => {
-                self.write_constant(Value::Int(*value), token.position);
+                self.write_constant(Value::Int(*value), true, token.position);
             }
             Expr::FloatLiteral { token, value } => {
-                self.write_constant(Value::Float(*value), token.position);
+                self.write_constant(Value::Float(*value), true, token.position);
             }
             Expr::BoolLiteral { token, payload } => {
-                self.write_constant(Value::Bool(*payload), token.position);
+                self.write_constant(Value::Bool(*payload), true, token.position);
             }
-            Expr::Underscore { token } => self.write_constant(Value::Empty, token.position),
-            Expr::Null { token } => self.write_constant(Value::Null, token.position),
+            Expr::Underscore { token } => self.write_constant(Value::Empty, true, token.position),
+            Expr::Null { token } => self.write_constant(Value::Null, true, token.position),
             Expr::ListLiteral {
                 token: _,
                 values: _,
@@ -143,12 +137,14 @@ impl Compiler {
     }
 
     /// Add a constant to the values vector and adds the index to the bytecode vector
-    fn write_constant(&mut self, value: Value, pos: Position) {
+    fn write_constant(&mut self, value: Value, include_opcode: bool, pos: Position) {
         self.values.push(value);
         if self.values.len() > 255 {
             // use OP_LCONSTANT
-            let byte = OpCode::ConstantLong as u8;
-            self.write_byte(byte, pos);
+            if include_opcode {
+                let byte = OpCode::ConstantLong as u8;
+                self.write_byte(byte, pos);
+            }
 
             // convert the constant index into two u8's and writes the bytes to the bytecode vector
             let mut bytes = [0u8; 2];
@@ -158,8 +154,10 @@ impl Compiler {
             }
         } else {
             // use OP_CONSTANT
-            let byte = OpCode::Constant as u8;
-            self.write_byte(byte, pos);
+            if include_opcode {
+                let byte = OpCode::Constant as u8;
+                self.write_byte(byte, pos);
+            }
 
             self.write_byte((self.values.len() - 1) as u8, pos)
         }
@@ -168,7 +166,7 @@ impl Compiler {
     /// Writes a byte to the bytecode vector
     fn write_byte(&mut self, byte: u8, pos: Position) {
         self.bytecode.push(byte);
-        // self.positions.insert(self.bytecode.len() - 1, pos);
-        self.positions.entry(self.bytecode.len() - 1).or_insert(pos);
+        self.positions.insert(self.bytecode.len() - 1, pos);
+        // self.positions.entry(self.bytecode.len() - 1).or_insert(pos);
     }
 }
