@@ -1,7 +1,7 @@
 # Feo
-*WIP: This project is still in early development.**
+**WIP: This project is still in early development.**
 
-*[Documentation](https://bichanna.github.io/feo-book/)
+[Documentation](https://bichanna.github.io/feo-book/)
 
 Feo is a dynamically- and strongly-typed, minimal, mildly-functional programming language that compiles to bytecode.
 
