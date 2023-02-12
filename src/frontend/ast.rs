@@ -90,6 +90,7 @@ pub enum Expr {
         branches: Vec<MatchBranch>,
     },
     Block {
+        token: Token,
         exprs: Vec<Box<Expr>>,
     },
     Unsafe {
@@ -249,7 +250,7 @@ impl Expr {
                 }
                 builder
             }
-            Expr::Block { exprs } => {
+            Expr::Block { token: _, exprs } => {
                 format!("(block{})", {
                     let expr = bulk_print!(exprs, " ");
                     if expr == "" {

@@ -52,8 +52,8 @@ impl<'a> Parser<'a> {
     fn report_errors(&self, filename: &str, source: &String) {
         if self.errors.len() > 0 {
             for err in &self.errors {
-                println!("{}", err.format(filename));
-                println!(
+                eprintln!("{}", err.format(filename));
+                eprintln!(
                     "{}",
                     source.split("\n").collect::<Vec<&str>>()[err.line - 1]
                 );
@@ -317,7 +317,10 @@ impl<'a> Parser<'a> {
                         exprs.push(Box::new(self.expression()?));
                     }
                     expect!(self, TokenType::RBrace, "expected '}'");
-                    Ok(Expr::Block { exprs })
+                    Ok(Expr::Block {
+                        token: self.previous,
+                        exprs,
+                    })
                 }
             }
         } else if self.does_match(&[TokenType::Func]) {

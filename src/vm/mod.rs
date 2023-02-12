@@ -126,6 +126,9 @@ impl<'a> VM<'a> {
                 OpCode::SetGlobalVar => {
                     self.set_global(false);
                 }
+                OpCode::Pop => {
+                    self.pop();
+                }
             }
 
             instruction = OpCode::u8_to_opcode(read_byte!(self)).unwrap();

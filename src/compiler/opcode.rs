@@ -19,6 +19,7 @@ pub enum OpCode {
     DefineGlobalVar,
     GetGlobalVar,
     SetGlobalVar,
+    Pop,
 }
 
 impl OpCode {
@@ -36,6 +37,7 @@ impl OpCode {
             9 => Some(Self::DefineGlobalVar),
             10 => Some(Self::GetGlobalVar),
             11 => Some(Self::SetGlobalVar),
+            12 => Some(Self::Pop),
             _ => None,
         }
     }

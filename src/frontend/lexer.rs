@@ -41,8 +41,8 @@ impl<'a> Lexer<'a> {
     fn report_errors(&self, filename: &str) {
         if self.errors.len() > 0 {
             for err in &self.errors {
-                println!("{}", err.format(filename));
-                println!(
+                eprintln!("{}", err.format(filename));
+                eprintln!(
                     "{}",
                     self.source.split("\n").collect::<Vec<&str>>()[err.line - 1]
                 );

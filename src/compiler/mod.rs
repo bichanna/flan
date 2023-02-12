@@ -2,17 +2,22 @@ pub mod debug;
 pub mod opcode;
 
 use std::collections::HashMap;
+use std::process;
 
 use byteorder::{ByteOrder, LittleEndian};
 use crossbeam_channel::Receiver;
 
 use self::opcode::{OpCode, Position};
 use crate::frontend::ast::Expr;
-use crate::frontend::token::TokenType;
+use crate::frontend::token::{Token, TokenType};
 use crate::vm::object::{Object, ObjectType, ObjectUnion};
 use crate::vm::value::Value;
 
-pub struct Compiler {
+pub struct Compiler<'a> {
+    /// File name
+    filename: &'a str,
+    /// Source
+    source: &'a String,
     /// The name of this Compiler, used for debugging
     name: &'static str,
     /// The compiled bytecode
@@ -21,15 +26,38 @@ pub struct Compiler {
     pub values: Vec<Value>,
     /// Position information used for runtime errors
     pub positions: HashMap<usize, Position>,
+    /// Local variables
+    pub locals: Vec<Local>,
+    score_depth: u32,
 }
 
-impl Compiler {
-    pub fn new(name: &'static str, recv: &Receiver<Expr>) {
+pub struct Local {
+    pub name: Token,
+    pub depth: u32,
+}
+
+impl Local {
+    pub fn new(token: Token, depth: u32) -> Self {
+        Self { name: token, depth }
+    }
+}
+
+impl<'a> Compiler<'a> {
+    pub fn new<'b>(
+        source: &'a String,
+        filename: &'a str,
+        name: &'static str,
+        recv: &Receiver<Expr>,
+    ) {
         let mut compiler = Self {
+            filename,
+            source,
             name,
             bytecode: vec![],
             positions: HashMap::new(),
             values: vec![],
+            locals: vec![],
+            score_depth: 0,
         };
 
         compiler.compile(recv);
@@ -157,12 +185,27 @@ impl Compiler {
             } => {
                 let left_value = self.convert_to_value((**left).to_owned()).unwrap();
                 let right_value = self.convert_to_value((**right).to_owned()).unwrap();
-                self.write_constant(left_value, true, token.position);
-                self.write_constant(right_value, true, token.position);
-                if *init {
-                    self.write_opcode(OpCode::DefineGlobalVar, token.position);
+                if self.score_depth == 0 {
+                    self.write_constant(left_value, true, token.position);
+                    self.write_constant(right_value, true, token.position);
+                    if *init {
+                        self.write_opcode(OpCode::DefineGlobalVar, token.position);
+                    } else {
+                        self.write_opcode(OpCode::SetGlobalVar, token.position);
+                    }
                 } else {
-                    self.write_opcode(OpCode::SetGlobalVar, token.position);
+                    for local in &self.locals {
+                        if local.depth < self.score_depth {
+                            break;
+                        }
+                        if *init && local.name.value == token.value {
+                            self.compile_error(
+                                &token,
+                                "a variable with this name is already in this scope",
+                            )
+                        }
+                    }
+                    self.add_local((*token).clone())
                 }
             }
             Expr::Variable { name } => {
@@ -177,8 +220,20 @@ impl Compiler {
                 self.write_constant(value, true, name.position);
                 self.write_opcode(OpCode::GetGlobalVar, name.position);
             }
+            Expr::Block { token, exprs } => {
+                self.begin_scope();
+                for mut expr in exprs {
+                    self.compile_expr(&mut expr);
+                }
+                self.end_scope(token);
+            }
             _ => {}
         }
+    }
+
+    fn add_local(&mut self, token: Token) {
+        let local = Local::new(token, self.score_depth);
+        self.locals.push(local);
     }
 
     /// Writes an opcode to the bytecode vector
@@ -291,5 +346,31 @@ impl Compiler {
             }
             _ => None,
         }
+    }
+
+    fn begin_scope(&mut self) {
+        self.score_depth += 1;
+    }
+
+    fn end_scope(&mut self, token: &Token) {
+        self.score_depth -= 1;
+
+        while self.locals.len() > 0 && self.locals.last().unwrap().depth > self.score_depth {
+            self.write_opcode(OpCode::Pop, token.position);
+            self.locals.pop();
+        }
+    }
+
+    fn compile_error(&self, token: &Token, message: &str) {
+        let message = format!(
+            "{}:{}:{} error: {}\n{}",
+            self.filename,
+            token.position.0,
+            token.position.1,
+            message,
+            self.source.split("\n").collect::<Vec<&str>>()[token.position.0 - 1]
+        );
+        eprintln!("{}", message);
+        process::exit(1);
     }
 }
