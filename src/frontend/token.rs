@@ -53,6 +53,7 @@ pub enum TokenType {
     Match,  // match
     Or,     // or
     And,    // and
+    Not,    // not
     True,   // true
     False,  // false
     Null,   // null

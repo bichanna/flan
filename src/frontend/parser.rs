@@ -483,7 +483,7 @@ impl<'a> Parser<'a> {
     }
 
     fn unary(&mut self) -> Result<Expr, &'static str> {
-        if self.does_match(&[TokenType::Bang, TokenType::Minus]) {
+        if self.does_match(&[TokenType::Bang, TokenType::Not, TokenType::Minus]) {
             let op = self.previous();
             Ok(Expr::Unary {
                 right: Box::new(self.unary()?),
