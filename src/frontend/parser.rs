@@ -318,13 +318,19 @@ impl<'a> Parser<'a> {
                     }
                     expect!(self, TokenType::RBrace, "expected '}'");
                     Ok(Expr::Block {
-                        token: self.previous,
+                        token: self.previous(),
                         exprs,
                     })
                 }
             }
         } else if self.does_match(&[TokenType::Func]) {
             // function
+            let public = if self.does_match(&[TokenType::Mul]) {
+                true
+            } else {
+                false
+            };
+
             let name: Option<Token> = if self.check_current(TokenType::Id) {
                 self.advance();
                 Some(self.previous())
@@ -334,6 +340,7 @@ impl<'a> Parser<'a> {
             let params = self.parse_params()?;
             let body = self.expression()?;
             Ok(Expr::Func {
+                public,
                 name,
                 params,
                 body: Box::new(body),
@@ -672,7 +679,7 @@ each(names) <| func(name) println("Hello, %{}!", name)
 // fizzbuzz
 std := import("std")
 
-func fizzbuzz(n) match ([n % 3, n % 5]) {
+func *fizzbuzz(n) match ([n % 3, n % 5]) {
     [0, 0] -> "FizzBuzz",
     [0, _] -> "Fizz",
     [_, 0] -> "Buzz",
@@ -687,7 +694,7 @@ std.range(1, 101) |> std.each() <| func(n) {
 (assignI names (list "Nobu" "Sol" "Thomas" "Damian" "Ryan" "Zen" "Esfir"))
 (each names (lambda (name) (println "Hello, %{}!" name)))
 (assignI std (import "std"))
-(func fizzbuzz (n) (match ((list (Mod n 3) (Mod n 5))) (list 0 0) -> "FizzBuzz" (list 0 :_:) -> "Fizz" (list :_: 0) -> "Buzz" :_: -> (string n)))
+(func [public] fizzbuzz (n) (match ((list (Mod n 3) (Mod n 5))) (list 0 0) -> "FizzBuzz" (list 0 :_:) -> "Fizz" (list :_: 0) -> "Buzz" :_: -> (string n)))
 std.std.(each (lambda (n) (block std.(println (fizzbuzz n)))))"#;
 
         parse!(source, expected);

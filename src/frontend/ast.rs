@@ -80,6 +80,7 @@ pub enum Expr {
         value: Box<Expr>,
     },
     Func {
+        public: bool,
         name: Option<Token>,
         params: Vec<Token>,
         body: Box<Expr>,
@@ -219,10 +220,20 @@ impl Expr {
                     value.print()
                 )
             }
-            Expr::Func { name, params, body } => {
+            Expr::Func {
+                public,
+                name,
+                params,
+                body,
+            } => {
                 if let Some(name) = name {
                     format!(
-                        "(func {} ({}) {})",
+                        "(func{} {} ({}) {})",
+                        if *public {
+                            " [public]".to_string()
+                        } else {
+                            "".to_string()
+                        },
                         name.print(),
                         bulk_print!(params, " "),
                         body.print()
