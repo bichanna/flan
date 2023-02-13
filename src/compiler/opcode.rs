@@ -20,6 +20,8 @@ pub enum OpCode {
     GetGlobalVar,
     SetGlobalVar,
     Pop,
+    GetLocalVar,
+    SetLocalVar,
 }
 
 impl OpCode {
@@ -38,6 +40,8 @@ impl OpCode {
             10 => Some(Self::GetGlobalVar),
             11 => Some(Self::SetGlobalVar),
             12 => Some(Self::Pop),
+            13 => Some(Self::GetLocalVar),
+            14 => Some(Self::SetLocalVar),
             _ => None,
         }
     }

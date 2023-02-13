@@ -3,6 +3,36 @@ use byteorder::{ByteOrder, LittleEndian};
 use super::opcode::{pos_str, OpCode};
 use super::Compiler;
 
+#[macro_export]
+macro_rules! compile {
+    ($source:expr, $expected:expr) => {
+        let source = String::from($source);
+        // for tokenizing
+        let (ts, tr) = crossbeam_channel::unbounded();
+        // for parsing
+        let (ps, pr) = crossbeam_channel::unbounded();
+        // for compiling
+        let (cs, cr) = crossbeam_channel::bounded(1);
+
+        let mut compiler = Compiler::new(&source, "input", "test", &pr, &cs);
+
+        std::thread::scope(|s| {
+            s.spawn(|| {
+                Lexer::new(&source, "input", &ts);
+            });
+
+            s.spawn(|| {
+                Parser::new(&source, "input", &tr, &ps);
+            });
+        });
+
+        compiler.start();
+        let bytecode = cr.recv().unwrap();
+
+        assert_eq!(*bytecode, $expected);
+    };
+}
+
 impl<'a> std::fmt::Debug for Compiler<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "=== {} ===", self.name)?;
@@ -51,6 +81,8 @@ impl<'a> Compiler<'a> {
                     self.debug_print_simple_instruction("OP_SET_GLOBAL", offset)
                 }
                 OpCode::Pop => self.debug_print_simple_instruction("OP_POP", offset),
+                OpCode::GetLocalVar => self.debug_print_simple_instruction("OP_GET_LOCAL", offset),
+                OpCode::SetLocalVar => self.debug_print_simple_instruction("OP_SET_LOCAL", offset),
             }
         } else {
             println!("Unknown opcode {:?}", instruction);

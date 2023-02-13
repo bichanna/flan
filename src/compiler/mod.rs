@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::process;
 
 use byteorder::{ByteOrder, LittleEndian};
-use crossbeam_channel::Receiver;
+use crossbeam_channel::{Receiver, Sender};
 
 use self::opcode::{OpCode, Position};
 use crate::frontend::ast::Expr;
@@ -19,7 +19,7 @@ pub struct Compiler<'a> {
     /// Source
     source: &'a String,
     /// The name of this Compiler, used for debugging
-    name: &'static str,
+    name: &'a str,
     /// The compiled bytecode
     pub bytecode: Vec<u8>,
     /// For simplicity's sake, we'll put all constants in here
@@ -29,6 +29,9 @@ pub struct Compiler<'a> {
     /// Local variables
     pub locals: Vec<Local>,
     score_depth: u32,
+
+    sender: &'a Sender<Vec<u8>>,
+    recv: &'a Receiver<Expr>,
 }
 
 pub struct Local {
@@ -47,9 +50,10 @@ impl<'a> Compiler<'a> {
         source: &'a String,
         filename: &'a str,
         name: &'static str,
-        recv: &Receiver<Expr>,
-    ) {
-        let mut compiler = Self {
+        recv: &'a Receiver<Expr>,
+        sender: &'a Sender<Vec<u8>>,
+    ) -> Self {
+        Self {
             filename,
             source,
             name,
@@ -58,14 +62,19 @@ impl<'a> Compiler<'a> {
             values: vec![],
             locals: vec![],
             score_depth: 0,
-        };
-
-        compiler.compile(recv);
+            sender,
+            recv,
+        }
     }
 
-    fn compile(&mut self, recv: &Receiver<Expr>) {
+    pub fn start(&mut self) {
+        self.compile();
+        self.sender.send(self.bytecode.to_owned()).unwrap();
+    }
+
+    fn compile(&mut self) {
         loop {
-            let expr = recv.recv().unwrap();
+            let expr = self.recv.recv().unwrap();
             match expr {
                 Expr::End => break,
                 mut expr => {
@@ -73,7 +82,7 @@ impl<'a> Compiler<'a> {
                 }
             }
         }
-        self.write_opcode(OpCode::Return, (0, 0))
+        self.write_opcode(OpCode::Return, (0, 0));
     }
 
     fn compile_expr(&mut self, expr: &mut Expr) {
@@ -372,5 +381,29 @@ impl<'a> Compiler<'a> {
         );
         eprintln!("{}", message);
         process::exit(1);
+    }
+}
+
+// Tests
+#[cfg(test)]
+mod tests {
+    use crate::compile;
+    use crate::frontend::lexer::Lexer;
+    use crate::frontend::parser::Parser;
+
+    use super::*;
+
+    #[test]
+    fn test_binary() {
+        let source = r#"1 + 1"#;
+        let expected: Vec<u8> = vec![1, 0, 1, 1, 4, 0];
+        compile!(source, expected);
+    }
+
+    #[test]
+    fn test_unary() {
+        let source = "not false";
+        let expected: Vec<u8> = vec![1, 0, 3, 0];
+        compile!(source, expected);
     }
 }

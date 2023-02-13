@@ -377,6 +377,7 @@ impl<'a> Lexer<'a> {
             "match" => Some(TokenType::Match),
             "or" => Some(TokenType::Or),
             "and" => Some(TokenType::And),
+            "not" => Some(TokenType::Not),
             "true" => Some(TokenType::True),
             "false" => Some(TokenType::False),
             "null" => Some(TokenType::Null),

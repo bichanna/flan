@@ -129,6 +129,8 @@ impl<'a> VM<'a> {
                 OpCode::Pop => {
                     self.pop();
                 }
+                OpCode::SetLocalVar => {}
+                OpCode::GetLocalVar => {}
             }
 
             instruction = OpCode::u8_to_opcode(read_byte!(self)).unwrap();

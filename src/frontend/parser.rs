@@ -756,4 +756,11 @@ std.std.(each (lambda (n) (block std.(println (fizzbuzz n)))))"#;
         let expected = r#"(assignI result (unsafe (Div 100 0)))"#;
         parse!(source, expected);
     }
+
+    #[test]
+    fn unary_expr() {
+        let source = "not false";
+        let expected = "(Not false)";
+        parse!(source, expected);
+    }
 }
