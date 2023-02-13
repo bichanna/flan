@@ -326,6 +326,15 @@ impl<'a> Compiler<'a> {
                 };
                 Some(Value::Object(obj))
             }
+            Expr::Variable { mut name } => {
+                let obj = Object {
+                    obj_type: ObjectType::Identifier,
+                    obj: &mut ObjectUnion {
+                        string: &mut name.value as *mut String,
+                    },
+                };
+                Some(Value::Object(obj))
+            }
             Expr::ListLiteral { token: _, values } => {
                 let mut list: Vec<Box<Value>> = vec![];
 
@@ -413,6 +422,13 @@ mod tests {
     fn test_unary() {
         let source = "not false";
         let expected: Vec<u8> = vec![1, 0, 3, 0];
+        compile!(source, expected);
+    }
+
+    #[test]
+    fn test_global_def() {
+        let source = r#"name := "nobu""#;
+        let expected: Vec<u8> = vec![1, 0, 1, 1, 9, 0];
         compile!(source, expected);
     }
 }

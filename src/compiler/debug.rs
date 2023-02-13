@@ -81,7 +81,9 @@ impl<'a> Compiler<'a> {
                     self.debug_print_simple_instruction("OP_SET_GLOBAL", offset)
                 }
                 OpCode::Pop => self.debug_print_simple_instruction("OP_POP", offset),
-                OpCode::GetLocalVar => self.debug_print_simple_instruction("OP_GET_LOCAL", offset),
+                OpCode::GetLocalVar => {
+                    self.debug_print_constant_instruction("OP_GET_LOCAL", offset)
+                }
                 OpCode::SetLocalVar => self.debug_print_simple_instruction("OP_SET_LOCAL", offset),
             }
         } else {
