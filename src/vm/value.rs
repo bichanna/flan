@@ -1,6 +1,6 @@
 use super::object::{Object, ObjectType, ObjectUnion};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Value {
     Null,
     Empty,

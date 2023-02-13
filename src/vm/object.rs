@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use super::value::Value;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Object {
     pub obj_type: ObjectType,
     pub obj: *mut ObjectUnion,
@@ -16,7 +16,7 @@ pub union ObjectUnion {
     pub list: *mut Vec<Box<Value>>,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum ObjectType {
     List,
     String,

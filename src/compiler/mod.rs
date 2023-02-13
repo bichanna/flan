@@ -218,16 +218,25 @@ impl<'a> Compiler<'a> {
                 }
             }
             Expr::Variable { name } => {
-                let obj = Object {
-                    obj_type: ObjectType::Identifier,
-                    obj: &mut ObjectUnion {
-                        string: &mut name.value as *mut String,
-                    },
-                };
-                let value = Value::Object(obj);
+                if self.score_depth != 0 {
+                    for i in self.locals.len()..0 {
+                        if self.locals[i - 1].name.value == name.value {
+                            self.write_opcode(OpCode::GetLocalVar, name.position);
+                            self.write_byte((i - 1) as u8, name.position);
+                        }
+                    }
+                } else {
+                    let obj = Object {
+                        obj_type: ObjectType::Identifier,
+                        obj: &mut ObjectUnion {
+                            string: &mut name.value as *mut String,
+                        },
+                    };
+                    let value = Value::Object(obj);
 
-                self.write_constant(value, true, name.position);
-                self.write_opcode(OpCode::GetGlobalVar, name.position);
+                    self.write_constant(value, true, name.position);
+                    self.write_opcode(OpCode::GetGlobalVar, name.position);
+                }
             }
             Expr::Block { token, exprs } => {
                 self.begin_scope();

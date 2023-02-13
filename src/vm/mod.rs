@@ -71,7 +71,7 @@ impl<'a> VM<'a> {
             bytecode,
             values,
             positions,
-            ip: bytecode[0] as *const u8,
+            ip: bytecode.as_ptr(),
             filename,
             source,
             stack: Box::new([Value::Null; STACK_MAX]),
@@ -309,8 +309,8 @@ impl<'a> VM<'a> {
     }
 
     /// Pushes a Value onto the stack
-    fn push(&mut self, mut value: Value) {
-        self.stack_top = &mut value as *mut Value;
+    fn push(&mut self, value: Value) {
+        unsafe { *self.stack_top = value }
         self.stack_top = unsafe { self.stack_top.add(1) };
     }
 
@@ -329,5 +329,24 @@ impl<'a> VM<'a> {
         } else {
             self.values[read_byte!(self) as usize]
         }
+    }
+}
+
+// Tests
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_binary() {
+        let bytecode: Vec<u8> = vec![1, 0, 1, 1, 4, 0];
+        let values: Vec<Value> = vec![Value::Int(1), Value::Int(1)];
+        let positions = HashMap::new();
+        let source = "1 + 1".to_string();
+
+        let mut vm = VM::new("input", &source, &bytecode, &values, &positions);
+        vm.run();
+
+        assert_eq!(unsafe { *vm.stack_top }, Value::Int(2));
     }
 }
