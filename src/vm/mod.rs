@@ -129,13 +129,20 @@ impl<'a> VM<'a> {
                 OpCode::Pop => {
                     self.pop();
                 }
-                OpCode::SetLocalVar => {}
-                OpCode::GetLocalVar => {}
+                OpCode::SetLocalVar => {
+                    let slot = read_byte!(self);
+                    self.stack[slot as usize] = unsafe { *self.peek(0) };
+                }
+                OpCode::GetLocalVar => {
+                    let slot = read_byte!(self);
+                    self.push(self.stack[slot as usize]);
+                }
             }
 
             instruction = OpCode::u8_to_opcode(read_byte!(self)).unwrap();
         }
 
+        // rudementary garbage collection
         for value in self.values {
             match value {
                 Value::Object(obj) => obj.free(),
@@ -330,12 +337,17 @@ impl<'a> VM<'a> {
             self.values[read_byte!(self) as usize]
         }
     }
+
+    /// Peeks a [`Value`] from the stack
+    fn peek(&mut self, n: usize) -> *mut Value {
+        unsafe { self.stack_top.sub(n + 1) }
+    }
 }
 
 // Tests
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{object::ObjectUnion, *};
 
     #[test]
     fn test_binary() {
@@ -348,5 +360,46 @@ mod tests {
         vm.run();
 
         assert_eq!(unsafe { *vm.stack_top }, Value::Int(2));
+    }
+
+    #[test]
+    fn test_unary() {
+        let bytecode: Vec<u8> = vec![1, 0, 3, 0];
+        let values: Vec<Value> = vec![Value::Bool(false)];
+        let positions = HashMap::new();
+        let source = "not false".to_string();
+
+        let mut vm = VM::new("input", &source, &bytecode, &values, &positions);
+        vm.run();
+
+        assert_eq!(unsafe { *vm.stack_top }, Value::Bool(true));
+    }
+
+    #[test]
+    fn test_global() {
+        let bytecode: Vec<u8> = vec![1, 0, 1, 1, 9, 1, 2, 1, 3, 11, 0];
+        let values: Vec<Value> = vec![
+            Value::Object(object::Object {
+                obj_type: ObjectType::Identifier,
+                obj: &mut ObjectUnion {
+                    string: &mut "Hello".to_string() as *mut String,
+                } as *mut ObjectUnion,
+            }),
+            Value::Int(5),
+            Value::Object(object::Object {
+                obj_type: ObjectType::Identifier,
+                obj: &mut ObjectUnion {
+                    string: &mut "Hello".to_string() as *mut String,
+                } as *mut ObjectUnion,
+            }),
+            Value::Bool(false),
+        ];
+        let positions = HashMap::new();
+        let source = r#"Hello := 5 Hello = false"#.to_string();
+
+        let mut vm = VM::new("input", &source, &bytecode, &values, &positions);
+        vm.run();
+
+        assert_eq!(unsafe { *vm.stack_top }, Value::Bool(false));
     }
 }

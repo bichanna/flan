@@ -431,4 +431,11 @@ mod tests {
         let expected: Vec<u8> = vec![1, 0, 1, 1, 9, 0];
         compile!(source, expected);
     }
+
+    #[test]
+    fn test_global_set() {
+        let source = r#"name = "nobu""#;
+        let expected: Vec<u8> = vec![1, 0, 1, 1, 11, 0];
+        compile!(source, expected);
+    }
 }
