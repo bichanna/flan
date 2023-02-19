@@ -6,15 +6,16 @@
 Feo is a dynamically- and strongly-typed, minimal, mildly-functional programming language that compiles to bytecode.
 
 The language looks like this:
-```
+```js
 // printing out names
-{fprintln: fprintln} := import("fmt")
+{println: fprintln} := import("fmt")
 {each: each} := import("std")
 
 names := ["Nobu", "Sol", "Thomas", "Damian", "Ryan", "Zen", "Esfir"]
 each(names) <| func(name) fprintln("Hello, {}!", name)
+```
 
-
+```js
 // fizzbuzz
 std := import("std")
 
@@ -28,11 +29,16 @@ func fizzbuzz(n) match [n % 3, n % 5] {
 std.range(1, 101) |> std.each() <| func(n) {
     println(fizzbuzz(n))
 }
+```
+
+```js
+std := import("std")
+fmt := import("fmt")
 
 // fibonacci
 func fib(n) n <= 1 : n ? fib(n-1) + fib(n-2)
 
 std.range(0, 10) |> std.each() <| func(i) {
-    fprintln("fib(%s) = %s", i, fib(i))
+    fmt.println("fib({}) = {}", i, fib(i))
 }
 ```
