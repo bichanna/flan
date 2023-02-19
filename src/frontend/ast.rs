@@ -83,6 +83,7 @@ pub enum Expr {
         public: bool,
         name: Option<Token>,
         params: Vec<Token>,
+        rest: Option<Token>,
         body: Box<Expr>,
     },
     Match {
@@ -224,11 +225,12 @@ impl Expr {
                 public,
                 name,
                 params,
+                rest,
                 body,
             } => {
                 if let Some(name) = name {
                     format!(
-                        "(func{} {} ({}) {})",
+                        "(func{} {} ({}{}) {})",
                         if *public {
                             " [public]".to_string()
                         } else {
@@ -236,6 +238,15 @@ impl Expr {
                         },
                         name.print(),
                         bulk_print!(params, " "),
+                        match rest {
+                            Some(rest) =>
+                                if params.len() > 0 {
+                                    format!(" {}+", rest.print())
+                                } else {
+                                    format!("{}+", rest.print())
+                                },
+                            None => "".to_string(),
+                        },
                         body.print()
                     )
                 } else {

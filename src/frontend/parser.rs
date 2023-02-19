@@ -342,7 +342,8 @@ impl<'a> Parser<'a> {
             Ok(Expr::Func {
                 public,
                 name,
-                params,
+                params: params.0,
+                rest: params.1,
                 body: Box::new(body),
             })
         } else if self.does_match(&[TokenType::Match]) {
@@ -577,14 +578,26 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
-    fn parse_params(&mut self) -> Result<Vec<Token>, &'static str> {
+    fn parse_params(&mut self) -> Result<(Vec<Token>, Option<Token>), &'static str> {
         expect!(self, TokenType::LParen, "expected '('");
         let mut params: Vec<Token> = vec![];
+        let mut rest: Option<Token> = None;
         if !self.check_current(TokenType::RParen) {
             loop {
+                if match rest {
+                    Some(_) => true,
+                    None => false,
+                } {
+                    return Err("required parameter cannot follow rest parameter");
+                }
+
                 expect!(self, TokenType::Id, "expected an identifier");
                 let param = self.previous();
-                params.push(param);
+                if self.does_match(&[TokenType::Plus]) {
+                    rest = Some(param);
+                } else {
+                    params.push(param);
+                }
 
                 if !self.does_match(&[TokenType::Comma]) {
                     break;
@@ -592,7 +605,7 @@ impl<'a> Parser<'a> {
             }
         }
         expect!(self, TokenType::RParen, "expected ')'");
-        Ok(params)
+        Ok((params, rest))
     }
 
     /// Checks if the current token is in the given types
@@ -761,6 +774,13 @@ std.std.(each (lambda (n) (block std.(println (fizzbuzz n)))))"#;
     fn unary_expr() {
         let source = "not false";
         let expected = "(Not false)";
+        parse!(source, expected);
+    }
+
+    #[test]
+    fn rest_param() {
+        let source = "func some_func(nums+) {}";
+        let expected = "(func some_func (nums+) (object))";
         parse!(source, expected);
     }
 }
