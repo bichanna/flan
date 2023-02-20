@@ -94,19 +94,45 @@ impl<'a> Parser<'a> {
             let value = Box::new(self.assignment()?);
 
             match expr {
-                Expr::Variable { name: ref token }
-                | Expr::ListLiteral {
-                    ref token,
-                    values: _,
-                }
-                | Expr::ObjectLiteral {
+                Expr::ObjectLiteral {
                     ref token,
                     keys: _,
-                    values: _,
+                    ref values,
                 } => {
+                    for v in values {
+                        match **v {
+                            Expr::Variable { name: _ } | Expr::Underscore { token: _ } => continue,
+                            _ => return Err("expected variable names or _ for object values"),
+                        }
+                    }
                     return Ok(Expr::Assign {
                         token: token.clone(),
                         init,
+                        left: Box::new(expr),
+                        right: value,
+                    });
+                }
+                Expr::ListLiteral {
+                    ref token,
+                    ref values,
+                } => {
+                    for v in values {
+                        match **v {
+                            Expr::Variable { name: _ } | Expr::Underscore { token: _ } => continue,
+                            _ => return Err("expected variable names or _ for elements"),
+                        }
+                    }
+                    return Ok(Expr::Assign {
+                        init,
+                        token: token.clone(),
+                        left: Box::new(expr),
+                        right: value,
+                    });
+                }
+                Expr::Variable { ref name } => {
+                    return Ok(Expr::Assign {
+                        init,
+                        token: name.clone(),
                         left: Box::new(expr),
                         right: value,
                     })
