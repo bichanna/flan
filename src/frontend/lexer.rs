@@ -372,6 +372,7 @@ impl<'a> Lexer<'a> {
     /// Returns the TokenType of the keyword if the given &str is a keyword
     fn keyword(value: &str) -> Option<TokenType> {
         match value.to_lowercase().as_str() {
+            "public" => Some(TokenType::Public),
             "func" => Some(TokenType::Func),
             "else" => Some(TokenType::Else),
             "match" => Some(TokenType::Match),

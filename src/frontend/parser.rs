@@ -349,29 +349,12 @@ impl<'a> Parser<'a> {
                     })
                 }
             }
-        } else if self.does_match(&[TokenType::Func]) {
-            // function
-            let public = if self.does_match(&[TokenType::Mul]) {
-                true
-            } else {
-                false
-            };
-
-            let name: Option<Token> = if self.check_current(TokenType::Id) {
-                self.advance();
-                Some(self.previous())
-            } else {
-                None
-            };
-            let params = self.parse_params()?;
-            let body = self.expression()?;
-            Ok(Expr::Func {
-                public,
-                name,
-                params: params.0,
-                rest: params.1,
-                body: Box::new(body),
-            })
+        } else if self.check_current(TokenType::Func) {
+            // private function
+            self.function(false)
+        } else if self.does_match(&[TokenType::Public]) {
+            // public function
+            self.function(true)
         } else if self.does_match(&[TokenType::Match]) {
             // match expression
             let token = self.previous();
@@ -412,6 +395,25 @@ impl<'a> Parser<'a> {
             // println!("{:#?}", &self.current);
             Err("unexpected token")
         }
+    }
+
+    fn function(&mut self, public: bool) -> Result<Expr, &'static str> {
+        expect!(self, TokenType::Func, "expected 'func'");
+        let name: Option<Token> = if self.check_current(TokenType::Id) {
+            self.advance();
+            Some(self.previous())
+        } else {
+            None
+        };
+        let params = self.parse_params()?;
+        let body = self.expression()?;
+        Ok(Expr::Func {
+            public,
+            name,
+            params: params.0,
+            rest: params.1,
+            body: Box::new(body),
+        })
     }
 
     fn finish_call(&mut self, callee: Expr, arg: Option<Expr>) -> Result<Expr, &'static str> {
@@ -718,7 +720,7 @@ each(names) <| func(name) println("Hello, %{}!", name)
 // fizzbuzz
 std := import("std")
 
-func *fizzbuzz(n) match ([n % 3, n % 5]) {
+public func fizzbuzz(n) match ([n % 3, n % 5]) {
     [0, 0] -> "FizzBuzz",
     [0, _] -> "Fizz",
     [_, 0] -> "Buzz",

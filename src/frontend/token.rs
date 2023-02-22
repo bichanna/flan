@@ -48,6 +48,7 @@ pub enum TokenType {
     DAmp,       // &&
     DPipe,      // ||
 
+    Public, // public
     Func,   // func
     Else,   // else
     Match,  // match
