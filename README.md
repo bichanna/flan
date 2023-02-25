@@ -1,7 +1,14 @@
 # Feo
 **WIP: This project is still in early development.**
 
-[Documentation](https://bichanna.github.io/feo-book/)
+<div align="center">
+    <h1>The Feo Programming Language</h1>
+    |
+    <a href="https://bichanna.github.io/feo-book/">Doc</a>
+    |
+</div><br>
+
+<div align="center">
 
 **Feo** is a dynamically- and strongly-typed, functional, simple programming language with automatic momery management.
 **Feo** is my highschool Computer Science project written in Rust.
