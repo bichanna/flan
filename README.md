@@ -3,9 +3,13 @@
 
 [Documentation](https://bichanna.github.io/feo-book/)
 
-Feo is a dynamically- and strongly-typed, minimal, mildly-functional programming language that compiles to bytecode.
+**Feo** is a dynamically- and strongly-typed, functional, simple programming language with automatic momery management.
+**Feo** is my highschool Computer Science project written in Rust.
 
-The language looks like this:
+I'm sorry or the ugly and inefficient and awful code. That's because Feo is my first serious project.
+
+## Examples
+
 ```js
 // printing out names
 {println: fprintln} := import("fmt")
