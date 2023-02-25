@@ -1,6 +1,3 @@
-# Feo
-**WIP: This project is still in early development.**
-
 <div align="center">
     <h1>The Feo Programming Language</h1>
     |
@@ -9,6 +6,7 @@
 </div><br>
 
 <div align="center">
+</div>
 
 **Feo** is a dynamically- and strongly-typed, functional, simple programming language with automatic momery management.
 **Feo** is my highschool Computer Science project written in Rust.
