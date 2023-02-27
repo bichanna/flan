@@ -11,7 +11,7 @@
 **Feo** is a dynamically- and strongly-typed, functional, simple programming language with automatic momery management.
 **Feo** is my highschool Computer Science project written in Rust.
 
-I'm sorry or the ugly and inefficient and awful code. That's because Feo is my first serious project.
+I'm sorry for the ugly and inefficient and awful code. That's because Feo is my first serious project.
 
 ## Examples
 
