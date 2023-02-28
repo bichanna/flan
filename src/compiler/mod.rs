@@ -8,6 +8,7 @@ use byteorder::{ByteOrder, LittleEndian};
 use crossbeam_channel::{Receiver, Sender};
 
 use self::opcode::{OpCode, Position};
+use super::vm::destruct::Assignee;
 use crate::frontend::ast::Expr;
 use crate::frontend::token::{Token, TokenType};
 use crate::vm::object::{Object, ObjectType, ObjectUnion};
@@ -29,9 +30,13 @@ pub struct Compiler<'a> {
     /// Local variables
     pub locals: Vec<Local>,
     score_depth: u32,
+    /// Objects and lists that are part of destructuring
+    pub assignees: Vec<Assignee>,
 
     sender: &'a Sender<Vec<u8>>,
     recv: &'a Receiver<Expr>,
+
+    pop: bool,
 }
 
 pub struct Local {
@@ -62,8 +67,10 @@ impl<'a> Compiler<'a> {
             values: vec![],
             locals: vec![],
             score_depth: 0,
+            assignees: vec![],
             sender,
             recv,
+            pop: true,
         }
     }
 
@@ -81,6 +88,10 @@ impl<'a> Compiler<'a> {
                     self.compile_expr(&mut expr);
                 }
             }
+            if self.pop {
+                self.write_opcode(OpCode::Pop, (0, 0));
+            }
+            self.pop = true
         }
         self.write_opcode(OpCode::Return, (0, 0));
     }
@@ -100,9 +111,7 @@ impl<'a> Compiler<'a> {
                     TokenType::Mul => self.write_opcode(OpCode::Mult, op.position),
                     TokenType::Div => self.write_opcode(OpCode::Div, op.position),
                     TokenType::Mod => self.write_opcode(OpCode::Mod, op.position),
-                    _ => {
-                        // TODO: report error
-                    }
+                    _ => self.compile_error(op, "invalid binary expression".to_string()),
                 }
             }
             Expr::Unary {
@@ -192,10 +201,56 @@ impl<'a> Compiler<'a> {
                 ref left,
                 ref right,
             } => {
-                let left_value = self.convert_to_value((**left).to_owned()).unwrap();
                 let right_value = self.convert_to_value((**right).to_owned()).unwrap();
                 if self.score_depth == 0 {
-                    self.write_constant(left_value, true, token.position);
+                    match **left {
+                        Expr::Variable { ref name } => {
+                            self.write_destruct(Assignee::Var(name.value.clone()), name.position);
+                        }
+                        Expr::ListLiteral {
+                            ref token,
+                            ref values,
+                        } => {
+                            let mut assignees: Vec<String> = vec![];
+                            for v in values {
+                                match **v {
+                                    Expr::Underscore { token: _ } => {
+                                        assignees.push("_".to_string());
+                                    }
+                                    Expr::Variable { ref name } => {
+                                        assignees.push(name.value.clone());
+                                    }
+                                    _ => todo!(), // cannot happen
+                                }
+                            }
+                            self.write_destruct(Assignee::List(assignees), token.position);
+                        }
+                        Expr::ObjectLiteral {
+                            ref token,
+                            ref keys,
+                            ref values,
+                        } => {
+                            let mut assignees: HashMap<String, (String, u8)> = HashMap::new();
+                            for (k, v) in keys.into_iter().zip(values.into_iter()) {
+                                match **v {
+                                    Expr::Underscore { token: _ } => continue,
+                                    Expr::Variable { ref name } => {
+                                        self.add_local((*name).clone());
+                                        if assignees.contains_key(&k.value) {
+                                            self.compile_error(
+                                                k,
+                                                format!("repeated key {}", k.value),
+                                            );
+                                        }
+                                        assignees.insert(k.value.clone(), (name.value.clone(), 0));
+                                    }
+                                    _ => todo!(), // cannot happen
+                                }
+                            }
+                            self.write_destruct(Assignee::Obj(assignees), token.position);
+                        }
+                        _ => todo!(),
+                    }
                     self.write_constant(right_value, true, token.position);
                     if *init {
                         self.write_opcode(OpCode::DefineGlobalVar, token.position);
@@ -203,38 +258,176 @@ impl<'a> Compiler<'a> {
                         self.write_opcode(OpCode::SetGlobalVar, token.position);
                     }
                 } else {
-                    for local in &self.locals {
-                        if local.depth < self.score_depth {
-                            break;
+                    if *init {
+                        self.check_local(left);
+                        match **left {
+                            Expr::Variable { ref name } => {
+                                self.add_local((*name).clone());
+                                self.write_destruct(
+                                    Assignee::Var(name.value.clone()),
+                                    name.position,
+                                );
+                            }
+                            Expr::ListLiteral {
+                                token: _,
+                                ref values,
+                            } => {
+                                let mut assignees: Vec<String> = vec![];
+                                for v in values {
+                                    match **v {
+                                        Expr::Underscore { token: _ } => {
+                                            assignees.push("_".to_string());
+                                        }
+                                        Expr::Variable { ref name } => {
+                                            self.add_local((*name).clone());
+                                            assignees.push(name.value.clone());
+                                        }
+                                        _ => todo!(), // cannot happen
+                                    }
+                                }
+                                self.write_destruct(Assignee::List(assignees), token.position);
+                            }
+                            Expr::ObjectLiteral {
+                                token: _,
+                                ref keys,
+                                ref values,
+                            } => {
+                                let mut assignees: HashMap<String, (String, u8)> = HashMap::new();
+                                for (k, v) in keys.into_iter().zip(values.into_iter()) {
+                                    match **v {
+                                        Expr::Underscore { token: _ } => continue,
+                                        Expr::Variable { ref name } => {
+                                            self.add_local((*name).clone());
+                                            if assignees.contains_key(&k.value) {
+                                                self.compile_error(
+                                                    k,
+                                                    format!("repeated key {}", k.value),
+                                                );
+                                            }
+                                            assignees
+                                                .insert(k.value.clone(), (name.value.clone(), 0));
+                                        }
+                                        _ => todo!(), // cannot happen
+                                    }
+                                }
+                                self.write_destruct(Assignee::Obj(assignees), token.position);
+                            }
+                            _ => todo!(), // cannot happen
                         }
-                        if *init && local.name.value == token.value {
-                            self.compile_error(
-                                &token,
-                                "a variable with this name is already in this scope",
-                            )
+                        self.write_constant(right_value, true, token.position);
+                        self.write_opcode(OpCode::DefineLocal, token.position);
+                    } else {
+                        match **left {
+                            Expr::Variable { ref name } => {
+                                let result = self.resolve_local(name);
+                                if result >= 0 {
+                                    self.write_constant(right_value, true, name.position);
+                                    self.write_opcode(OpCode::SetLocalVar, name.position);
+                                    self.write_byte(result as u8, name.position);
+                                } else {
+                                    self.compile_error(
+                                        name,
+                                        format!("local variable {} not defined", name.value),
+                                    );
+                                }
+                            }
+                            Expr::ListLiteral {
+                                ref token,
+                                ref values,
+                            } => {
+                                let mut assignees: Vec<String> = vec![];
+                                let mut u8s: Vec<u8> = vec![];
+                                for v in values {
+                                    match **v {
+                                        Expr::Underscore { token: _ } => {
+                                            assignees.push("_".to_string());
+                                        }
+                                        Expr::Variable { ref name } => {
+                                            let result = self.resolve_local(name);
+                                            if result >= 0 {
+                                                u8s.push(result as u8);
+                                            } else {
+                                                self.compile_error(
+                                                    name,
+                                                    format!(
+                                                        "local variable {} not defined",
+                                                        name.value
+                                                    ),
+                                                );
+                                            }
+                                            assignees.push(name.value.clone());
+                                        }
+                                        _ => todo!(), // cannot happen
+                                    }
+                                }
+                                if u8s.len() > std::u8::MAX as usize {
+                                    self.compile_error(
+                                        token,
+                                        "too many assignee variables".to_string(),
+                                    );
+                                }
+
+                                self.write_destruct(Assignee::List(assignees), token.position);
+                                self.write_constant(right_value, true, token.position);
+                                self.write_opcode(OpCode::SetLocalVar, token.position);
+                                self.write_byte(u8s.len() as u8, token.position);
+                                for b in u8s {
+                                    self.write_byte(b, token.position);
+                                }
+                            }
+                            Expr::ObjectLiteral {
+                                token: _,
+                                ref keys,
+                                ref values,
+                            } => {
+                                let mut assignees: HashMap<String, (String, u8)> = HashMap::new();
+                                for (k, v) in keys.into_iter().zip(values.into_iter()) {
+                                    match **v {
+                                        Expr::Underscore { token: _ } => continue,
+                                        Expr::Variable { ref name } => {
+                                            let result = self.resolve_local(name);
+                                            if result >= 0 {
+                                                assignees.insert(
+                                                    k.value.clone(),
+                                                    (name.value.clone(), result as u8),
+                                                );
+                                            } else {
+                                                self.compile_error(
+                                                    name,
+                                                    format!(
+                                                        "local variable {} not defined",
+                                                        name.value
+                                                    ),
+                                                )
+                                            }
+                                        }
+                                        _ => todo!(), // cannot happen
+                                    }
+                                }
+                                self.write_destruct(Assignee::Obj(assignees), token.position);
+                                self.write_constant(right_value, true, token.position);
+                                self.write_opcode(OpCode::SetLocalObj, token.position);
+                            }
+                            _ => todo!(), // cannot happen
                         }
                     }
-                    self.add_local((*token).clone())
                 }
             }
             Expr::Variable { name } => {
                 if self.score_depth != 0 {
-                    for i in self.locals.len()..0 {
-                        if self.locals[i - 1].name.value == name.value {
-                            self.write_opcode(OpCode::GetLocalVar, name.position);
-                            self.write_byte((i - 1) as u8, name.position);
-                        }
+                    let result = self.resolve_local(name);
+                    if result >= 0 {
+                        self.write_opcode(OpCode::GetLocal, name.position);
+                        self.write_byte(result as u8, name.position);
+                    } else {
+                        self.compile_error(
+                            name,
+                            format!("undefined {} local variable", name.value),
+                        );
                     }
                 } else {
-                    let obj = Object {
-                        obj_type: ObjectType::Identifier,
-                        obj: &mut ObjectUnion {
-                            string: &mut name.value as *mut String,
-                        },
-                    };
-                    let value = Value::Object(obj);
-
-                    self.write_constant(value, true, name.position);
+                    let var = Assignee::Var(name.value.to_owned());
+                    self.write_destruct(var, name.position);
                     self.write_opcode(OpCode::GetGlobalVar, name.position);
                 }
             }
@@ -254,6 +447,17 @@ impl<'a> Compiler<'a> {
         self.locals.push(local);
     }
 
+    fn resolve_local(&self, name: &Token) -> i8 {
+        let mut i = self.locals.len() as i8 - 1;
+        while i >= 0 {
+            if self.locals[i as usize].name.value == name.value {
+                return i;
+            }
+            i -= 1;
+        }
+        -1
+    }
+
     /// Writes an opcode to the bytecode vector
     fn write_opcode(&mut self, opcode: OpCode, pos: Position) {
         let byte = opcode as u8;
@@ -263,7 +467,7 @@ impl<'a> Compiler<'a> {
     /// Add a constant to the values vector and adds the index to the bytecode vector
     fn write_constant(&mut self, value: Value, include_opcode: bool, pos: Position) {
         self.values.push(value);
-        if self.values.len() > 255 {
+        if self.values.len() > std::u8::MAX as usize - 1 {
             // use OP_LCONSTANT
             if include_opcode {
                 let byte = OpCode::ConstantLong as u8;
@@ -284,6 +488,28 @@ impl<'a> Compiler<'a> {
             }
 
             self.write_byte((self.values.len() - 1) as u8, pos)
+        }
+    }
+
+    /// Add a Destruct to the destructs vector and adds the index to the bytecode vector
+    fn write_destruct(&mut self, assignee: Assignee, pos: Position) {
+        self.assignees.push(assignee);
+        let byte: u8;
+        if self.values.len() > 255 {
+            // use OP_LDESTRUCT
+            byte = OpCode::LDestruct as u8;
+            self.write_byte(byte, pos);
+
+            let mut bytes = [0u8; 2];
+            LittleEndian::write_u16(&mut bytes, (self.assignees.len() - 1) as u16);
+            for byte in bytes {
+                self.write_byte(byte, pos);
+            }
+        } else {
+            // use OP_DESTRUCT
+            byte = OpCode::Destruct as u8;
+            self.write_byte(byte, pos);
+            self.write_byte((self.assignees.len() - 1) as u8, pos);
         }
     }
 
@@ -326,15 +552,6 @@ impl<'a> Compiler<'a> {
                 };
                 Some(Value::Object(obj))
             }
-            Expr::Variable { mut name } => {
-                let obj = Object {
-                    obj_type: ObjectType::Identifier,
-                    obj: &mut ObjectUnion {
-                        string: &mut name.value as *mut String,
-                    },
-                };
-                Some(Value::Object(obj))
-            }
             Expr::ListLiteral { token: _, values } => {
                 let mut list: Vec<Box<Value>> = vec![];
 
@@ -362,7 +579,6 @@ impl<'a> Compiler<'a> {
                     let value = self.convert_to_value(*value).unwrap();
                     map.insert(key.value, Box::new(value));
                 }
-
                 let obj = Object {
                     obj_type: ObjectType::Object,
                     obj: &mut ObjectUnion {
@@ -372,6 +588,67 @@ impl<'a> Compiler<'a> {
                 Some(Value::Object(obj))
             }
             _ => None,
+        }
+    }
+
+    /// Checks
+    fn check_local(&self, left: &Expr) {
+        for local in &self.locals {
+            if local.depth < self.score_depth {
+                break;
+            }
+
+            match *left {
+                Expr::Underscore { token: _ } => continue,
+                Expr::Variable { ref name } => {
+                    if local.name.value == name.value {
+                        self.compile_error(
+                            &name,
+                            format!("local variable {} already defined", name.value),
+                        );
+                    }
+                }
+                Expr::ListLiteral {
+                    token: _,
+                    ref values,
+                } => {
+                    for v in values {
+                        match **v {
+                            Expr::Underscore { token: _ } => continue,
+                            Expr::Variable { ref name } => {
+                                if local.name.value == name.value {
+                                    self.compile_error(
+                                        &name,
+                                        format!("local variable {} already defined", name.value),
+                                    );
+                                }
+                            }
+                            _ => todo!(), // cannot happen
+                        }
+                    }
+                }
+                Expr::ObjectLiteral {
+                    token: _,
+                    keys: _,
+                    ref values,
+                } => {
+                    for v in values {
+                        match **v {
+                            Expr::Underscore { token: _ } => continue,
+                            Expr::Variable { ref name } => {
+                                if local.name.value == name.value {
+                                    self.compile_error(
+                                        &name,
+                                        format!("local variable {} already defined", name.value),
+                                    );
+                                }
+                            }
+                            _ => todo!(), // cannot happen
+                        }
+                    }
+                }
+                _ => todo!(), // cannot happen
+            }
         }
     }
 
@@ -386,9 +663,10 @@ impl<'a> Compiler<'a> {
             self.write_opcode(OpCode::Pop, token.position);
             self.locals.pop();
         }
+        self.pop = false;
     }
 
-    fn compile_error(&self, token: &Token, message: &str) {
+    fn compile_error(&self, token: &Token, message: String) {
         let message = format!(
             "{}:{}:{} error: {}\n{}",
             self.filename,
@@ -414,28 +692,70 @@ mod tests {
     #[test]
     fn test_binary() {
         let source = r#"1 + 1"#;
-        let expected: Vec<u8> = vec![1, 0, 1, 1, 4, 0];
+        let expected: Vec<u8> = vec![1, 0, 1, 1, 4, 12, 0];
         compile!(source, expected);
     }
 
     #[test]
     fn test_unary() {
         let source = "not false";
-        let expected: Vec<u8> = vec![1, 0, 3, 0];
+        let expected: Vec<u8> = vec![1, 0, 3, 12, 0];
         compile!(source, expected);
     }
 
     #[test]
     fn test_global_def() {
         let source = r#"name := "nobu""#;
-        let expected: Vec<u8> = vec![1, 0, 1, 1, 9, 0];
+        let expected: Vec<u8> = vec![18, 0, 1, 0, 9, 12, 0];
         compile!(source, expected);
     }
 
     #[test]
     fn test_global_set() {
         let source = r#"name = "nobu""#;
-        let expected: Vec<u8> = vec![1, 0, 1, 1, 11, 0];
+        let expected: Vec<u8> = vec![18, 0, 1, 0, 11, 12, 0];
+        compile!(source, expected);
+    }
+
+    #[test]
+    fn test_global_get() {
+        let source = r#"name"#;
+        let expected: Vec<u8> = vec![18, 0, 10, 12, 0];
+        compile!(source, expected);
+    }
+
+    #[test]
+    fn test_local_def() {
+        let source = r#"{ a := 123 }"#;
+        let expected: Vec<u8> = vec![18, 0, 1, 0, 13, 12, 0];
+        compile!(source, expected);
+    }
+
+    #[test]
+    fn test_local_set_var() {
+        let source = r#"{ a := 123 a = 321 }"#;
+        let expected: Vec<u8> = vec![18, 0, 1, 0, 13, 1, 1, 15, 0, 12, 0];
+        compile!(source, expected);
+    }
+
+    #[test]
+    fn test_local_set_list() {
+        let source = r#"{ [a, b, c] := [1, 2, 3] [a, b, c] = [3, 2, 1] }"#;
+        let expected: Vec<u8> = vec![18, 0, 1, 0, 13, 18, 1, 1, 1, 15, 3, 0, 1, 2, 12, 12, 12, 0];
+        compile!(source, expected);
+    }
+
+    #[test]
+    fn test_local_set_obj() {
+        let source = r#"{ {name: a} := {name: "Nobu"} {a: a} = {a: 10, b: 11} }"#;
+        let expected: Vec<u8> = vec![18, 0, 1, 0, 13, 18, 1, 1, 1, 17, 12, 0];
+        compile!(source, expected);
+    }
+
+    #[test]
+    fn test_local_get() {
+        let source = r#"{ a := 123 a }"#;
+        let expected: Vec<u8> = vec![18, 0, 1, 0, 13, 14, 0, 12, 0];
         compile!(source, expected);
     }
 }

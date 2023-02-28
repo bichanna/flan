@@ -81,10 +81,19 @@ impl<'a> Compiler<'a> {
                     self.debug_print_simple_instruction("OP_SET_GLOBAL", offset)
                 }
                 OpCode::Pop => self.debug_print_simple_instruction("OP_POP", offset),
-                OpCode::GetLocalVar => {
-                    self.debug_print_constant_instruction("OP_GET_LOCAL", offset)
-                }
+                OpCode::GetLocal => self.debug_print_constant_instruction("OP_GET_LOCAL", offset),
                 OpCode::SetLocalVar => self.debug_print_simple_instruction("OP_SET_LOCAL", offset),
+                OpCode::Destruct => self.debug_print_constant_instruction("OP_DESTRUCT", offset),
+                OpCode::LDestruct => self.debug_print_lconstant_instruction("OP_LDESTRUCT", offset),
+                OpCode::DefineLocal => {
+                    self.debug_print_simple_instruction("OP_DEFINE_LOCAL", offset)
+                }
+                OpCode::SetLocalList => {
+                    self.debug_print_length_instruction("OP_SET_LOCAL_LIST", offset)
+                }
+                OpCode::SetLocalObj => {
+                    self.debug_print_simple_instruction("OP_SET_LOCAL_OBJ", offset)
+                }
             }
         } else {
             println!("Unknown opcode {:?}", instruction);
@@ -118,5 +127,23 @@ impl<'a> Compiler<'a> {
             self.values[constant as usize].print()
         );
         offset + 3
+    }
+
+    fn debug_print_length_instruction(&self, name: &str, offset: usize) -> usize {
+        let length = self.bytecode[offset + 1] as usize;
+        let mut bytes: Vec<u8> = vec![];
+        for i in 0..length {
+            bytes.push(self.bytecode[offset + 1 + i])
+        }
+        println!(
+            "{:-16} [{}]",
+            name,
+            bytes
+                .into_iter()
+                .map(|x| format!("{:#?}", x))
+                .collect::<Vec<String>>()
+                .join(" "),
+        );
+        offset + 2 + length
     }
 }

@@ -20,8 +20,13 @@ pub enum OpCode {
     GetGlobalVar,
     SetGlobalVar,
     Pop,
-    GetLocalVar,
+    DefineLocal,
+    GetLocal,
     SetLocalVar,
+    SetLocalList,
+    SetLocalObj,
+    Destruct,
+    LDestruct,
 }
 
 impl OpCode {
@@ -40,8 +45,14 @@ impl OpCode {
             10 => Some(Self::GetGlobalVar),
             11 => Some(Self::SetGlobalVar),
             12 => Some(Self::Pop),
-            13 => Some(Self::GetLocalVar),
-            14 => Some(Self::SetLocalVar),
+            13 => Some(Self::DefineLocal),
+            14 => Some(Self::GetLocal),
+            15 => Some(Self::SetLocalVar),
+            16 => Some(Self::SetLocalList),
+            17 => Some(Self::SetLocalObj),
+            18 => Some(Self::Destruct),
+            19 => Some(Self::LDestruct),
+            //18, 0, 1, 0, 13, 18, 1, 1, 1, 15, 3, 0, 1, 2, 12, 12, 12, 0
             _ => None,
         }
     }
