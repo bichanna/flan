@@ -369,7 +369,7 @@ impl<'a> Compiler<'a> {
 
                                 self.write_destruct(Assignee::List(assignees), token.position);
                                 self.write_constant(right_value, true, token.position);
-                                self.write_opcode(OpCode::SetLocalVar, token.position);
+                                self.write_opcode(OpCode::SetLocalList, token.position);
                                 self.write_byte(u8s.len() as u8, token.position);
                                 for b in u8s {
                                     self.write_byte(b, token.position);
@@ -659,10 +659,19 @@ impl<'a> Compiler<'a> {
     fn end_scope(&mut self, token: &Token) {
         self.score_depth -= 1;
 
+        let mut pop_nums = 0;
         while self.locals.len() > 0 && self.locals.last().unwrap().depth > self.score_depth {
-            self.write_opcode(OpCode::Pop, token.position);
+            pop_nums += 1;
             self.locals.pop();
         }
+
+        if pop_nums > 1 {
+            self.write_opcode(OpCode::PopN, token.position);
+            self.write_byte(pop_nums as u8, token.position);
+        } else if pop_nums == 1 {
+            self.write_opcode(OpCode::Pop, token.position);
+        }
+
         self.pop = false;
     }
 
@@ -741,7 +750,7 @@ mod tests {
     #[test]
     fn test_local_set_list() {
         let source = r#"{ [a, b, c] := [1, 2, 3] [a, b, c] = [3, 2, 1] }"#;
-        let expected: Vec<u8> = vec![18, 0, 1, 0, 13, 18, 1, 1, 1, 15, 3, 0, 1, 2, 12, 12, 12, 0];
+        let expected: Vec<u8> = vec![18, 0, 1, 0, 13, 18, 1, 1, 1, 16, 3, 0, 1, 2, 20, 3, 0];
         compile!(source, expected);
     }
 

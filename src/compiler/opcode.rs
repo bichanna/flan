@@ -27,6 +27,7 @@ pub enum OpCode {
     SetLocalObj,
     Destruct,
     LDestruct,
+    PopN,
 }
 
 impl OpCode {
@@ -52,7 +53,7 @@ impl OpCode {
             17 => Some(Self::SetLocalObj),
             18 => Some(Self::Destruct),
             19 => Some(Self::LDestruct),
-            //18, 0, 1, 0, 13, 18, 1, 1, 1, 15, 3, 0, 1, 2, 12, 12, 12, 0
+            20 => Some(Self::PopN),
             _ => None,
         }
     }
