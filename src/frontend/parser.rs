@@ -455,7 +455,7 @@ impl<'a> Parser<'a> {
                 // function call
                 expr = self.finish_call(expr, arg.clone())?;
             } else if self.does_match(&[TokenType::Dot]) {
-                // object access
+                // object access or list indexing
                 let token = self.previous();
                 let value = self.expression()?;
                 expr = Expr::Get {
@@ -467,16 +467,6 @@ impl<'a> Parser<'a> {
                 // pipe
                 expr = self.call(&Some(expr))?;
                 break;
-            } else if self.does_match(&[TokenType::LBracket]) {
-                // index
-                let token = self.previous();
-                let key = self.expression()?;
-                expect!(self, TokenType::RBracket, "expected ']'");
-                expr = Expr::Get {
-                    token,
-                    instance: Box::new(expr),
-                    value: Box::new(key),
-                }
             } else if self.does_match(&[TokenType::Question]) {
                 // short-hand match
                 let token = self.previous();
