@@ -20,7 +20,6 @@ pub union ObjectUnion {
 pub enum ObjectType {
     List,
     String,
-    Identifier,
     Atom,
     Object,
 }
@@ -29,9 +28,7 @@ impl Object {
     /// Frees the object pointed based on its type
     pub fn free(&self) {
         match self.obj_type {
-            ObjectType::String | ObjectType::Identifier | ObjectType::Atom => unsafe {
-                drop((*self.obj).string)
-            },
+            ObjectType::String | ObjectType::Atom => unsafe { drop((*self.obj).string) },
             ObjectType::List => unsafe { drop((*self.obj).list) },
             ObjectType::Object => unsafe { drop((*self.obj).object) },
         }
@@ -41,9 +38,7 @@ impl Object {
 
     pub fn print(&self) -> String {
         match self.obj_type {
-            ObjectType::String | ObjectType::Identifier => unsafe {
-                (*(*self.obj).string).to_owned()
-            },
+            ObjectType::String => unsafe { (*(*self.obj).string).to_owned() },
             ObjectType::Atom => {
                 let name = unsafe { (*(*self.obj).string).to_owned() };
                 format!(":{}", name)
