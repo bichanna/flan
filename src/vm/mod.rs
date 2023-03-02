@@ -1,4 +1,3 @@
-pub mod destruct;
 pub mod object;
 pub mod value;
 
@@ -7,7 +6,7 @@ use std::ptr;
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use self::destruct::Assignee;
+use self::object::{Object, ObjectType};
 use self::value::Value;
 use crate::compiler::opcode::{OpCode, Position};
 
@@ -45,8 +44,6 @@ pub struct VM<'a> {
     bytecode: &'a Vec<u8>,
     /// The constants pool, holds all constants in a program
     values: &'a Vec<Value>,
-    /// The destructs pool, holds all assignees in a program (will be removed)
-    destructs: &'a Vec<Assignee>,
     /// Position information only used when runtime errors occur
     positions: &'a HashMap<usize, Position>,
     /// The file name of the source code
@@ -60,8 +57,6 @@ pub struct VM<'a> {
     stack_top: *mut Value,
     /// All global variables
     globals: HashMap<String, Value>,
-    /// Stack for Assignees (will be removed)
-    destruct_stack: Vec<Assignee>,
 }
 
 impl<'a> VM<'a> {
@@ -70,13 +65,11 @@ impl<'a> VM<'a> {
         source: &'a String,
         bytecode: &'a Vec<u8>,
         values: &'a Vec<Value>,
-        destructs: &'a Vec<Assignee>,
         positions: &'a HashMap<usize, Position>,
     ) -> Self {
         Self {
             bytecode,
             values,
-            destructs,
             positions,
             ip: bytecode.as_ptr(),
             filename,
@@ -84,7 +77,6 @@ impl<'a> VM<'a> {
             stack: Box::new([Value::Null; STACK_MAX]),
             stack_top: ptr::null_mut(),
             globals: HashMap::new(),
-            destruct_stack: Vec::new(),
         }
     }
 
@@ -105,14 +97,6 @@ impl<'a> VM<'a> {
                 OpCode::ConstantLong => {
                     let value = self.read_constant(true);
                     self.push(value);
-                }
-                OpCode::Destruct => {
-                    let assignee = self.read_destruct(false);
-                    self.push_destruct(assignee);
-                }
-                OpCode::LDestruct => {
-                    let assignee = self.read_destruct(true);
-                    self.push_destruct(assignee);
                 }
                 OpCode::Negate => {
                     push_or_err!(self, -self.pop());
@@ -147,6 +131,8 @@ impl<'a> VM<'a> {
                 OpCode::SetLocalVar => {}
                 OpCode::SetLocalList => {}
                 OpCode::SetLocalObj => {}
+                OpCode::InitList => {}
+                OpCode::InitObj => {}
             }
 
             instruction = OpCode::u8_to_opcode(read_byte!(self)).unwrap();
@@ -167,11 +153,6 @@ impl<'a> VM<'a> {
         self.stack_top = unsafe { self.stack_top.add(1) };
     }
 
-    /// Pushes an Assignee onto the destructs stack
-    fn push_destruct(&mut self, destruct: Assignee) {
-        self.destruct_stack.push(destruct);
-    }
-
     /// Pops a Value from the stack
     fn pop(&mut self) -> Value {
         self.popn(1);
@@ -181,11 +162,6 @@ impl<'a> VM<'a> {
     /// Pops n times from the stack
     fn popn(&mut self, n: u8) {
         self.stack_top = unsafe { self.stack_top.sub(n as usize) };
-    }
-
-    /// Pops an Assignee from the destructs stack
-    fn pop_destruct(&mut self) -> Assignee {
-        self.destruct_stack.pop().unwrap()
     }
 
     fn read_2bytes(&mut self) -> u16 {
@@ -203,14 +179,37 @@ impl<'a> VM<'a> {
         }
     }
 
-    /// Reads an Assignee and returns it
-    fn read_destruct(&mut self, long: bool) -> Assignee {
-        if long {
-            let constant = self.read_2bytes();
-            self.destructs[constant as usize].clone()
+    /// Defines a global variable
+    fn define_global(&mut self, name: String, value: Value) {
+        if self.globals.contains_key(&name) {
+            // TODO: report error
         } else {
-            self.destructs[read_byte!(self) as usize].clone()
+            self.globals.insert(name, value);
         }
+    }
+
+    /// Sets a Value to a global variable
+    fn set_global(&mut self, name: String, value: Value) {
+        if self.globals.contains_key(&name) {
+            self.globals.insert(name, value);
+        } else {
+            // TODO: report error
+        }
+    }
+
+    /// Casts an Object to a list Value
+    fn cast_obj_to_list(obj: Object) -> Vec<Box<Value>> {
+        unsafe { (*(*obj.obj).list).clone() }
+    }
+
+    /// Casts an Object to an object Value
+    fn cast_obj_to_obj(obj: Object) -> HashMap<String, Box<Value>> {
+        unsafe { (*(*obj.obj).object).clone() }
+    }
+
+    /// Casts an Object to an atom Value
+    fn cast_obj_to_str(obj: Object) -> String {
+        unsafe { (*(*obj.obj).string).clone() }
     }
 
     /// Peeks a Value from the stack
@@ -228,11 +227,10 @@ mod tests {
     fn test_binary() {
         let bytecode: Vec<u8> = vec![1, 0, 1, 1, 4, 12, 0];
         let values: Vec<Value> = vec![Value::Int(1), Value::Int(1)];
-        let destructs: Vec<Assignee> = vec![];
         let positions = HashMap::new();
         let source = "1 + 1".to_string();
 
-        let mut vm = VM::new("input", &source, &bytecode, &values, &destructs, &positions);
+        let mut vm = VM::new("input", &source, &bytecode, &values, &positions);
         vm.run();
 
         assert_eq!(unsafe { *vm.stack_top }, Value::Int(2));
@@ -242,11 +240,10 @@ mod tests {
     fn test_unary() {
         let bytecode: Vec<u8> = vec![1, 0, 3, 12, 0];
         let values: Vec<Value> = vec![Value::Bool(false)];
-        let destructs: Vec<Assignee> = vec![];
         let positions = HashMap::new();
         let source = "not false".to_string();
 
-        let mut vm = VM::new("input", &source, &bytecode, &values, &destructs, &positions);
+        let mut vm = VM::new("input", &source, &bytecode, &values, &positions);
         vm.run();
 
         assert_eq!(unsafe { *vm.stack_top }, Value::Bool(true));
