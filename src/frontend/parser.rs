@@ -2,7 +2,7 @@ use std::process;
 
 use crossbeam_channel::{Receiver, Sender};
 
-use super::ast::{Expr, MatchBranch};
+use super::ast::{CallArg, Expr, MatchBranch};
 use super::error::ParserError;
 use super::token::{Token, TokenType};
 
@@ -418,19 +418,27 @@ impl<'a> Parser<'a> {
 
     fn finish_call(&mut self, callee: Expr, arg: Option<Expr>) -> Result<Expr, &'static str> {
         let callee = Box::new(callee);
-        let mut args: Vec<Box<Expr>> = vec![];
+        let mut args: Vec<CallArg> = vec![];
         if match arg {
             // check for |>
             Some(_) => true,
             _ => false,
         } {
-            args.push(Box::new(arg.unwrap()));
+            args.push(CallArg::Positional(Box::new(arg.unwrap())));
         }
 
         if !self.check_current(TokenType::RParen) {
-            args.push(Box::new(self.expression()?));
+            if self.does_match(&[TokenType::Ellipsis]) {
+                args.push(CallArg::Unpacking(Box::new(self.expression()?)));
+            } else {
+                args.push(CallArg::Positional(Box::new(self.expression()?)));
+            }
             while self.does_match(&[TokenType::Comma]) {
-                args.push(Box::new(self.expression()?));
+                if self.does_match(&[TokenType::Ellipsis]) {
+                    args.push(CallArg::Unpacking(Box::new(self.expression()?)));
+                } else {
+                    args.push(CallArg::Positional(Box::new(self.expression()?)));
+                }
             }
         }
         expect!(self, TokenType::RParen, "expected ')'");
@@ -438,7 +446,7 @@ impl<'a> Parser<'a> {
 
         // check for <|
         if self.does_match(&[TokenType::LPipe]) {
-            args.push(Box::new(self.expression()?));
+            args.push(CallArg::Positional(Box::new(self.expression()?)));
         }
 
         Ok(Expr::Call {
@@ -799,6 +807,13 @@ std.std.(each (lambda (n) (block std.(println (fizzbuzz n)))))"#;
     fn rest_param() {
         let source = "func some_func(nums+) {}";
         let expected = "(func some_func (nums+) (object))";
+        parse!(source, expected);
+    }
+
+    #[test]
+    fn unpacking_arg() {
+        let source = "some_func(...abc)";
+        let expected = "(some_func ...abc)";
         parse!(source, expected);
     }
 }

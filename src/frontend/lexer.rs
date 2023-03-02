@@ -107,7 +107,19 @@ impl<'a> Lexer<'a> {
                 '@' => self.add_no_value_token(TokenType::At),
                 '^' => self.add_no_value_token(TokenType::Caret),
                 ',' => self.add_no_value_token(TokenType::Comma),
-                '.' => self.add_no_value_token(TokenType::Dot),
+                '.' => {
+                    if self.next_char() == '.' {
+                        self.advance();
+                        if self.next_char() == '.' {
+                            self.advance();
+                            self.add_no_value_token(TokenType::Ellipsis);
+                        } else {
+                            self.add_error("expected ...")
+                        }
+                    } else {
+                        self.add_no_value_token(TokenType::Dot);
+                    }
+                }
                 '+' => match self.next_char() {
                     '+' => {
                         self.add_no_value_token(TokenType::DPlus);
@@ -374,7 +386,6 @@ impl<'a> Lexer<'a> {
         match value.to_lowercase().as_str() {
             "public" => Some(TokenType::Public),
             "func" => Some(TokenType::Func),
-            "else" => Some(TokenType::Else),
             "match" => Some(TokenType::Match),
             "or" => Some(TokenType::Or),
             "and" => Some(TokenType::And),
@@ -464,12 +475,13 @@ _age := 16
 println(name!, _age)
 // Some comment
 /* comment!! /* block */ */
+...
 "#;
         let source = &String::from(source);
         let (s, r) = unbounded();
         let lexer = Lexer::new(source, "input", &s);
 
         assert_eq!(lexer.errors.len(), 0);
-        assert_eq!(r.len(), 13);
+        assert_eq!(r.len(), 14);
     }
 }

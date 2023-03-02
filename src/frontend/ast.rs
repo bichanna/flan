@@ -66,7 +66,7 @@ pub enum Expr {
     },
     Call {
         callee: Box<Expr>,
-        args: Vec<Box<Expr>>,
+        args: Vec<CallArg>,
         token: Token,
     },
     Get {
@@ -106,6 +106,12 @@ pub enum Expr {
 pub struct MatchBranch {
     pub target: Box<Expr>,
     pub body: Box<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum CallArg {
+    Positional(Box<Expr>),
+    Unpacking(Box<Expr>),
 }
 
 impl Expr {
@@ -196,7 +202,16 @@ impl Expr {
             } => {
                 let mut builder = format!("({}", callee.print());
                 if args.len() > 0 {
-                    builder += &format!(" {})", bulk_print!(args, " "));
+                    builder += &format!(
+                        " {})",
+                        args.into_iter()
+                            .map(|arg| match arg {
+                                CallArg::Positional(expr) => expr.print(),
+                                CallArg::Unpacking(expr) => format!("...{}", expr.print()),
+                            })
+                            .collect::<Vec<String>>()
+                            .join(" "),
+                    );
                 } else {
                     builder += ")";
                 }

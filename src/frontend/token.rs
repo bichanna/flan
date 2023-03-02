@@ -44,13 +44,13 @@ pub enum TokenType {
     DEq,        // ==
     Equal,      // =
     Dot,        // .
+    Ellipsis,   // ...
     Question,   // ?
     DAmp,       // &&
     DPipe,      // ||
 
     Public, // public
     Func,   // func
-    Else,   // else
     Match,  // match
     Or,     // or
     And,    // and
