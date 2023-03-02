@@ -351,10 +351,17 @@ impl<'a> Parser<'a> {
             }
         } else if self.check_current(TokenType::Func) {
             // private function
-            self.function(false)
+            self.function(false, vec![])
         } else if self.does_match(&[TokenType::Public]) {
             // public function
-            self.function(true)
+            self.function(true, vec![])
+        } else if self.does_match(&[TokenType::Hash]) {
+            // decorator-applied
+            let mut decorators = vec![];
+            expect!(self, TokenType::LBracket, "expected '['");
+            decorators.push(Box::new(self.expression()?));
+            expect!(self, TokenType::RBracket, "expected ']'");
+            self.function(false, decorators)
         } else if self.does_match(&[TokenType::Match]) {
             // match expression
             let token = self.previous();
@@ -397,7 +404,16 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn function(&mut self, public: bool) -> Result<Expr, &'static str> {
+    fn function(
+        &mut self,
+        mut public: bool,
+        decorators: Vec<Box<Expr>>,
+    ) -> Result<Expr, &'static str> {
+        if !public {
+            if self.does_match(&[TokenType::Public]) {
+                public = true;
+            }
+        }
         expect!(self, TokenType::Func, "expected 'func'");
         let name: Option<Token> = if self.check_current(TokenType::Id) {
             self.advance();
@@ -412,6 +428,7 @@ impl<'a> Parser<'a> {
             name,
             params: params.0,
             rest: params.1,
+            decorators,
             body: Box::new(body),
         })
     }
@@ -814,6 +831,13 @@ std.std.(each (lambda (n) (block std.(println (fizzbuzz n)))))"#;
     fn unpacking_arg() {
         let source = "some_func(...abc)";
         let expected = "(some_func ...abc)";
+        parse!(source, expected);
+    }
+
+    #[test]
+    fn decorators() {
+        let source = "#[some_decorator] func abc() {}";
+        let expected = "(#[some_decorator] func abc () (object))";
         parse!(source, expected);
     }
 }

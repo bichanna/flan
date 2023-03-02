@@ -84,6 +84,7 @@ pub enum Expr {
         name: Option<Token>,
         params: Vec<Token>,
         rest: Option<Token>,
+        decorators: Vec<Box<Expr>>,
         body: Box<Expr>,
     },
     Match {
@@ -241,11 +242,22 @@ impl Expr {
                 name,
                 params,
                 rest,
+                decorators,
                 body,
             } => {
                 if let Some(name) = name {
+                    let decs = if decorators.len() > 0 {
+                        format!("#[{}]", bulk_print!(decorators, " "))
+                    } else {
+                        "".to_string()
+                    };
                     format!(
-                        "(func{} {} ({}{}) {})",
+                        "({}func{} {} ({}{}) {})",
+                        if decs == "" {
+                            "".to_string()
+                        } else {
+                            decs + " "
+                        },
                         if *public {
                             " [public]".to_string()
                         } else {
