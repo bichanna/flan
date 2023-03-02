@@ -106,6 +106,7 @@ impl<'a> Lexer<'a> {
                 ';' => self.add_no_value_token(TokenType::SColon),
                 '@' => self.add_no_value_token(TokenType::At),
                 '^' => self.add_no_value_token(TokenType::Caret),
+                '#' => self.add_no_value_token(TokenType::Hash),
                 ',' => self.add_no_value_token(TokenType::Comma),
                 '.' => {
                     if self.next_char() == '.' {

@@ -32,6 +32,7 @@ pub enum TokenType {
     ModEq,      // %=
     At,         // @
     Caret,      // ^
+    Hash,       // #
     Comma,      // ,
     RPipe,      // |>
     LPipe,      // <|
