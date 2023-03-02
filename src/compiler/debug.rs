@@ -48,7 +48,7 @@ impl<'a> std::fmt::Debug for Compiler<'a> {
 
 impl<'a> Compiler<'a> {
     /// Disassembles one instruction
-    fn disasemble_instruction(&self, offset: usize) -> usize {
+    fn disasemble_instruction(&self, mut offset: usize) -> usize {
         print!("{:04} ", offset);
 
         if offset > 0 && self.positions.get(&offset) == self.positions.get(&(offset - 1)) {
@@ -81,20 +81,26 @@ impl<'a> Compiler<'a> {
                     self.debug_print_simple_instruction("OP_SET_GLOBAL", offset)
                 }
                 OpCode::Pop => self.debug_print_simple_instruction("OP_POP", offset),
-                OpCode::PopN => self.debug_print_constant_instruction("OP_POPN", offset),
-                OpCode::GetLocal => self.debug_print_constant_instruction("OP_GET_LOCAL", offset),
-                OpCode::SetLocalVar => self.debug_print_simple_instruction("OP_SET_LOCAL", offset),
-                OpCode::Destruct => self.debug_print_constant_instruction("OP_DESTRUCT", offset),
-                OpCode::LDestruct => self.debug_print_lconstant_instruction("OP_LDESTRUCT", offset),
+                OpCode::PopN => self.debug_print_length_instruction("OP_POPN", offset),
+                OpCode::GetLocal => self.debug_print_length_instruction("OP_GET_LOCAL", offset),
+                OpCode::SetLocalVar => {
+                    self.debug_print_length_instruction("OP_SET_LOCAL_VAR", offset)
+                }
+                OpCode::SetLocalList => {
+                    self.debug_print_set_local_list(&mut offset);
+                    offset
+                }
+                OpCode::SetLocalObj => {
+                    self.debug_print_set_local_obj(&mut offset);
+                    offset
+                }
                 OpCode::DefineLocal => {
                     self.debug_print_simple_instruction("OP_DEFINE_LOCAL", offset)
                 }
-                OpCode::SetLocalList => {
-                    self.debug_print_length_instruction("OP_SET_LOCAL_LIST", offset)
+                OpCode::InitList => {
+                    self.debug_print_long_length_instruction("OP_INIT_LIST", offset)
                 }
-                OpCode::SetLocalObj => {
-                    self.debug_print_simple_instruction("OP_SET_LOCAL_OBJ", offset)
-                }
+                OpCode::InitObj => self.debug_print_long_length_instruction("OP_INIT_OBJ", offset),
             }
         } else {
             println!("Unknown opcode {:?}", instruction);
@@ -132,19 +138,37 @@ impl<'a> Compiler<'a> {
 
     fn debug_print_length_instruction(&self, name: &str, offset: usize) -> usize {
         let length = self.bytecode[offset + 1] as usize;
-        let mut bytes: Vec<u8> = vec![];
-        for i in 0..length {
-            bytes.push(self.bytecode[offset + 1 + i])
+        println!("{:-16} length: {}", name, length);
+        offset + 2
+    }
+
+    fn debug_print_long_length_instruction(&self, name: &str, offset: usize) -> usize {
+        let bytes = [self.bytecode[offset + 1], self.bytecode[offset + 2]];
+        let length = LittleEndian::read_u16(&bytes) as usize;
+        println!("{:-16} length: {}", name, length);
+        offset + 3
+    }
+
+    fn debug_print_set_local_list(&self, offset: &mut usize) {
+        let length = self.bytecode[*offset + 1] as usize;
+        println!("{:-16} length: {}", "OP_SET_LOCAL_LIST", length);
+        *offset += 2;
+        for _ in 0..length {
+            *offset = self.disasemble_instruction(*offset);
+            println!("      u8arg: {}", self.bytecode[*offset + 1]);
+            *offset += 1;
         }
-        println!(
-            "{:-16} [{}]",
-            name,
-            bytes
-                .into_iter()
-                .map(|x| format!("{:#?}", x))
-                .collect::<Vec<String>>()
-                .join(" "),
-        );
-        offset + 2 + length
+    }
+
+    fn debug_print_set_local_obj(&self, offset: &mut usize) {
+        let length = self.bytecode[*offset + 1] as usize;
+        println!("{:-16} length: {}", "OP_SET_LOCAL_OBJ", length);
+        *offset += 2;
+        for _ in 0..length {
+            *offset = self.disasemble_instruction(*offset);
+            *offset = self.disasemble_instruction(*offset);
+            println!("      u8arg: {}", self.bytecode[*offset + 1]);
+            *offset += 1;
+        }
     }
 }
