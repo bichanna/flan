@@ -360,6 +360,9 @@ impl<'a> Parser<'a> {
             let mut decorators = vec![];
             expect!(self, TokenType::LBracket, "expected '['");
             decorators.push(Box::new(self.expression()?));
+            while self.does_match(&[TokenType::Comma]) {
+                decorators.push(Box::new(self.expression()?));
+            }
             expect!(self, TokenType::RBracket, "expected ']'");
             self.function(false, decorators)
         } else if self.does_match(&[TokenType::Match]) {
@@ -836,8 +839,8 @@ std.std.(each (lambda (n) (block std.(println (fizzbuzz n)))))"#;
 
     #[test]
     fn decorators() {
-        let source = "#[some_decorator] func abc() {}";
-        let expected = "(#[some_decorator] func abc () (object))";
+        let source = "#[some_decorator, another] func abc() {}";
+        let expected = "(#[some_decorator another] func abc () (object))";
         parse!(source, expected);
     }
 }
