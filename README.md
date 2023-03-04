@@ -8,7 +8,7 @@
 <div align="center">
 </div>
 
-**Feo** is a dynamically- and strongly-typed, functional, simple programming language with automatic momery management.
+**Feo** is a high-level, dynamically- and strongly-typed, functional programming language that runs on a virtual machine.
 **Feo** is my highschool Computer Science project written in Rust.
 
 I'm sorry for the ugly and inefficient and awful code. That's because Feo is my first serious project.
