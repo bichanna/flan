@@ -71,15 +71,11 @@ impl<'a> Compiler<'a> {
                 OpCode::Mult => self.debug_print_simple_instruction("OP_MULT", offset),
                 OpCode::Div => self.debug_print_simple_instruction("OP_DIV", offset),
                 OpCode::Mod => self.debug_print_simple_instruction("OP_MOD", offset),
-                OpCode::DefineGlobalVar => {
+                OpCode::DefineGlobal => {
                     self.debug_print_simple_instruction("OP_DEFINE_GLOBAL", offset)
                 }
-                OpCode::GetGlobalVar => {
-                    self.debug_print_simple_instruction("OP_GET_GLOBAL", offset)
-                }
-                OpCode::SetGlobalVar => {
-                    self.debug_print_simple_instruction("OP_SET_GLOBAL", offset)
-                }
+                OpCode::GetGlobal => self.debug_print_simple_instruction("OP_GET_GLOBAL", offset),
+                OpCode::SetGlobal => self.debug_print_simple_instruction("OP_SET_GLOBAL", offset),
                 OpCode::Pop => self.debug_print_simple_instruction("OP_POP", offset),
                 OpCode::PopN => self.debug_print_length_instruction("OP_POPN", offset),
                 OpCode::GetLocal => self.debug_print_length_instruction("OP_GET_LOCAL", offset),

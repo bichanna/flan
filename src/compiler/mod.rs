@@ -233,11 +233,9 @@ impl<'a> Compiler<'a> {
                                         true,
                                         name.position,
                                     ),
-                                    Expr::Underscore { ref mut token } => self.write_constant(
-                                        Self::token_to_string(&mut *token),
-                                        true,
-                                        token.position,
-                                    ),
+                                    Expr::Underscore { ref mut token } => {
+                                        self.write_constant(Value::Empty, true, token.position)
+                                    }
                                     _ => todo!(), // does not happen
                                 }
                             }
@@ -284,9 +282,9 @@ impl<'a> Compiler<'a> {
 
                     self.compile_expr(&mut *right);
                     if *init {
-                        self.write_opcode(OpCode::DefineGlobalVar, token.position);
+                        self.write_opcode(OpCode::DefineGlobal, token.position);
                     } else {
-                        self.write_opcode(OpCode::SetGlobalVar, token.position);
+                        self.write_opcode(OpCode::SetGlobal, token.position);
                     }
                 } else {
                     // local variables
@@ -331,11 +329,9 @@ impl<'a> Compiler<'a> {
                                             );
                                             self.add_local((*name).clone());
                                         }
-                                        Expr::Underscore { ref mut token } => self.write_constant(
-                                            Self::token_to_string(&mut *token),
-                                            true,
-                                            token.position,
-                                        ),
+                                        Expr::Underscore { ref mut token } => {
+                                            self.write_constant(Value::Empty, true, token.position)
+                                        }
                                         _ => todo!(), // does not happen
                                     }
                                 }
@@ -509,7 +505,7 @@ impl<'a> Compiler<'a> {
                     }
                 } else {
                     self.write_constant(Self::token_to_string(name), true, name.position);
-                    self.write_opcode(OpCode::GetGlobalVar, name.position);
+                    self.write_opcode(OpCode::GetGlobal, name.position);
                 }
             }
             Expr::Block {
