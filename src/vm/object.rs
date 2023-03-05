@@ -3,12 +3,6 @@ use std::mem::ManuallyDrop;
 
 use super::value::Value;
 
-macro_rules! drop {
-    ($v:expr) => {
-        drop(ManuallyDrop::into_inner(unsafe { **$v }))
-    };
-}
-
 #[derive(Debug, Copy, PartialEq, Clone)]
 pub enum RawObject {
     String(*mut ManuallyDrop<String>),
@@ -21,19 +15,19 @@ impl RawObject {
     /// Frees the object pointed
     pub fn free(&self) {
         match self {
-            Self::String(v) => drop!(v),
-            Self::Atom(v) => drop!(v),
-            Self::Object(obj) => drop!(obj),
-            Self::List(list) => drop!(list),
+            Self::String(v) => drop(v),
+            Self::Atom(v) => drop(v),
+            Self::Object(obj) => drop(obj),
+            Self::List(list) => drop(list),
         }
     }
 
     pub fn print(&self) -> String {
         match self {
-            Self::String(v) => ManuallyDrop::into_inner(unsafe { **v }),
-            Self::Atom(v) => format!(":{}", ManuallyDrop::into_inner(unsafe { **v })),
+            Self::String(v) => ManuallyDrop::into_inner(unsafe { (**v).clone() }),
+            Self::Atom(v) => format!(":{}", ManuallyDrop::into_inner(unsafe { (**v).clone() })),
             Self::List(list) => {
-                let list = ManuallyDrop::into_inner(unsafe { **list });
+                let list = ManuallyDrop::into_inner(unsafe { (**list).clone() });
                 format!(
                     "[{}]",
                     list.into_iter()
@@ -43,7 +37,7 @@ impl RawObject {
                 )
             }
             Self::Object(obj) => {
-                let obj = ManuallyDrop::into_inner(unsafe { **obj });
+                let obj = ManuallyDrop::into_inner(unsafe { (**obj).clone() });
 
                 format!(
                     "{{\n{}\n}}",

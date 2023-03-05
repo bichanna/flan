@@ -2,6 +2,7 @@ pub mod debug;
 pub mod opcode;
 
 use std::collections::HashMap;
+use std::mem::ManuallyDrop;
 use std::process;
 
 use byteorder::{ByteOrder, LittleEndian};
@@ -10,7 +11,7 @@ use crossbeam_channel::{Receiver, Sender};
 use self::opcode::{OpCode, Position};
 use crate::frontend::ast::Expr;
 use crate::frontend::token::{Token, TokenType};
-use crate::vm::object::{Object, ObjectType, ObjectUnion};
+use crate::vm::object::RawObject;
 use crate::vm::value::Value;
 
 pub struct Compiler<'a> {
@@ -117,31 +118,23 @@ impl<'a> Compiler<'a> {
                 self.compile_expr(right);
                 self.write_opcode(OpCode::Negate, op.position);
             }
-            Expr::StringLiteral {
-                token,
-                ref mut value,
-            } => {
-                let obj = Object {
-                    obj_type: ObjectType::String,
-                    obj: &mut ObjectUnion {
-                        string: value as *mut String,
-                    } as *mut ObjectUnion,
-                };
-                let value = Value::Object(obj);
-                self.write_constant(value, true, token.position);
+            Expr::StringLiteral { token, value } => {
+                self.write_constant(
+                    Value::Object(RawObject::String(
+                        &mut ManuallyDrop::new((*value).clone()) as *mut ManuallyDrop<String>
+                    )),
+                    true,
+                    token.position,
+                );
             }
-            Expr::AtomLiteral {
-                token,
-                ref mut value,
-            } => {
-                let obj = Object {
-                    obj_type: ObjectType::Atom,
-                    obj: &mut ObjectUnion {
-                        string: value as *mut String,
-                    } as *mut ObjectUnion,
-                };
-                let value = Value::Object(obj);
-                self.write_constant(value, true, token.position);
+            Expr::AtomLiteral { token, value } => {
+                self.write_constant(
+                    Value::Object(RawObject::Atom(
+                        &mut ManuallyDrop::new((*value).clone()) as *mut ManuallyDrop<String>
+                    )),
+                    true,
+                    token.position,
+                );
             }
             Expr::IntegerLiteral { token, value } => {
                 self.write_constant(Value::Int(*value), true, token.position);
@@ -393,14 +386,11 @@ impl<'a> Compiler<'a> {
                                             format!("local variable {} not defined", name.value),
                                         );
                                     }
-                                    let obj = Object {
-                                        obj_type: ObjectType::Atom,
-                                        obj: &mut ObjectUnion {
-                                            string: &mut name.value as *mut String,
-                                        },
-                                    };
                                     compiler.write_constant(
-                                        Value::Object(obj),
+                                        Value::Object(RawObject::Atom(&mut ManuallyDrop::new(
+                                            name.value.clone(),
+                                        )
+                                            as *mut ManuallyDrop<String>)),
                                         true,
                                         name.position,
                                     );
@@ -580,13 +570,9 @@ impl<'a> Compiler<'a> {
 
     /// Converts a Token to Value::Atom
     fn token_to_string(token: &mut Token) -> Value {
-        let obj = Object {
-            obj_type: ObjectType::Atom,
-            obj: &mut ObjectUnion {
-                string: &mut token.value as *mut String,
-            },
-        };
-        Value::Object(obj)
+        Value::Object(RawObject::Atom(
+            &mut ManuallyDrop::new(token.value.clone()) as *mut ManuallyDrop<String>
+        ))
     }
 
     /// Checks
@@ -657,30 +643,12 @@ impl<'a> Compiler<'a> {
             Expr::BoolLiteral { token: _, payload } => Some(Value::Bool(payload.clone())),
             Expr::Null { token: _ } => Some(Value::Null),
             Expr::Underscore { token: _ } => Some(Value::Empty),
-            Expr::StringLiteral {
-                token: _,
-                ref mut value,
-            } => {
-                let obj = Object {
-                    obj_type: ObjectType::String,
-                    obj: &mut ObjectUnion {
-                        string: &mut value.clone() as *mut String,
-                    },
-                };
-                Some(Value::Object(obj))
-            }
-            Expr::AtomLiteral {
-                token: _,
-                ref mut value,
-            } => {
-                let obj = Object {
-                    obj_type: ObjectType::Atom,
-                    obj: &mut ObjectUnion {
-                        string: &mut value.clone() as *mut String,
-                    },
-                };
-                Some(Value::Object(obj))
-            }
+            Expr::StringLiteral { token: _, value } => Some(Value::Object(RawObject::String(
+                &mut ManuallyDrop::new((*value).clone()) as *mut ManuallyDrop<String>,
+            ))),
+            Expr::AtomLiteral { token: _, value } => Some(Value::Object(RawObject::Atom(
+                &mut ManuallyDrop::new((*value).clone()) as *mut ManuallyDrop<String>,
+            ))),
             _ => None,
         }
     }

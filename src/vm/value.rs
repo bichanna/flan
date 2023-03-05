@@ -61,8 +61,8 @@ impl std::ops::Add<Value> for Value {
                 RawObject::String(l) => match rhs {
                     Self::Object(right) => match right {
                         RawObject::String(r) => {
-                            let left = unsafe { **l };
-                            let right = unsafe { **r };
+                            let left = unsafe { (**l).clone() };
+                            let right = unsafe { (**r).clone() };
                             Ok(Value::Object(RawObject::String(
                                 &mut ManuallyDrop::new(left + &right) as *mut ManuallyDrop<String>,
                             )))
