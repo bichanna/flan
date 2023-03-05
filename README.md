@@ -26,7 +26,7 @@ each(names) <| func(name) fprintln("Hello, {}!", name)
 
 ```js
 // fizzbuzz
-std := import("std")
+range := import("range")
 
 func fizzbuzz(n) match [n % 3, n % 5] {
     [0, 0] -> "FizzBuzz",
@@ -35,7 +35,7 @@ func fizzbuzz(n) match [n % 3, n % 5] {
     _ -> string(n),
 }
 
-std.range(1, 101) |> std.each() <| func(n) {
+range.range(1, 10001) |> range.each() <| func(n) {
     println(fizzbuzz(n))
 }
 ```
