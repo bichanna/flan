@@ -1,50 +1,39 @@
 use std::collections::HashMap;
+use std::mem::ManuallyDrop;
 
 use super::value::Value;
 
-#[derive(Copy, Clone, PartialEq, Debug)]
-pub struct Object {
-    pub obj_type: ObjectType,
-    pub obj: *mut ObjectUnion,
+macro_rules! drop {
+    ($v:expr) => {
+        drop(ManuallyDrop::into_inner(unsafe { **$v }))
+    };
 }
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub union ObjectUnion {
-    pub string: *mut String,
-    pub object: *mut HashMap<String, Box<Value>>,
-    pub list: *mut Vec<Box<Value>>,
+#[derive(Debug, Copy, PartialEq, Clone)]
+pub enum RawObject {
+    String(*mut ManuallyDrop<String>),
+    Atom(*const ManuallyDrop<String>),
+    Object(*mut ManuallyDrop<HashMap<String, Box<Value>>>),
+    List(*mut ManuallyDrop<Vec<Box<Value>>>),
 }
 
-#[derive(Copy, Clone, PartialEq, Debug)]
-pub enum ObjectType {
-    List,
-    String,
-    Atom,
-    Object,
-}
-
-impl Object {
-    /// Frees the object pointed based on its type
+impl RawObject {
+    /// Frees the object pointed
     pub fn free(&self) {
-        match self.obj_type {
-            ObjectType::String | ObjectType::Atom => unsafe { drop((*self.obj).string) },
-            ObjectType::List => unsafe { drop((*self.obj).list) },
-            ObjectType::Object => unsafe { drop((*self.obj).object) },
+        match self {
+            Self::String(v) => drop!(v),
+            Self::Atom(v) => drop!(v),
+            Self::Object(obj) => drop!(obj),
+            Self::List(list) => drop!(list),
         }
-        // Drop the object itself
-        drop(self.obj);
     }
 
     pub fn print(&self) -> String {
-        match self.obj_type {
-            ObjectType::String => unsafe { (*(*self.obj).string).to_owned() },
-            ObjectType::Atom => {
-                let name = unsafe { (*(*self.obj).string).to_owned() };
-                format!(":{}", name)
-            }
-            ObjectType::List => {
-                let list = unsafe { (*(*self.obj).list).to_owned() };
+        match self {
+            Self::String(v) => ManuallyDrop::into_inner(unsafe { **v }),
+            Self::Atom(v) => format!(":{}", ManuallyDrop::into_inner(unsafe { **v })),
+            Self::List(list) => {
+                let list = ManuallyDrop::into_inner(unsafe { **list });
                 format!(
                     "[{}]",
                     list.into_iter()
@@ -53,8 +42,9 @@ impl Object {
                         .join(", ")
                 )
             }
-            ObjectType::Object => {
-                let obj = unsafe { (*(*self.obj).object).to_owned() };
+            Self::Object(obj) => {
+                let obj = ManuallyDrop::into_inner(unsafe { **obj });
+
                 format!(
                     "{{\n{}\n}}",
                     obj.into_iter()

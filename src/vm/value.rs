@@ -1,4 +1,6 @@
-use super::object::{Object, ObjectType, ObjectUnion};
+use std::mem::ManuallyDrop;
+
+use super::object::RawObject;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Value {
@@ -7,7 +9,7 @@ pub enum Value {
     Bool(bool),
     Int(i64),
     Float(f64),
-    Object(Object),
+    Object(RawObject),
 }
 
 impl Value {
@@ -29,11 +31,11 @@ impl Value {
             Value::Bool(_) => "bool".to_string(),
             Value::Int(_) => "integer".to_string(),
             Value::Float(_) => "float".to_string(),
-            Value::Object(obj) => match obj.obj_type {
-                ObjectType::String => "string".to_string(),
-                ObjectType::Atom => "atom".to_string(),
-                ObjectType::List => "list".to_string(),
-                ObjectType::Object => "object".to_string(),
+            Value::Object(obj) => match obj {
+                RawObject::String(_) => "string".to_string(),
+                RawObject::Atom(_) => "atom".to_string(),
+                RawObject::List(_) => "list".to_string(),
+                RawObject::Object(_) => "object".to_string(),
             },
         }
     }
@@ -55,28 +57,21 @@ impl std::ops::Add<Value> for Value {
                 Self::Float(r) => Ok(Self::Float(l + r)),
                 _ => Err(format!("cannot add float and {}", rhs.type_())),
             },
-            Self::Object(l) => match l.obj_type {
-                ObjectType::String => match rhs {
-                    Self::Object(r) => match r.obj_type {
-                        ObjectType::String => {
-                            // Concatenate two strings
-                            let mut new_str = unsafe { (*(*l.obj).string).clone() }
-                                + (&(unsafe { (*(*r.obj).string).clone() }));
-
-                            let obj = Object {
-                                obj_type: ObjectType::String,
-                                obj: &mut ObjectUnion {
-                                    string: &mut new_str as *mut String,
-                                } as *mut ObjectUnion,
-                            };
-
-                            Ok(Self::Object(obj))
+            Self::Object(left) => match left {
+                RawObject::String(l) => match rhs {
+                    Self::Object(right) => match right {
+                        RawObject::String(r) => {
+                            let left = unsafe { **l };
+                            let right = unsafe { **r };
+                            Ok(Value::Object(RawObject::String(
+                                &mut ManuallyDrop::new(left + &right) as *mut ManuallyDrop<String>,
+                            )))
                         }
                         _ => Err(format!("cannot add string and {}", rhs.type_())),
                     },
-                    _ => Err(format!("cannot add string and {}", rhs.type_())),
+                    _ => Err(format!("cannot add {} and {}", self.type_(), rhs.type_())),
                 },
-                _ => Err(format!("cannot add string and {}", rhs.type_())),
+                _ => Err(format!("cannot add {} and {}", self.type_(), rhs.type_())),
             },
             _ => Err(format!("cannot add {} and {}", self.type_(), rhs.type_())),
         }
