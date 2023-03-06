@@ -83,8 +83,18 @@ impl<'a> Parser<'a> {
 
     fn assignment(&mut self) -> Result<Expr, &'static str> {
         let expr = self.or_expr()?;
-        if self.check_current(TokenType::Equal) || self.check_current(TokenType::ColonEq) {
-            let init = if self.current.kind == TokenType::ColonEq {
+        if self.check_current(TokenType::Equal)
+            || self.check_current(TokenType::ColonEq)
+            || self.check_current(TokenType::PipeEq)
+        {
+            let init = if self.current.kind == TokenType::ColonEq
+                || self.current.kind == TokenType::PipeEq
+            {
+                true
+            } else {
+                false
+            };
+            let public = if self.current.kind == TokenType::PipeEq {
                 true
             } else {
                 false
@@ -108,6 +118,7 @@ impl<'a> Parser<'a> {
                     return Ok(Expr::Assign {
                         token: token.clone(),
                         init,
+                        public,
                         left: Box::new(expr),
                         right: value,
                     });
@@ -124,6 +135,7 @@ impl<'a> Parser<'a> {
                     }
                     return Ok(Expr::Assign {
                         init,
+                        public,
                         token: token.clone(),
                         left: Box::new(expr),
                         right: value,
@@ -132,6 +144,7 @@ impl<'a> Parser<'a> {
                 Expr::Variable { ref name } => {
                     return Ok(Expr::Assign {
                         init,
+                        public,
                         token: name.clone(),
                         left: Box::new(expr),
                         right: value,
@@ -166,6 +179,7 @@ impl<'a> Parser<'a> {
                     return Ok(Expr::Assign {
                         token: token.clone(),
                         init: false,
+                        public: false,
                         left: Box::new(expr.clone()),
                         right: Box::new(Expr::Binary {
                             left: Box::new(expr),
@@ -188,6 +202,7 @@ impl<'a> Parser<'a> {
                     return Ok(Expr::Assign {
                         token: token.clone(),
                         init: false,
+                        public: false,
                         left: Box::new(expr.clone()),
                         right: Box::new(Expr::Binary {
                             left: Box::new(expr),

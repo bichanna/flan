@@ -17,6 +17,7 @@ pub enum TokenType {
     Colon,      // :
     SColon,     // ;
     ColonEq,    // :=
+    PipeEq,     // |=
     Plus,       // +
     DPlus,      // ++
     PlusEq,     // +=

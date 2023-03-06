@@ -189,6 +189,10 @@ impl<'a> Lexer<'a> {
                         self.add_no_value_token(TokenType::DPipe);
                         self.advance();
                     }
+                    '=' => {
+                        self.add_no_value_token(TokenType::PipeEq);
+                        self.advance();
+                    }
                     _ => {
                         self.advance();
                         self.add_error("unrecognized character");
