@@ -1,5 +1,5 @@
 <div align="center">
-    <h1>The Feo Programming Language</h1>
+    <h1>The Impala Programming Language</h1>
     |
     <a href="https://bichanna.github.io/feo-book/">Doc</a>
     |

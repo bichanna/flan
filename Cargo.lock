@@ -34,7 +34,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "feo"
+name = "impala"
 version = "0.0.1"
 dependencies = [
  "byteorder",
