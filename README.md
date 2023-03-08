@@ -21,7 +21,7 @@ I'm sorry for the ugly and inefficient and awful code. That's because Impala is 
 {each: each} := import("std")
 
 names := ["Nobu", "Sol", "Thomas", "Damian", "Ryan", "Zen", "Esfir"]
-each(names) <| func(name) fprintln("Hello, {}!", name)
+each(names) <~ (name) fprintln("Hello, {}!", name)
 ```
 
 ```js
@@ -35,7 +35,7 @@ func fizzbuzz(n) match [n % 3, n % 5] {
     _ -> string(n),
 }
 
-range.range(1, 10001) |> range.each() <| func(n) {
+range.range(1, 10001) |> range.each() <~ (n) {
     println(fizzbuzz(n))
 }
 ```
@@ -47,7 +47,6 @@ fmt := import("fmt")
 // fibonacci
 func fib(n) n <= 1 : n ? fib(n-1) + fib(n-2)
 
-std.range(0, 10) |> std.each() <| func(i) {
+std.range(0, 10) |> std.each() <~ (i)
     fmt.println("fib({}) = {}", i, fib(i))
-}
 ```
