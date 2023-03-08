@@ -37,6 +37,7 @@ pub enum TokenType {
     Comma,      // ,
     RPipe,      // |>
     LPipe,      // <|
+    LTilde,     // <~
     GT,         // >
     LT,         // <
     GTEq,       // >=

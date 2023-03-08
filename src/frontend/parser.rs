@@ -364,6 +364,21 @@ impl<'a> Parser<'a> {
                     })
                 }
             }
+        } else if self.does_match(&[TokenType::MinusGT]) {
+            // short-hand anonymous function
+            let (params, rest) = if self.check_current(TokenType::RParen) {
+                self.parse_params()?
+            } else {
+                (vec![], None)
+            };
+            let body = Box::new(self.expression()?);
+            Ok(Expr::Func {
+                public: false,
+                name: None,
+                params,
+                rest,
+                body,
+            })
         } else if self.check_current(TokenType::Func) {
             // private function
             self.function(false, vec![])
@@ -371,7 +386,7 @@ impl<'a> Parser<'a> {
             // public function
             self.function(true, vec![])
         } else if self.does_match(&[TokenType::Hash]) {
-            // decorator-applied
+            // decorator-applied function
             expect!(self, TokenType::LBracket, "expected '['");
 
             // get decorators
@@ -545,6 +560,24 @@ impl<'a> Parser<'a> {
         // check for <|
         if self.does_match(&[TokenType::LPipe]) {
             args.push(CallArg::Positional(Box::new(self.expression()?)));
+        }
+
+        // check for <~
+        if self.does_match(&[TokenType::LTilde]) {
+            let (params, rest) = if self.check_current(TokenType::LParen) {
+                self.parse_params()?
+            } else {
+                (vec![], None)
+            };
+            let body = Box::new(self.expression()?);
+            let func = Expr::Func {
+                public: false,
+                name: None,
+                params,
+                rest,
+                body,
+            };
+            args.push(CallArg::Positional(Box::new(func)));
         }
 
         Ok(Expr::Call {
@@ -841,6 +874,20 @@ std.std.(each (lambda (n) (block std.(println (fizzbuzz n)))))"#;
     fn test_anonymous_func() {
         let source = r#"add := func (x, y) x + y"#;
         let expected = "(assignI add (lambda (x y) (Plus x y)))";
+        parse!(source, expected);
+    }
+
+    #[test]
+    fn test_shorthand_anonymous_func() {
+        let source = r#"something := -> 100"#;
+        let expected = "(assignI something (lambda () 100))";
+        parse!(source, expected);
+    }
+
+    #[test]
+    fn test_callback_func() {
+        let source = r#"some_func() <~ (a, b) a + b"#;
+        let expected = "(some_func (lambda (a b) (Plus a b)))";
         parse!(source, expected);
     }
 

@@ -207,6 +207,10 @@ impl<'a> Lexer<'a> {
                         self.add_no_value_token(TokenType::LTEq);
                         self.advance();
                     }
+                    '~' => {
+                        self.add_no_value_token(TokenType::LTilde);
+                        self.advance();
+                    }
                     _ => self.add_no_value_token(TokenType::LT),
                 },
                 '>' => match self.next_char() {
