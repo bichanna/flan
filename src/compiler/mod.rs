@@ -641,24 +641,6 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    /// Converts an Expr to Value
-    fn convert_to_value(&self, expr: &mut Expr) -> Option<Value> {
-        match expr {
-            Expr::IntegerLiteral { token: _, value } => Some(Value::Int(value.clone())),
-            Expr::FloatLiteral { token: _, value } => Some(Value::Float(value.clone())),
-            Expr::BoolLiteral { token: _, payload } => Some(Value::Bool(payload.clone())),
-            Expr::Null { token: _ } => Some(Value::Null),
-            Expr::Underscore { token: _ } => Some(Value::Empty),
-            Expr::StringLiteral { token: _, value } => Some(Value::Object(RawObject::String(
-                &mut ManuallyDrop::new((*value).clone()) as *mut ManuallyDrop<String>,
-            ))),
-            Expr::AtomLiteral { token: _, value } => Some(Value::Object(RawObject::Atom(
-                &mut ManuallyDrop::new((*value).clone()) as *mut ManuallyDrop<String>,
-            ))),
-            _ => None,
-        }
-    }
-
     fn begin_scope(&mut self) {
         self.score_depth += 1;
     }
