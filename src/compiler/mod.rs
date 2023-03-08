@@ -33,8 +33,6 @@ pub struct Compiler<'a> {
 
     sender: &'a Sender<Vec<u8>>,
     recv: &'a Receiver<Expr>,
-
-    pop: bool,
 }
 
 pub struct Local {
@@ -67,7 +65,6 @@ impl<'a> Compiler<'a> {
             score_depth: 0,
             sender,
             recv,
-            pop: true,
         }
     }
 
@@ -85,10 +82,7 @@ impl<'a> Compiler<'a> {
                     self.compile_expr(&mut expr);
                 }
             }
-            if self.pop {
-                self.write_opcode(OpCode::Pop, (0, 0));
-            }
-            self.pop = true
+            self.write_opcode(OpCode::Pop, (0, 0));
         }
         self.write_opcode(OpCode::Return, (0, 0));
     }
@@ -648,7 +642,7 @@ impl<'a> Compiler<'a> {
     fn end_scope(&mut self, token: &Token) {
         self.score_depth -= 1;
 
-        let mut pop_nums = 0;
+        let mut pop_nums = -1;
         while self.locals.len() > 0 && self.locals.last().unwrap().depth > self.score_depth {
             pop_nums += 1;
             self.locals.pop();
@@ -660,8 +654,6 @@ impl<'a> Compiler<'a> {
         } else if pop_nums == 1 {
             self.write_opcode(OpCode::Pop, token.position);
         }
-
-        self.pop = false;
     }
 
     fn compile_error(&self, token: &Token, message: String) {
@@ -732,7 +724,7 @@ mod tests {
     #[test]
     fn test_local_def_list() {
         let source = r#"{ [a, b] := [1, 2] }"#;
-        let expected: Vec<u8> = vec![19, 2, 0, 1, 0, 1, 1, 19, 2, 0, 1, 2, 1, 3, 14, 13, 2, 0];
+        let expected: Vec<u8> = vec![19, 2, 0, 1, 0, 1, 1, 19, 2, 0, 1, 2, 1, 3, 14, 12, 12, 0];
         compile!(source, expected);
     }
 
@@ -755,7 +747,7 @@ mod tests {
         let source = r#"{ [a, b, c] := [1, 2, 3] [a, b, c] = [3, 2, 1] }"#;
         let expected: Vec<u8> = vec![
             19, 3, 0, 1, 0, 1, 1, 1, 2, 19, 3, 0, 1, 3, 1, 4, 1, 5, 14, 17, 19, 3, 0, 1, 6, 0, 1,
-            7, 1, 1, 8, 2, 13, 3, 0,
+            7, 1, 1, 8, 2, 13, 2, 12, 0,
         ];
         compile!(source, expected);
     }

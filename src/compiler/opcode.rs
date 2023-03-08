@@ -54,6 +54,7 @@ impl OpCode {
             18 => Some(Self::SetLocalObj),
             19 => Some(Self::InitList),
             20 => Some(Self::InitObj),
+            // 20, 1, 0, 1, 0, 1, 1, 20, 1, 0, 1, 2, 1, 3, 14, 12, 12, 0
             _ => None,
         }
     }
