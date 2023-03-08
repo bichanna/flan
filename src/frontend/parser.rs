@@ -372,13 +372,42 @@ impl<'a> Parser<'a> {
             self.function(true, vec![])
         } else if self.does_match(&[TokenType::Hash]) {
             // decorator-applied
-            let mut decorators = vec![];
             expect!(self, TokenType::LBracket, "expected '['");
-            decorators.push(Box::new(self.expression()?));
-            while self.does_match(&[TokenType::Comma]) {
-                decorators.push(Box::new(self.expression()?));
+
+            // get decorators
+            let mut decorators = vec![];
+            while !self.check_current(TokenType::RBracket) {
+                let mut dec_args = vec![];
+                let decorator_name = Expr::Variable {
+                    name: self.current.clone(),
+                };
+                self.advance();
+                if self.does_match(&[TokenType::LParen]) {
+                    if !self.check_current(TokenType::RParen) {
+                        if self.does_match(&[TokenType::Ellipsis]) {
+                            dec_args.push(CallArg::Unpacking(Box::new(self.expression()?)));
+                        } else {
+                            dec_args.push(CallArg::Positional(Box::new(self.expression()?)));
+                        }
+                        while self.does_match(&[TokenType::Comma]) {
+                            if self.does_match(&[TokenType::Ellipsis]) {
+                                dec_args.push(CallArg::Unpacking(Box::new(self.expression()?)));
+                            } else {
+                                dec_args.push(CallArg::Positional(Box::new(self.expression()?)));
+                            }
+                        }
+                    }
+                    expect!(self, TokenType::RParen, "expected ')'");
+                }
+                decorators.push((decorator_name, dec_args));
+                if self.does_match(&[TokenType::Comma]) {
+                    continue;
+                } else {
+                    break;
+                }
             }
             expect!(self, TokenType::RBracket, "expected ']'");
+
             self.function(false, decorators)
         } else if self.does_match(&[TokenType::Match]) {
             // match expression
@@ -417,7 +446,7 @@ impl<'a> Parser<'a> {
                 expr: Box::new(expr),
             })
         } else {
-            // println!("{:#?}", &self.current);
+            // println!("{:#?}", self.current);
             Err("unexpected token")
         }
     }
@@ -425,7 +454,7 @@ impl<'a> Parser<'a> {
     fn function(
         &mut self,
         mut public: bool,
-        decorators: Vec<Box<Expr>>,
+        decorators: Vec<(Expr, Vec<CallArg>)>,
     ) -> Result<Expr, &'static str> {
         if !public {
             if self.does_match(&[TokenType::Public]) {
@@ -441,14 +470,48 @@ impl<'a> Parser<'a> {
         };
         let params = self.parse_params()?;
         let body = self.expression()?;
-        Ok(Expr::Func {
-            public,
-            name,
-            params: params.0,
-            rest: params.1,
-            decorators,
-            body: Box::new(body),
-        })
+
+        // check decorators
+        if decorators.is_empty() {
+            Ok(Expr::Func {
+                public,
+                name,
+                params: params.0,
+                rest: params.1,
+                body: Box::new(body),
+            })
+        } else {
+            // apply the decorators
+            let mut right: Expr = Expr::Func {
+                public: false,
+                name: None,
+                params: params.0,
+                rest: params.1,
+                body: Box::new(body),
+            };
+            for d in decorators {
+                let mut args = vec![CallArg::Positional(Box::new(right))];
+                for i in d.1 {
+                    args.push(i);
+                }
+                right = Expr::Call {
+                    callee: Box::new(d.0),
+                    args,
+                    token: self.previous(),
+                }
+            }
+
+            match name {
+                Some(name) => Ok(Expr::Assign {
+                    init: true,
+                    public,
+                    token: name.clone(),
+                    left: Box::new(Expr::Variable { name }),
+                    right: Box::new(right),
+                }),
+                None => Err("expected function name"),
+            }
+        }
     }
 
     fn finish_call(&mut self, callee: Expr, arg: Option<Expr>) -> Result<Expr, &'static str> {
@@ -854,8 +917,9 @@ std.std.(each (lambda (n) (block std.(println (fizzbuzz n)))))"#;
 
     #[test]
     fn decorators() {
-        let source = "#[some_decorator, another] func abc() {}";
-        let expected = "(#[some_decorator another] func abc () (object))";
+        let source = r#"#[some_decorator("something"), another] public func abc() {}"#;
+        let expected =
+            r#"(assignPI abc (another (some_decorator (lambda () (object)) "something")))"#;
         parse!(source, expected);
     }
 }
