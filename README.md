@@ -24,9 +24,9 @@ range := import("range")
 // bubble sort
 func bubble_sort!(list)
     range.range(0, len(list)) |> range.each() <~ (i, _)
-        range.range(0, len(list)-i-1) |> range.each() <~ (j, _)
-            if(list.j > list.(j+1)) <~ 
-                [list.j, list.(j+1)] = [list.(j+1), list.j]
+    range.range(0, len(list)-i-1) |> range.each() <~ (j, _)
+    if(list.j > list.(j+1)) <~ 
+    [list.j, list.(j+1)] = [list.(j+1), list.j]
 
 list := [-2, 4, 2, 1, 0, 5, -1, 6]
 bubble_sort!(list)
