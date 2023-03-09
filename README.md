@@ -23,11 +23,8 @@ std := import("std")
 func bubble_sort!(list)
     range.range(0, len(list)) <~ (i, _)
         range.range(0, len(list) - i - 1) <~ (j, _)
-            std.if(list.j > list.(j+1)) <~ {
-                tmp := list.j
-                list.j = list.(j+1)
-                list.(j+1) = tmp
-            }
+            std.if(list.j > list.(j+1)) <~ 
+                [list.j, list.(j+1)] = [list.(j+1), list.j]
 
 list := [-2, 4, 2, 1, 0, 5, -1, 6]
 bubble_sort!(list)
