@@ -21,8 +21,8 @@ std := import("std")
 
 // bubble sort
 func bubble_sort!(list)
-    range.range(0, len(list)) <~ (i, _)
-        range.range(0, len(list) - i - 1) <~ (j, _)
+    range.range(0, len(list)) |> range.each() <~ (i, _)
+        range.range(0, len(list) - i - 1) |> range.each() <~ (j, _)
             std.if(list.j > list.(j+1)) <~ 
                 [list.j, list.(j+1)] = [list.(j+1), list.j]
 
@@ -38,6 +38,6 @@ fmt := import("fmt")
 // fibonacci
 func fib(n) n <= 1 : n ? fib(n-1) + fib(n-2)
 
-std.range(0, 10) |> std.each() <~ (i)
+std.range(0, 10) |> std.each() <~ (i, _)
     fmt.println("fib({}) = {}", i, fib(i))
 ```
