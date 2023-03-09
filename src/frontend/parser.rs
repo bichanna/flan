@@ -111,7 +111,13 @@ impl<'a> Parser<'a> {
                 } => {
                     for v in values {
                         match **v {
-                            Expr::Variable { name: _ } | Expr::Underscore { token: _ } => continue,
+                            Expr::Variable { name: _ }
+                            | Expr::Get {
+                                instance: _,
+                                value: _,
+                                token: _,
+                            }
+                            | Expr::Underscore { token: _ } => continue,
                             _ => return Err("expected variable names or _ for object values"),
                         }
                     }
@@ -129,7 +135,13 @@ impl<'a> Parser<'a> {
                 } => {
                     for v in values {
                         match **v {
-                            Expr::Variable { name: _ } | Expr::Underscore { token: _ } => continue,
+                            Expr::Variable { name: _ }
+                            | Expr::Get {
+                                instance: _,
+                                value: _,
+                                token: _,
+                            }
+                            | Expr::Underscore { token: _ } => continue,
                             _ => return Err("expected variable names or _ for elements"),
                         }
                     }
@@ -922,8 +934,9 @@ std.std.(each (lambda (n) (block std.(println (fizzbuzz n)))))"#;
 
     #[test]
     fn assign_expr() {
-        let source = r#"[name, _] := ["Nobu", 16]"#;
-        let expected = r#"(assignI (list name :_:) (list "Nobu" 16))"#;
+        let source = r#"[name, _] := ["Nobu", 16] [some_list.0, _] = [1, 3]"#;
+        let expected = r#"(assignI (list name :_:) (list "Nobu" 16))
+(assign (list some_list.0 :_:) (list 1 3))"#;
         parse!(source, expected);
     }
 
