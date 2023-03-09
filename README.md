@@ -16,28 +16,22 @@ I'm sorry for the ugly and inefficient and awful code. That's because Impala is 
 ## Examples
 
 ```js
-// printing out names
-{println: fprintln} := import("fmt")
-{each: each} := import("std")
-
-names := ["Nobu", "Sol", "Thomas", "Damian", "Ryan", "Zen", "Esfir"]
-each(names) <~ (name) fprintln("Hello, {}!", name)
-```
-
-```js
-// fizzbuzz
 range := import("range")
+std := import("std")
 
-func fizzbuzz(n) match [n % 3, n % 5] {
-    [0, 0] -> "FizzBuzz",
-    [0, _] -> "Fizz",
-    [_, 0] -> "Buzz",
-    _ -> string(n),
-}
+// bubble sort
+func bubble_sort!(list)
+    range.range(0, len(list)) <~ (i, _)
+        range.range(0, len(list) - i - 1) <~ (j, _)
+            std.if(list.j > list.(j+1)) <~ {
+                tmp := list.j
+                list.j = list.(j+1)
+                list.(j+1) = tmp
+            }
 
-range.range(1, 10001) |> range.each() <~ (n) {
-    println(fizzbuzz(n))
-}
+list := [-2, 4, 2, 1, 0, 5, -1, 6]
+bubble_sort!(list)
+println(list) // [-2, -1, 0, 1, 2, 4, 5, 6]
 ```
 
 ```js
