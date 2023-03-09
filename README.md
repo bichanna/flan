@@ -8,6 +8,8 @@
 <div align="center">
 </div>
 
+**WARNING!! THIS LANGUAGE IS IN DEVELOPMENT AND FOR LEARNING PURPOSES. ANYTHING CAN CHANGE AT ANY MOMENT.**
+
 **IMP**ure function**A**l **LA**nguage is a high-level, dynamically- and strongly-typed, functional programming language that runs on a virtual machine.
 **Impala** is my highschool Computer Science project written in Rust.
 
@@ -17,13 +19,13 @@ I'm sorry for the ugly and inefficient and awful code. That's because Impala is 
 
 ```js
 range := import("range")
-std := import("std")
+{if: if} := import("std")
 
 // bubble sort
 func bubble_sort!(list)
     range.range(0, len(list)) |> range.each() <~ (i, _)
-        range.range(0, len(list) - i - 1) |> range.each() <~ (j, _)
-            std.if(list.j > list.(j+1)) <~ 
+        range.range(0, len(list)-i-1) |> range.each() <~ (j, _)
+            if(list.j > list.(j+1)) <~ 
                 [list.j, list.(j+1)] = [list.(j+1), list.j]
 
 list := [-2, 4, 2, 1, 0, 5, -1, 6]
