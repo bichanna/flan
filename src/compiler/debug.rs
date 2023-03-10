@@ -77,7 +77,13 @@ impl<'a> Compiler<'a> {
                 OpCode::GetGlobal => self.debug_print_simple_instruction("OP_GET_GLOBAL", offset),
                 OpCode::SetGlobal => self.debug_print_simple_instruction("OP_SET_GLOBAL", offset),
                 OpCode::Pop => self.debug_print_simple_instruction("OP_POP", offset),
+                OpCode::PopExceptLast => {
+                    self.debug_print_simple_instruction("OP_POP_EXCEPT_LAST", offset)
+                }
                 OpCode::PopN => self.debug_print_length_instruction("OP_POPN", offset),
+                OpCode::PopExceptLastN => {
+                    self.debug_print_length_instruction("OP_POP_EXCEPT_LASTN", offset)
+                }
                 OpCode::GetLocal => self.debug_print_length_instruction("OP_GET_LOCAL", offset),
                 OpCode::SetLocalVar => {
                     self.debug_print_length_instruction("OP_SET_LOCAL_VAR", offset)

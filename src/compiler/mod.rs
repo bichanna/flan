@@ -35,6 +35,7 @@ pub struct Compiler<'a> {
     recv: &'a Receiver<Expr>,
 }
 
+#[derive(Clone)]
 pub struct Local {
     pub name: Token,
     pub depth: u32,
@@ -80,9 +81,9 @@ impl<'a> Compiler<'a> {
                 Expr::End => break,
                 mut expr => {
                     self.compile_expr(&mut expr);
+                    self.write_opcode(OpCode::Pop, (0, 0));
                 }
             }
-            self.write_opcode(OpCode::Pop, (0, 0));
         }
         self.write_opcode(OpCode::Return, (0, 0));
     }
@@ -503,10 +504,83 @@ impl<'a> Compiler<'a> {
                 ref mut exprs,
             } => {
                 self.begin_scope();
+
+                // get the last expression in the block
+                let mut last_expr = match exprs.pop() {
+                    Some(expr) => *expr,
+                    None => Expr::Null {
+                        token: token.clone(),
+                    },
+                };
+
+                // check whether the last expression in this block is a local variable declaration
+                // or not
+                match last_expr {
+                    Expr::Assign {
+                        init,
+                        public: _,
+                        ref token,
+                        left: _,
+                        right: _,
+                    } => {
+                        if init {
+                            self.compile_error(
+                                token,
+                                "the last expression of a block cannot be a variable declaration"
+                                    .to_string(),
+                            )
+                        }
+                    }
+                    _ => {}
+                }
+
+                // compile all expressions in the block except for the last expression and local
+                // variable declarations
                 for mut expr in exprs {
                     self.compile_expr(&mut expr);
+                    match **expr {
+                        Expr::Assign {
+                            init,
+                            public: _,
+                            ref token,
+                            left: _,
+                            right: _,
+                        } => {
+                            if !init {
+                                self.write_opcode(OpCode::Pop, token.position);
+                            }
+                        }
+                        _ => self.write_opcode(OpCode::Pop, token.position),
+                    }
                 }
-                self.end_scope(token);
+
+                // calculate the number of pops needed to remove all the unused values
+                let mut pop_nums = 0;
+                for local in self.locals.clone().into_iter().rev() {
+                    if local.depth > self.score_depth - 1 {
+                        pop_nums += 1;
+                    }
+                }
+
+                // compile the last expression, and this expression is the value of the block
+                self.compile_expr(&mut last_expr);
+
+                // add OpCode::PopExceptLast instructions according to the number of local variables
+                if pop_nums > 1 {
+                    self.write_opcode(OpCode::PopExceptLastN, token.position);
+                    self.write_byte(pop_nums as u8, token.position);
+                } else if pop_nums == 1 {
+                    self.write_opcode(OpCode::PopExceptLast, token.position);
+                }
+
+                // remove all local variables
+                while self.locals.len() > 0
+                    && self.locals.last().unwrap().depth > self.score_depth - 1
+                {
+                    self.locals.pop();
+                }
+
+                self.end_scope();
             }
             _ => {}
         }
@@ -639,21 +713,8 @@ impl<'a> Compiler<'a> {
         self.score_depth += 1;
     }
 
-    fn end_scope(&mut self, token: &Token) {
+    fn end_scope(&mut self) {
         self.score_depth -= 1;
-
-        let mut pop_nums = -1;
-        while self.locals.len() > 0 && self.locals.last().unwrap().depth > self.score_depth {
-            pop_nums += 1;
-            self.locals.pop();
-        }
-
-        if pop_nums > 1 {
-            self.write_opcode(OpCode::PopN, token.position);
-            self.write_byte(pop_nums as u8, token.position);
-        } else if pop_nums == 1 {
-            self.write_opcode(OpCode::Pop, token.position);
-        }
     }
 
     fn compile_error(&self, token: &Token, message: String) {
@@ -716,29 +777,33 @@ mod tests {
 
     #[test]
     fn test_local_def_var() {
-        let source = r#"{ a := 123 }"#;
-        let expected: Vec<u8> = vec![1, 0, 1, 1, 14, 12, 0];
+        let source = r#"{ a := 123 a + 3 }"#;
+        let expected: Vec<u8> = vec![1, 0, 1, 1, 14, 15, 0, 1, 2, 4, 21, 12, 0];
         compile!(source, expected);
     }
 
     #[test]
     fn test_local_def_list() {
-        let source = r#"{ [a, b] := [1, 2] }"#;
-        let expected: Vec<u8> = vec![19, 2, 0, 1, 0, 1, 1, 19, 2, 0, 1, 2, 1, 3, 14, 12, 12, 0];
+        let source = r#"{ [a, b] := [1, 2] null }"#;
+        let expected: Vec<u8> = vec![
+            19, 2, 0, 1, 0, 1, 1, 19, 2, 0, 1, 2, 1, 3, 14, 1, 4, 22, 2, 12, 0,
+        ];
         compile!(source, expected);
     }
 
     #[test]
     fn test_local_def_obj() {
-        let source = r#"{ {a: b} := {a: 123} }"#;
-        let expected: Vec<u8> = vec![20, 1, 0, 1, 0, 1, 1, 20, 1, 0, 1, 2, 1, 3, 14, 12, 0];
+        let source = r#"{ {a: b} := {a: 123} null }"#;
+        let expected: Vec<u8> = vec![
+            20, 1, 0, 1, 0, 1, 1, 20, 1, 0, 1, 2, 1, 3, 14, 1, 4, 21, 12, 0,
+        ];
         compile!(source, expected);
     }
 
     #[test]
     fn test_local_set_var() {
         let source = r#"{ a := 123 a = 321 }"#;
-        let expected: Vec<u8> = vec![1, 0, 1, 1, 14, 1, 2, 16, 0, 12, 0];
+        let expected: Vec<u8> = vec![1, 0, 1, 1, 14, 1, 2, 16, 0, 21, 12, 0];
         compile!(source, expected);
     }
 
@@ -747,7 +812,7 @@ mod tests {
         let source = r#"{ [a, b, c] := [1, 2, 3] [a, b, c] = [3, 2, 1] }"#;
         let expected: Vec<u8> = vec![
             19, 3, 0, 1, 0, 1, 1, 1, 2, 19, 3, 0, 1, 3, 1, 4, 1, 5, 14, 17, 19, 3, 0, 1, 6, 0, 1,
-            7, 1, 1, 8, 2, 13, 2, 12, 0,
+            7, 1, 1, 8, 2, 22, 3, 12, 0,
         ];
         compile!(source, expected);
     }
@@ -755,14 +820,14 @@ mod tests {
     #[test]
     fn test_local_set_obj() {
         let source = r#"{ a := 100 {a: a} = {a: 10} }"#;
-        let expected: Vec<u8> = vec![1, 0, 1, 1, 14, 18, 20, 1, 0, 1, 2, 1, 3, 0, 12, 0];
+        let expected: Vec<u8> = vec![1, 0, 1, 1, 14, 18, 20, 1, 0, 1, 2, 1, 3, 0, 21, 12, 0];
         compile!(source, expected);
     }
 
     #[test]
     fn test_local_get() {
         let source = r#"{ a := 123 a }"#;
-        let expected: Vec<u8> = vec![1, 0, 1, 1, 14, 15, 0, 12, 0];
+        let expected: Vec<u8> = vec![1, 0, 1, 1, 14, 15, 0, 21, 12, 0];
         compile!(source, expected);
     }
 }

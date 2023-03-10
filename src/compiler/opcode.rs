@@ -28,6 +28,8 @@ pub enum OpCode {
     SetLocalObj,
     InitList,
     InitObj,
+    PopExceptLast,
+    PopExceptLastN,
 }
 
 impl OpCode {
@@ -54,7 +56,9 @@ impl OpCode {
             18 => Some(Self::SetLocalObj),
             19 => Some(Self::InitList),
             20 => Some(Self::InitObj),
-            // 20, 1, 0, 1, 0, 1, 1, 20, 1, 0, 1, 2, 1, 3, 14, 12, 12, 0
+            21 => Some(Self::PopExceptLast),
+            22 => Some(Self::PopExceptLastN),
+            // 19, 3, 0, 1, 0, 1, 1, 1, 2, 19, 3, 0, 1, 3, 1, 4, 1, 5, 14, 17, 19, 3, 0, 1, 6, 0, 1, 7, 1, 1, 8, 2, 22, 3, 12, 0
             _ => None,
         }
     }
