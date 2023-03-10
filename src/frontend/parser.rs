@@ -103,6 +103,18 @@ impl<'a> Parser<'a> {
             self.advance();
             let value = Box::new(self.assignment()?);
 
+            match *value {
+                Expr::Assign {
+                    init: _,
+                    public: _,
+                    token: _,
+                    left: _,
+                    right: _,
+                } => return Err("assignment value should not be assignment"),
+                _ => {}
+            }
+
+            // check what kind of assignment it is
             match expr {
                 Expr::ObjectLiteral {
                     ref token,
