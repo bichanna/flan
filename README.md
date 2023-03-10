@@ -23,8 +23,8 @@ range := import("range")
 
 // bubble sort
 func bubble_sort!(list)
-    range.range(0, len(list)) |> range.each() <~ (i, _)
-    range.range(0, len(list)-i-1) |> range.each() <~ (j, _)
+    range.range(0, len(list)) |> range.each() <~ (_, i)
+    range.range(0, len(list)-i-1) |> range.each() <~ (_, j)
     if(list.j > list.(j+1)) <~ 
     [list.j, list.(j+1)] = [list.(j+1), list.j]
 
