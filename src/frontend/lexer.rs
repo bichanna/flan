@@ -416,6 +416,8 @@ impl<'a> Lexer<'a> {
             "null" => Some(TokenType::Null),
             "def" => Some(TokenType::Def),
             "redef" => Some(TokenType::Redef),
+            "try" => Some(TokenType::Try),
+            "else" => Some(TokenType::Else),
             _ => None,
         }
     }

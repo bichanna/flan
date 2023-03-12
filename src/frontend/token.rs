@@ -65,6 +65,8 @@ pub enum TokenType {
     Unsafe, // unsafe
     Def,    // def
     Redef,  // redef
+    Try,    // try
+    Else,   // else
 
     EOF,
 }

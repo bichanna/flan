@@ -480,6 +480,52 @@ impl<'a> Parser<'a> {
                 condition: Box::new(condition),
                 branches,
             })
+        } else if self.does_match(&[TokenType::Try]) {
+            // try expression
+            let token = self.previous();
+            let result = self.expression()?;
+            let err_handling = self.expression()?;
+            let mut success: Option<Expr> = None;
+            if self.check_current(TokenType::Else) {
+                expect!(self, TokenType::Else, "expected 'else'");
+                success = Some(self.expression()?);
+            }
+            Ok(Expr::Match {
+                token: token.clone(),
+                condition: Box::new(Expr::Call {
+                    callee: Box::new(Expr::Variable {
+                        name: Token::new(
+                            TokenType::Id,
+                            "error?".to_string(),
+                            token.position.0,
+                            token.position.1,
+                        ),
+                    }),
+                    args: vec![CallArg::Positional(Box::new(result))],
+                    token: token.clone(),
+                }),
+                branches: vec![
+                    MatchBranch {
+                        target: Box::new(Expr::BoolLiteral {
+                            token: token.clone(),
+                            payload: true,
+                        }),
+                        body: Box::new(err_handling),
+                    },
+                    MatchBranch {
+                        target: Box::new(Expr::BoolLiteral {
+                            token: token.clone(),
+                            payload: false,
+                        }),
+                        body: Box::new(match success {
+                            Some(expr) => expr,
+                            None => Expr::Null {
+                                token: token.clone(),
+                            },
+                        }),
+                    },
+                ],
+            })
         } else if self.does_match(&[TokenType::Unsafe]) {
             // unsafe expression
             let token = self.previous();
@@ -897,7 +943,13 @@ impl<'a> Parser<'a> {
         while !self.is_end() {
             self.advance();
             match self.current.kind {
-                TokenType::Func | TokenType::Id => return,
+                TokenType::Func
+                | TokenType::Match
+                | TokenType::Def
+                | TokenType::Redef
+                | TokenType::Try
+                | TokenType::Unsafe
+                | TokenType::Id => return,
                 _ => {}
             }
         }
@@ -1056,6 +1108,13 @@ std.std.(each (lambda (n) (block std.(println (fizzbuzz n)))))"#;
     fn macros() {
         let source = r#"def NAME "Nobu" println(#NAME) redef NAME "Sol" println(#NAME)"#;
         let expected = "null\n(println \"Nobu\")\nnull\n(println \"Sol\")";
+        parse!(source, expected);
+    }
+
+    #[test]
+    fn try_expr() {
+        let source = r#"try result {} else {}"#;
+        let expected = r#"(match (error? result) true -> (object) false -> (object))"#;
         parse!(source, expected);
     }
 }
