@@ -414,6 +414,7 @@ impl<'a> Lexer<'a> {
             "true" => Some(TokenType::True),
             "false" => Some(TokenType::False),
             "null" => Some(TokenType::Null),
+            "def" => Some(TokenType::Def),
             _ => None,
         }
     }

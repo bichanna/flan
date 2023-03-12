@@ -63,6 +63,7 @@ pub enum TokenType {
     False,  // false
     Null,   // null
     Unsafe, // unsafe
+    Def,    // def
 
     EOF,
 }

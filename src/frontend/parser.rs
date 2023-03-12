@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::process;
 
 use crossbeam_channel::{Receiver, Sender};
@@ -5,6 +6,16 @@ use crossbeam_channel::{Receiver, Sender};
 use super::ast::{CallArg, Expr, MatchBranch};
 use super::error::ParserError;
 use super::token::{Token, TokenType};
+
+macro_rules! expect {
+    ($self: expr, $kind: expr, $msg: expr) => {
+        if $self.check_current($kind) {
+            $self.advance();
+        } else {
+            return Err($msg);
+        }
+    };
+}
 
 pub struct Parser<'a> {
     /// The current token being parsed, received from the channel
@@ -17,16 +28,8 @@ pub struct Parser<'a> {
     sender: &'a Sender<Expr>,
     /// Errors encountered while parsing
     errors: Vec<ParserError>,
-}
-
-macro_rules! expect {
-    ($self: expr, $kind: expr, $msg: expr) => {
-        if $self.check_current($kind) {
-            $self.advance();
-        } else {
-            return Err($msg);
-        }
-    };
+    /// Macros
+    macros: HashMap<String, Expr>,
 }
 
 impl<'a> Parser<'a> {
@@ -43,6 +46,7 @@ impl<'a> Parser<'a> {
             recv: token_recv,
             sender: output_sender,
             errors: vec![],
+            macros: HashMap::new(),
         };
         parser.parse();
         parser.report_errors(filename, source);
@@ -409,7 +413,7 @@ impl<'a> Parser<'a> {
         } else if self.does_match(&[TokenType::Public]) {
             // public function
             self.function(true, vec![])
-        } else if self.does_match(&[TokenType::Hash]) {
+        } else if self.does_match(&[TokenType::At]) {
             // decorator-applied function
             expect!(self, TokenType::LBracket, "expected '['");
 
@@ -492,6 +496,25 @@ impl<'a> Parser<'a> {
                 token,
                 expr: Box::new(expr),
             })
+        } else if self.does_match(&[TokenType::Def]) {
+            // macro definition
+            expect!(self, TokenType::Id, "expected an identifier");
+            let name = self.previous();
+            let expr = self.expression()?;
+            if self.macros.contains_key(&name.value) {
+                Err("macro with the same name is already defined")
+            } else {
+                self.macros.insert(name.value.clone(), expr);
+                Ok(Expr::Null { token: name })
+            }
+        } else if self.does_match(&[TokenType::Hash]) {
+            // macro usage
+            expect!(self, TokenType::Id, "expected an identifier");
+            let name = self.previous();
+            match self.macros.get(&name.value) {
+                Some(expr) => Ok(expr.clone()),
+                None => Err("macro undefined"),
+            }
         } else {
             // println!("{:#?}", self.current);
             Err("unexpected token")
@@ -1012,9 +1035,15 @@ std.std.(each (lambda (n) (block std.(println (fizzbuzz n)))))"#;
 
     #[test]
     fn decorators() {
-        let source = r#"#[some_decorator("something"), another] public func abc() {}"#;
+        let source = r#"@[some_decorator("something"), another] public func abc() {}"#;
         let expected =
             r#"(assignPI abc (another (some_decorator (lambda () (object)) "something")))"#;
         parse!(source, expected);
+    }
+
+    #[test]
+    fn macros() {
+        let source = r#"def NAME "Nobu" println(#NAME)"#;
+        let expected = r#"null (println "Nobu")"#;
     }
 }
