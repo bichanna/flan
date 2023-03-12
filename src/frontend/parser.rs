@@ -772,11 +772,19 @@ impl<'a> Parser<'a> {
                     return Err("required parameter cannot follow rest parameter");
                 }
 
-                expect!(self, TokenType::Id, "expected an identifier");
-                let param = self.previous();
-                if self.does_match(&[TokenType::Plus]) {
-                    rest = Some(param);
-                } else {
+                if self.check_current(TokenType::Id) {
+                    // identifier
+                    expect!(self, TokenType::Id, "expected an identifier");
+                    let param = self.previous();
+                    if self.does_match(&[TokenType::Plus]) {
+                        rest = Some(param);
+                    } else {
+                        params.push(param);
+                    }
+                } else if self.check_current(TokenType::Underscore) {
+                    // empty parameter
+                    expect!(self, TokenType::Underscore, "expected an underscore");
+                    let param = self.previous();
                     params.push(param);
                 }
 
@@ -975,8 +983,8 @@ std.std.(each (lambda (n) (block std.(println (fizzbuzz n)))))"#;
 
     #[test]
     fn rest_param() {
-        let source = "func some_func(nums+) {}";
-        let expected = "(func some_func (nums+) (object))";
+        let source = "func some_func(_, nums+) {}";
+        let expected = "(func some_func (Underscore nums+) (object))";
         parse!(source, expected);
     }
 
