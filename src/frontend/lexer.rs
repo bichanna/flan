@@ -105,6 +105,7 @@ impl<'a> Lexer<'a> {
                 }
                 ';' => self.add_no_value_token(TokenType::SColon),
                 '@' => self.add_no_value_token(TokenType::At),
+                '$' => self.add_no_value_token(TokenType::Dollar),
                 '^' => self.add_no_value_token(TokenType::Caret),
                 '#' => self.add_no_value_token(TokenType::Hash),
                 ',' => self.add_no_value_token(TokenType::Comma),
@@ -335,6 +336,17 @@ impl<'a> Lexer<'a> {
                             } else {
                                 value.push(self.current);
                             }
+                            self.advance();
+                        }
+
+                        self.add_token(TokenType::Str, value);
+                    } else if self.current == '`' {
+                        // unescaped string
+                        let mut value = String::new();
+                        self.advance();
+
+                        while !self.is_strict_end() && self.current != '`' {
+                            value.push(self.current);
                             self.advance();
                         }
 

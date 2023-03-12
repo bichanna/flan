@@ -49,6 +49,7 @@ pub enum TokenType {
     Dot,        // .
     Ellipsis,   // ...
     Question,   // ?
+    Dollar,     // $
     DAmp,       // &&
     DPipe,      // ||
 

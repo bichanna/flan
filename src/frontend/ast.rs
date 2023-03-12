@@ -100,6 +100,10 @@ pub enum Expr {
         token: Token,
         expr: Box<Expr>,
     },
+    Shell {
+        token: Token,
+        expr: Box<Expr>,
+    },
     End,
 }
 
@@ -302,6 +306,9 @@ impl Expr {
             }
             Expr::Unsafe { token: _, expr } => {
                 format!("(unsafe {})", expr.print())
+            }
+            Expr::Shell { token: _, expr } => {
+                format!("(shell_op {})", expr.print())
             }
             Expr::End => "".to_string(),
         }

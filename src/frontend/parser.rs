@@ -484,6 +484,14 @@ impl<'a> Parser<'a> {
                 token,
                 expr: Box::new(expr),
             })
+        } else if self.does_match(&[TokenType::Dollar]) {
+            // shell operator
+            let token = self.previous();
+            let expr = self.expression()?;
+            Ok(Expr::Shell {
+                token,
+                expr: Box::new(expr),
+            })
         } else {
             // println!("{:#?}", self.current);
             Err("unexpected token")
@@ -971,6 +979,13 @@ std.std.(each (lambda (n) (block std.(println (fizzbuzz n)))))"#;
     fn unsafe_expr() {
         let source = r#"result := unsafe ( 100 / 0 )"#;
         let expected = r#"(assignI result (unsafe (Div 100 0)))"#;
+        parse!(source, expected);
+    }
+
+    #[test]
+    fn shell_operator() {
+        let source = r#"result := $`echo "Hello\nWorld"`"#;
+        let expected = r#"(assignI result (shell_op "echo "Hello\nWorld""))"#;
         parse!(source, expected);
     }
 
