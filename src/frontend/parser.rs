@@ -507,6 +507,17 @@ impl<'a> Parser<'a> {
                 self.macros.insert(name.value.clone(), expr);
                 Ok(Expr::Null { token: name })
             }
+        } else if self.does_match(&[TokenType::Redef]) {
+            // macro redefinition
+            expect!(self, TokenType::Id, "expected an identifier");
+            let name = self.previous();
+            let expr = self.expression()?;
+            if self.macros.contains_key(&name.value) {
+                self.macros.insert(name.value.clone(), expr);
+                Ok(Expr::Null { token: name })
+            } else {
+                Err("macro with the same name is not defined")
+            }
         } else if self.does_match(&[TokenType::Hash]) {
             // macro usage
             expect!(self, TokenType::Id, "expected an identifier");
@@ -1043,7 +1054,8 @@ std.std.(each (lambda (n) (block std.(println (fizzbuzz n)))))"#;
 
     #[test]
     fn macros() {
-        let source = r#"def NAME "Nobu" println(#NAME)"#;
-        let expected = r#"null (println "Nobu")"#;
+        let source = r#"def NAME "Nobu" println(#NAME) redef NAME "Sol" println(#NAME)"#;
+        let expected = "null\n(println \"Nobu\")\nnull\n(println \"Sol\")";
+        parse!(source, expected);
     }
 }
