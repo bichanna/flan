@@ -141,6 +141,17 @@ impl<'a> VM<'a> {
                 let n = read_byte!(self);
                 self.popn(n);
             }
+            OpCode::PopExceptLast => {
+                let v = unsafe { *self.stack_top.sub(1) };
+                unsafe { self.stack_top.sub(2) };
+                self.push(v);
+            }
+            OpCode::PopExceptLastN => {
+                let v = unsafe { *self.stack_top.sub(1) };
+                let n = read_byte!(self) as usize;
+                unsafe { self.stack_top.sub(n + 1) };
+                self.push(v);
+            }
             OpCode::DefineGlobal => {
                 self.define_or_set_global(true);
             }
@@ -381,74 +392,4 @@ mod tests {
 
         assert_eq!(unsafe { *vm.stack_top }, Value::Bool(true));
     }
-
-    //  #[test]
-    //  fn test_global() {
-    //      let bytecode: Vec<u8> = vec![
-    //          1, 0, 1, 1, 9, 12, 19, 2, 0, 1, 2, 1, 3, 19, 2, 0, 1, 4, 1, 5, 9, 12, 20, 1, 0, 1, 6,
-    //          1, 7, 20, 1, 0, 1, 8, 1, 9, 9, 12, 1, 10, 10, 1, 11, 10, 4, 1, 12, 10, 4, 12, 0,
-    //      ];
-    //      let values: Vec<Value> = vec![
-    //          Value::Object(Object {
-    //              obj_type: ObjectType::Atom,
-    //              obj: &mut ObjectUnion {
-    //                  string: &mut "a".to_string() as *mut String,
-    //              },
-    //          }),
-    //          Value::Int(1),
-    //          Value::Object(Object {
-    //              obj_type: ObjectType::Atom,
-    //              obj: &mut ObjectUnion {
-    //                  string: &mut "b".to_string() as *mut String,
-    //              },
-    //          }),
-    //          Value::Empty,
-    //          Value::Int(2),
-    //          Value::Int(3),
-    //          Value::Object(Object {
-    //              obj_type: ObjectType::Atom,
-    //              obj: &mut ObjectUnion {
-    //                  string: &mut "c".to_string() as *mut String,
-    //              },
-    //          }),
-    //          Value::Object(Object {
-    //              obj_type: ObjectType::Atom,
-    //              obj: &mut ObjectUnion {
-    //                  string: &mut "c".to_string() as *mut String,
-    //              },
-    //          }),
-    //          Value::Object(Object {
-    //              obj_type: ObjectType::Atom,
-    //              obj: &mut ObjectUnion {
-    //                  string: &mut "c".to_string() as *mut String,
-    //              },
-    //          }),
-    //          Value::Int(4),
-    //          Value::Object(Object {
-    //              obj_type: ObjectType::Atom,
-    //              obj: &mut ObjectUnion {
-    //                  string: &mut "a".to_string() as *mut String,
-    //              },
-    //          }),
-    //          Value::Object(Object {
-    //              obj_type: ObjectType::Atom,
-    //              obj: &mut ObjectUnion {
-    //                  string: &mut "b".to_string() as *mut String,
-    //              },
-    //          }),
-    //          Value::Object(Object {
-    //              obj_type: ObjectType::Atom,
-    //              obj: &mut ObjectUnion {
-    //                  string: &mut "c".to_string() as *mut String,
-    //              },
-    //          }),
-    //      ];
-    //      let positions = HashMap::new();
-    //      let source = r#"a := 1 [b, _] := [2, 3] {c: c} := {c: 4} a+b+c"#.to_string();
-
-    //      let mut vm = VM::new("input", &source, &bytecode, &values, &positions);
-    //      vm.run();
-
-    //      assert_eq!(unsafe { *vm.stack_top }, Value::Int(7));
-    //  }
 }
