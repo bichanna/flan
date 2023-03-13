@@ -13,8 +13,6 @@
 **IMP**ure function**A**l **LA**nguage is a high-level, dynamically- and strongly-typed, functional programming language that runs on a virtual machine.
 **Impala** is my highschool Computer Science project written in Rust.
 
-I'm sorry for the ugly and inefficient and awful code. That's because Impala is my first serious project.
-
 ## Examples
 
 ```js
