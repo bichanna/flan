@@ -2,7 +2,6 @@ pub mod object;
 pub mod value;
 
 use std::collections::HashMap;
-use std::mem::ManuallyDrop;
 use std::ptr;
 
 use byteorder::{ByteOrder, LittleEndian};
@@ -58,6 +57,8 @@ pub struct VM<'a> {
     pub stack_top: *mut Value,
     /// All global variables
     globals: HashMap<String, Value>,
+    /// All to-be-garbage-collected objects
+    pub objects: Vec<RawObject>,
 }
 
 impl<'a> VM<'a> {
@@ -78,7 +79,20 @@ impl<'a> VM<'a> {
             stack: Box::new([Value::Null; STACK_MAX]),
             stack_top: ptr::null_mut(),
             globals: HashMap::new(),
+            objects: vec![],
         }
+    }
+
+    pub fn update(
+        &mut self,
+        bytecode: &'a Vec<u8>,
+        values: &'a Vec<Value>,
+        positions: &'a HashMap<usize, Position>,
+    ) {
+        self.bytecode = bytecode;
+        self.ip = self.bytecode.as_ptr();
+        self.values = values;
+        self.positions = positions;
     }
 
     /// The heart of the VM
@@ -93,12 +107,9 @@ impl<'a> VM<'a> {
             instruction = OpCode::u8_to_opcode(read_byte!(self)).unwrap();
         }
 
-        // rudementary garbage collection
-        for value in self.values {
-            match value {
-                Value::Object(obj) => obj.free(),
-                _ => {}
-            }
+        // rudimentary garbage collection
+        for obj in self.objects.clone() {
+            obj.free();
         }
     }
 
@@ -162,7 +173,7 @@ impl<'a> VM<'a> {
                 match self.pop() {
                     Value::Object(obj) => match obj {
                         RawObject::Atom(var_name) => {
-                            let var_name = unsafe { (**var_name).clone() };
+                            let var_name = unsafe { var_name.read() };
                             match self.globals.get(&var_name) {
                                 Some(v) => self.push(*v),
                                 None => {} // TODO: report error
@@ -180,7 +191,7 @@ impl<'a> VM<'a> {
             OpCode::SetLocalObj => {}
             OpCode::InitList => {
                 let length = self.read_2bytes() as usize;
-                let mut list: ManuallyDrop<Vec<Box<Value>>> = ManuallyDrop::new(Vec::new());
+                let mut list: Vec<Box<Value>> = Vec::new();
                 for _ in 0..length {
                     let inst = OpCode::u8_to_opcode(read_byte!(self)).unwrap();
                     self.execute_once(inst);
@@ -188,13 +199,12 @@ impl<'a> VM<'a> {
                     list.push(Box::new(element));
                 }
                 self.push(Value::Object(RawObject::List(
-                    &mut list as *mut ManuallyDrop<Vec<Box<Value>>>,
+                    &mut list as *mut Vec<Box<Value>>,
                 )));
             }
             OpCode::InitObj => {
                 let length = self.read_2bytes() as usize;
-                let mut map: ManuallyDrop<HashMap<String, Box<Value>>> =
-                    ManuallyDrop::new(HashMap::new());
+                let mut map: HashMap<String, Box<Value>> = HashMap::new();
                 for _ in 0..length {
                     // get key
                     let mut inst = OpCode::u8_to_opcode(read_byte!(self)).unwrap();
@@ -207,7 +217,7 @@ impl<'a> VM<'a> {
                     match key {
                         Value::Object(obj) => match obj {
                             RawObject::Atom(v) => {
-                                let key = unsafe { (**v).clone() };
+                                let key = unsafe { v.read() };
                                 map.insert(key, Box::new(value));
                             }
                             _ => todo!(), // does not happen
@@ -215,7 +225,7 @@ impl<'a> VM<'a> {
                         _ => {} // TODO: report error
                     }
                     self.push(Value::Object(RawObject::Object(
-                        &mut map as *mut ManuallyDrop<HashMap<String, Box<Value>>>,
+                        &mut map as *mut HashMap<String, Box<Value>>,
                     )));
                 }
             }
@@ -229,7 +239,7 @@ impl<'a> VM<'a> {
         match left {
             Value::Object(left_obj) => match left_obj {
                 RawObject::Atom(v) => {
-                    let var_name = unsafe { (**v).clone() };
+                    let var_name = unsafe { v.read() };
                     if define {
                         self.define_global(var_name, right);
                     } else {
@@ -237,11 +247,11 @@ impl<'a> VM<'a> {
                     }
                 }
                 RawObject::List(list) => {
-                    let left = unsafe { (**list).clone() };
+                    let left = unsafe { list.read() };
                     match right {
                         Value::Object(right_obj) => match right_obj {
                             RawObject::List(list) => {
-                                let right = unsafe { (**list).clone() };
+                                let right = unsafe { list.read() };
                                 if right.len() != left.len() {
                                     // TODO: report error
                                 }
@@ -249,7 +259,7 @@ impl<'a> VM<'a> {
                                     match *l {
                                         Value::Object(left_obj) => match left_obj {
                                             RawObject::Atom(v) => {
-                                                let var_name = unsafe { (**v).clone() };
+                                                let var_name = unsafe { v.read() };
                                                 if define {
                                                     self.define_global(var_name, *r);
                                                 } else {
@@ -269,17 +279,17 @@ impl<'a> VM<'a> {
                     }
                 }
                 RawObject::Object(map) => {
-                    let assignee = unsafe { (**map).clone() };
+                    let assignee = unsafe { map.read() };
                     match right {
                         Value::Object(right_obj) => match right_obj {
                             RawObject::Object(map) => {
-                                let right = unsafe { (**map).clone() };
+                                let right = unsafe { map.read() };
                                 for (k, assignee) in assignee.into_iter() {
                                     match right.get(&k) {
                                         Some(v) => match *assignee {
                                             Value::Object(assignee_obj) => match assignee_obj {
                                                 RawObject::Atom(assignee) => {
-                                                    let var_name = unsafe { (**assignee).clone() };
+                                                    let var_name = unsafe { assignee.read() };
                                                     if define {
                                                         self.define_global(var_name, **v);
                                                     } else {
@@ -359,6 +369,30 @@ impl<'a> VM<'a> {
     /// Peeks a Value from the stack
     fn peek(&mut self, n: usize) -> *mut Value {
         unsafe { self.stack_top.sub(n + 1) }
+    }
+
+    pub fn new_string(&mut self, mut v: String) -> Value {
+        let raw_obj = RawObject::String(&mut v as *mut String);
+        self.objects.push(raw_obj);
+        Value::Object(raw_obj.clone())
+    }
+
+    pub fn new_atom(&mut self, mut v: String) -> Value {
+        let raw_obj = RawObject::Atom(&mut v as *const String);
+        self.objects.push(raw_obj);
+        Value::Object(raw_obj.clone())
+    }
+
+    pub fn new_list(&mut self, mut list: Vec<Box<Value>>) -> Value {
+        let raw_obj = RawObject::List(&mut list as *mut Vec<Box<Value>>);
+        self.objects.push(raw_obj);
+        Value::Object(raw_obj.clone())
+    }
+
+    pub fn new_obj(&mut self, mut obj: HashMap<String, Box<Value>>) -> Value {
+        let raw_obj = RawObject::Object(&mut obj as *mut HashMap<String, Box<Value>>);
+        self.objects.push(raw_obj);
+        Value::Object(raw_obj.clone())
     }
 }
 

@@ -1,14 +1,13 @@
 use std::collections::HashMap;
-use std::mem::ManuallyDrop;
 
 use super::value::Value;
 
 #[derive(Debug, Copy, PartialEq, Clone)]
 pub enum RawObject {
-    String(*mut ManuallyDrop<String>),
-    Atom(*const ManuallyDrop<String>),
-    Object(*mut ManuallyDrop<HashMap<String, Box<Value>>>),
-    List(*mut ManuallyDrop<Vec<Box<Value>>>),
+    String(*mut String),
+    Atom(*const String),
+    Object(*mut HashMap<String, Box<Value>>),
+    List(*mut Vec<Box<Value>>),
 }
 
 impl RawObject {
@@ -24,10 +23,10 @@ impl RawObject {
 
     pub fn print(&self) -> String {
         match self {
-            Self::String(v) => ManuallyDrop::into_inner(unsafe { (**v).clone() }),
-            Self::Atom(v) => format!(":{}", ManuallyDrop::into_inner(unsafe { (**v).clone() })),
+            Self::String(v) => unsafe { v.read() },
+            Self::Atom(v) => format!(":{}", unsafe { v.read() }),
             Self::List(list) => {
-                let list = ManuallyDrop::into_inner(unsafe { (**list).clone() });
+                let list = unsafe { list.read() };
                 format!(
                     "[{}]",
                     list.into_iter()
@@ -37,7 +36,7 @@ impl RawObject {
                 )
             }
             Self::Object(obj) => {
-                let obj = ManuallyDrop::into_inner(unsafe { (**obj).clone() });
+                let obj = unsafe { obj.read() };
 
                 format!(
                     "{{\n{}\n}}",

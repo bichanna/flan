@@ -2,7 +2,6 @@ pub mod debug;
 pub mod opcode;
 
 use std::collections::HashMap;
-use std::mem::ManuallyDrop;
 use std::process;
 
 use byteorder::{ByteOrder, LittleEndian};
@@ -11,8 +10,8 @@ use crossbeam_channel::{Receiver, Sender};
 use self::opcode::{OpCode, Position};
 use crate::frontend::ast::Expr;
 use crate::frontend::token::{Token, TokenType};
-use crate::vm::object::RawObject;
 use crate::vm::value::Value;
+use crate::vm::VM;
 
 pub struct Compiler<'a> {
     /// File name
@@ -33,6 +32,8 @@ pub struct Compiler<'a> {
 
     sender: &'a Sender<Vec<u8>>,
     recv: &'a Receiver<Expr>,
+
+    vm: &'a mut VM<'a>,
 }
 
 #[derive(Clone)]
@@ -54,6 +55,7 @@ impl<'a> Compiler<'a> {
         name: &'static str,
         recv: &'a Receiver<Expr>,
         sender: &'a Sender<Vec<u8>>,
+        vm: &'a mut VM<'a>,
     ) -> Self {
         Self {
             filename,
@@ -66,6 +68,7 @@ impl<'a> Compiler<'a> {
             score_depth: 0,
             sender,
             recv,
+            vm,
         }
     }
 
@@ -114,22 +117,12 @@ impl<'a> Compiler<'a> {
                 self.write_opcode(OpCode::Negate, op.position);
             }
             Expr::StringLiteral { token, value } => {
-                self.write_constant(
-                    Value::Object(RawObject::String(
-                        &mut ManuallyDrop::new((*value).clone()) as *mut ManuallyDrop<String>
-                    )),
-                    true,
-                    token.position,
-                );
+                let value = self.vm.new_string(value.clone());
+                self.write_constant(value, true, token.position);
             }
             Expr::AtomLiteral { token, value } => {
-                self.write_constant(
-                    Value::Object(RawObject::Atom(
-                        &mut ManuallyDrop::new((*value).clone()) as *mut ManuallyDrop<String>
-                    )),
-                    true,
-                    token.position,
-                );
+                let value = self.vm.new_atom(value.clone());
+                self.write_constant(value, true, token.position);
             }
             Expr::IntegerLiteral { token, value } => {
                 self.write_constant(Value::Int(*value), true, token.position);
@@ -177,7 +170,8 @@ impl<'a> Compiler<'a> {
 
                 for (k, v) in keys.into_iter().zip(values.into_iter()) {
                     // write constant key
-                    self.write_constant(Self::token_to_string(k), true, token.position);
+                    let key = self.token_to_string(k);
+                    self.write_constant(key, true, token.position);
                     // write value expression
                     self.compile_expr(&mut *v);
                 }
@@ -194,7 +188,8 @@ impl<'a> Compiler<'a> {
                     // global variables
                     match **left {
                         Expr::Variable { ref mut name } => {
-                            self.write_constant(Self::token_to_string(name), true, token.position)
+                            let var = self.token_to_string(name);
+                            self.write_constant(var, true, token.position)
                         }
                         Expr::ListLiteral {
                             ref token,
@@ -217,11 +212,10 @@ impl<'a> Compiler<'a> {
 
                             for v in values {
                                 match **v {
-                                    Expr::Variable { ref mut name } => self.write_constant(
-                                        Self::token_to_string(&mut *name),
-                                        true,
-                                        name.position,
-                                    ),
+                                    Expr::Variable { ref mut name } => {
+                                        let var = self.token_to_string(name);
+                                        self.write_constant(var, true, name.position);
+                                    }
                                     Expr::Underscore { ref mut token } => {
                                         self.write_constant(Value::Empty, true, token.position)
                                     }
@@ -252,15 +246,13 @@ impl<'a> Compiler<'a> {
 
                             for (k, v) in keys.into_iter().zip(values.into_iter()) {
                                 // write constant key
-                                self.write_constant(Self::token_to_string(k), true, token.position);
+                                let key = self.token_to_string(k);
+                                self.write_constant(key, true, token.position);
                                 // write value expression
                                 match **v {
                                     Expr::Variable { ref mut name } => {
-                                        self.write_constant(
-                                            Self::token_to_string(name),
-                                            true,
-                                            token.position,
-                                        );
+                                        let var = self.token_to_string(name);
+                                        self.write_constant(var, true, token.position);
                                     }
                                     _ => todo!(), // does not happen
                                 }
@@ -286,11 +278,8 @@ impl<'a> Compiler<'a> {
                         self.check_local(left);
                         match **left {
                             Expr::Variable { ref mut name } => {
-                                self.write_constant(
-                                    Self::token_to_string(name),
-                                    true,
-                                    token.position,
-                                );
+                                let var = self.token_to_string(name);
+                                self.write_constant(var, true, token.position);
                                 self.add_local((*name).clone());
                             }
                             Expr::ListLiteral {
@@ -316,11 +305,8 @@ impl<'a> Compiler<'a> {
                                 for v in values {
                                     match **v {
                                         Expr::Variable { ref mut name } => {
-                                            self.write_constant(
-                                                Self::token_to_string(&mut *name),
-                                                true,
-                                                name.position,
-                                            );
+                                            let var = self.token_to_string(&mut *name);
+                                            self.write_constant(var, true, name.position);
                                             self.add_local((*name).clone());
                                         }
                                         Expr::Underscore { ref mut token } => {
@@ -353,19 +339,13 @@ impl<'a> Compiler<'a> {
 
                                 for (k, v) in keys.into_iter().zip(values.into_iter()) {
                                     // write constant key
-                                    self.write_constant(
-                                        Self::token_to_string(k),
-                                        true,
-                                        token.position,
-                                    );
+                                    let key = self.token_to_string(k);
+                                    self.write_constant(key, true, token.position);
                                     // write value expression
                                     match **v {
                                         Expr::Variable { ref mut name } => {
-                                            self.write_constant(
-                                                Self::token_to_string(name),
-                                                true,
-                                                token.position,
-                                            );
+                                            let var = self.token_to_string(name);
+                                            self.write_constant(var, true, token.position);
                                             self.add_local((*name).clone());
                                         }
                                         _ => todo!(), // does not happen
@@ -387,14 +367,8 @@ impl<'a> Compiler<'a> {
                                             format!("local variable {} not defined", name.value),
                                         );
                                     }
-                                    compiler.write_constant(
-                                        Value::Object(RawObject::Atom(&mut ManuallyDrop::new(
-                                            name.value.clone(),
-                                        )
-                                            as *mut ManuallyDrop<String>)),
-                                        true,
-                                        name.position,
-                                    );
+                                    let value = compiler.vm.new_atom(name.value.clone());
+                                    compiler.write_constant(value, true, name.position);
                                     // u8 argument
                                     compiler.write_byte(result as u8, name.position);
                                 }
@@ -468,11 +442,8 @@ impl<'a> Compiler<'a> {
                                 }
 
                                 for (k, v) in &mut keys.into_iter().zip(values.into_iter()) {
-                                    self.write_constant(
-                                        Self::token_to_string(k),
-                                        true,
-                                        token.position,
-                                    );
+                                    let key = self.token_to_string(k);
+                                    self.write_constant(key, true, token.position);
 
                                     followed_by_u8arg(self, &mut **v);
                                 }
@@ -495,7 +466,8 @@ impl<'a> Compiler<'a> {
                         );
                     }
                 } else {
-                    self.write_constant(Self::token_to_string(name), true, name.position);
+                    let var = self.token_to_string(name);
+                    self.write_constant(var, true, name.position);
                     self.write_opcode(OpCode::GetGlobal, name.position);
                 }
             }
@@ -643,10 +615,8 @@ impl<'a> Compiler<'a> {
     }
 
     /// Converts a Token to Value::Atom
-    fn token_to_string(token: &mut Token) -> Value {
-        Value::Object(RawObject::Atom(
-            &mut ManuallyDrop::new(token.value.clone()) as *mut ManuallyDrop<String>
-        ))
+    fn token_to_string(&mut self, token: &mut Token) -> Value {
+        self.vm.new_atom(token.value.clone())
     }
 
     /// Checks

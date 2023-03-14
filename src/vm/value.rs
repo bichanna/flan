@@ -1,5 +1,3 @@
-use std::mem::ManuallyDrop;
-
 use super::object::RawObject;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -61,10 +59,10 @@ impl std::ops::Add<Value> for Value {
                 RawObject::String(l) => match rhs {
                     Self::Object(right) => match right {
                         RawObject::String(r) => {
-                            let left = unsafe { (**l).clone() };
-                            let right = unsafe { (**r).clone() };
+                            let left = unsafe { l.read() };
+                            let right = unsafe { r.read() };
                             Ok(Value::Object(RawObject::String(
-                                &mut ManuallyDrop::new(left + &right) as *mut ManuallyDrop<String>,
+                                &mut (left + &right) as *mut String,
                             )))
                         }
                         _ => Err(format!("cannot add string and {}", rhs.type_())),
