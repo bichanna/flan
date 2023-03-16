@@ -284,7 +284,7 @@ impl<'a> Compiler<'a> {
                                 if values.len() > std::u16::MAX as usize {
                                     self.compile_error(
                                         token,
-                                        "too big list literal for destructuringassignment"
+                                        "too big list literal for destructuring assignment"
                                             .to_string(),
                                     );
                                 }
@@ -362,7 +362,7 @@ impl<'a> Compiler<'a> {
                                             format!("local variable {} not defined", name.value),
                                         );
                                     }
-                                    let value: Value = name.value.clone().into();
+                                    let value: Value = name.value.clone().as_str().into();
                                     compiler.write_constant(value, true, name.position);
                                     // u8 argument
                                     compiler.write_byte(result as u8, name.position);
@@ -445,6 +445,7 @@ impl<'a> Compiler<'a> {
                             }
                             _ => todo!(), // does not happen
                         }
+                        self.compile_expr(right);
                     }
                 }
             }
@@ -768,7 +769,7 @@ mod tests {
     #[test]
     fn test_local_set_var() {
         let source = r#"{ a := 123 a = 321 }"#;
-        let expected: Vec<u8> = vec![1, 0, 1, 1, 14, 1, 2, 16, 0, 21, 12, 0];
+        let expected: Vec<u8> = vec![1, 0, 1, 1, 14, 1, 2, 16, 0, 1, 3, 21, 12, 0];
         compile!(source, expected);
     }
 
@@ -777,7 +778,7 @@ mod tests {
         let source = r#"{ [a, b, c] := [1, 2, 3] [a, b, c] = [3, 2, 1] }"#;
         let expected: Vec<u8> = vec![
             19, 3, 0, 1, 0, 1, 1, 1, 2, 19, 3, 0, 1, 3, 1, 4, 1, 5, 14, 17, 19, 3, 0, 1, 6, 0, 1,
-            7, 1, 1, 8, 2, 22, 3, 12, 0,
+            7, 1, 1, 8, 2, 19, 3, 0, 1, 9, 1, 10, 1, 11, 22, 3, 12, 0,
         ];
         compile!(source, expected);
     }
@@ -785,7 +786,9 @@ mod tests {
     #[test]
     fn test_local_set_obj() {
         let source = r#"{ a := 100 {a: a} = {a: 10} }"#;
-        let expected: Vec<u8> = vec![1, 0, 1, 1, 14, 18, 20, 1, 0, 1, 2, 1, 3, 0, 21, 12, 0];
+        let expected: Vec<u8> = vec![
+            1, 0, 1, 1, 14, 18, 20, 1, 0, 1, 2, 1, 3, 0, 20, 1, 0, 1, 4, 1, 5, 21, 12, 0,
+        ];
         compile!(source, expected);
     }
 
