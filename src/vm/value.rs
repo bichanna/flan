@@ -1,13 +1,18 @@
-use super::object::RawObject;
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::rc::Rc;
 
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum Value {
     Null,
     Empty,
     Bool(bool),
     Int(i64),
     Float(f64),
-    Object(RawObject),
+    String(Rc<RefCell<String>>),
+    Atom(Rc<String>),
+    Object(Rc<RefCell<HashMap<String, Box<Value>>>>),
+    List(Rc<RefCell<Vec<Box<Value>>>>),
 }
 
 impl Value {
@@ -18,7 +23,30 @@ impl Value {
             Value::Bool(v) => format!("{}", v),
             Value::Int(v) => format!("{}", v),
             Value::Float(v) => format!("{}", v),
-            Value::Object(obj) => obj.print(),
+            Value::String(v) => format!("{}", v.borrow()),
+            Value::Atom(v) => format!(":{}", v),
+            Value::List(list) => {
+                let list = list.borrow();
+                format!(
+                    "[{}]",
+                    list.clone()
+                        .into_iter()
+                        .map(|i| i.print())
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                )
+            }
+            Value::Object(obj) => {
+                let obj = obj.borrow();
+                format!(
+                    "{{\n{}\n}}",
+                    obj.clone()
+                        .into_iter()
+                        .map(|(k, v)| format!("\t{}: {}", k, v.print()))
+                        .collect::<Vec<String>>()
+                        .join(",\n")
+                )
+            }
         }
     }
 
@@ -29,13 +57,35 @@ impl Value {
             Value::Bool(_) => "bool".to_string(),
             Value::Int(_) => "integer".to_string(),
             Value::Float(_) => "float".to_string(),
-            Value::Object(obj) => match obj {
-                RawObject::String(_) => "string".to_string(),
-                RawObject::Atom(_) => "atom".to_string(),
-                RawObject::List(_) => "list".to_string(),
-                RawObject::Object(_) => "object".to_string(),
-            },
+            Value::String(_) => "string".to_string(),
+            Value::Atom(_) => "atom".to_string(),
+            Value::List(_) => "list".to_string(),
+            Value::Object(_) => "object".to_string(),
         }
+    }
+}
+
+impl From<String> for Value {
+    fn from(value: String) -> Self {
+        Self::String(Rc::new(RefCell::new(value)))
+    }
+}
+
+impl From<&str> for Value {
+    fn from(value: &str) -> Self {
+        Self::Atom(Rc::new(value.to_string()))
+    }
+}
+
+impl From<Vec<Box<Value>>> for Value {
+    fn from(value: Vec<Box<Value>>) -> Self {
+        Self::List(Rc::new(RefCell::new(value)))
+    }
+}
+
+impl From<HashMap<String, Box<Value>>> for Value {
+    fn from(value: HashMap<String, Box<Value>>) -> Self {
+        Self::Object(Rc::new(RefCell::new(value)))
     }
 }
 
@@ -55,21 +105,11 @@ impl std::ops::Add<Value> for Value {
                 Self::Float(r) => Ok(Self::Float(l + r)),
                 _ => Err(format!("cannot add float and {}", rhs.type_())),
             },
-            Self::Object(left) => match left {
-                RawObject::String(l) => match rhs {
-                    Self::Object(right) => match right {
-                        RawObject::String(r) => {
-                            let left = unsafe { l.read() };
-                            let right = unsafe { r.read() };
-                            Ok(Value::Object(RawObject::String(
-                                &mut (left + &right) as *mut String,
-                            )))
-                        }
-                        _ => Err(format!("cannot add string and {}", rhs.type_())),
-                    },
-                    _ => Err(format!("cannot add {} and {}", self.type_(), rhs.type_())),
-                },
-                _ => Err(format!("cannot add {} and {}", self.type_(), rhs.type_())),
+            Self::String(l) => match rhs {
+                Self::String(r) => Ok(Self::String(Rc::new(RefCell::new(
+                    l.borrow().to_string() + &r.borrow(),
+                )))),
+                _ => Err(format!("cannot string and {}", rhs.type_())),
             },
             _ => Err(format!("cannot add {} and {}", self.type_(), rhs.type_())),
         }

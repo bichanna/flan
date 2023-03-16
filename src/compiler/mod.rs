@@ -11,7 +11,6 @@ use self::opcode::{OpCode, Position};
 use crate::frontend::ast::Expr;
 use crate::frontend::token::{Token, TokenType};
 use crate::vm::value::Value;
-use crate::vm::VM;
 
 pub struct Compiler<'a> {
     /// File name
@@ -32,8 +31,6 @@ pub struct Compiler<'a> {
 
     sender: &'a Sender<Vec<u8>>,
     recv: &'a Receiver<Expr>,
-
-    vm: &'a mut VM<'a>,
 }
 
 #[derive(Clone)]
@@ -55,7 +52,6 @@ impl<'a> Compiler<'a> {
         name: &'static str,
         recv: &'a Receiver<Expr>,
         sender: &'a Sender<Vec<u8>>,
-        vm: &'a mut VM<'a>,
     ) -> Self {
         Self {
             filename,
@@ -68,7 +64,6 @@ impl<'a> Compiler<'a> {
             score_depth: 0,
             sender,
             recv,
-            vm,
         }
     }
 
@@ -117,11 +112,11 @@ impl<'a> Compiler<'a> {
                 self.write_opcode(OpCode::Negate, op.position);
             }
             Expr::StringLiteral { token, value } => {
-                let value = self.vm.new_string(value.clone());
+                let value: Value = value.clone().into();
                 self.write_constant(value, true, token.position);
             }
             Expr::AtomLiteral { token, value } => {
-                let value = self.vm.new_atom(value.clone());
+                let value: Value = value.clone().as_str().into();
                 self.write_constant(value, true, token.position);
             }
             Expr::IntegerLiteral { token, value } => {
@@ -367,7 +362,7 @@ impl<'a> Compiler<'a> {
                                             format!("local variable {} not defined", name.value),
                                         );
                                     }
-                                    let value = compiler.vm.new_atom(name.value.clone());
+                                    let value: Value = name.value.clone().into();
                                     compiler.write_constant(value, true, name.position);
                                     // u8 argument
                                     compiler.write_byte(result as u8, name.position);
@@ -616,7 +611,7 @@ impl<'a> Compiler<'a> {
 
     /// Converts a Token to Value::Atom
     fn token_to_string(&mut self, token: &mut Token) -> Value {
-        self.vm.new_atom(token.value.clone())
+        token.value.clone().as_str().into()
     }
 
     /// Checks

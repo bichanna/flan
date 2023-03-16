@@ -14,12 +14,7 @@ macro_rules! compile {
         // for compiling
         let (cs, cr) = crossbeam_channel::bounded(1);
 
-        let bytecode = vec![];
-        let values = vec![];
-        let positions = HashMap::new();
-        let mut vm = VM::new("input", &source, &bytecode, &values, &positions);
-
-        let mut compiler = Compiler::new(&source, "input", "test", &pr, &cs, &mut vm);
+        let mut compiler = Compiler::new(&source, "input", "test", &pr, &cs);
 
         std::thread::scope(|s| {
             s.spawn(|| {
@@ -33,10 +28,6 @@ macro_rules! compile {
 
         compiler.start();
         let bytecode = cr.recv().unwrap();
-
-        for obj in &compiler.vm.objects {
-            obj.free();
-        }
 
         assert_eq!(*bytecode, $expected);
     };

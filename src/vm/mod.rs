@@ -1,17 +1,11 @@
-pub mod object;
 pub mod value;
 
 use std::collections::HashMap;
-use std::ptr;
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use self::object::RawObject;
 use self::value::Value;
 use crate::compiler::opcode::{OpCode, Position};
-
-// Constants
-const STACK_MAX: usize = 256;
 
 macro_rules! read_byte {
     ($self: expr) => {{
@@ -53,12 +47,9 @@ pub struct VM<'a> {
     /// Instruction pointer, holds the current instruction being executed
     ip: *const u8,
     /// This stack can be safely accessed without bound checking
-    stack: Box<[Value; STACK_MAX]>,
-    pub stack_top: *mut Value,
+    stack: Vec<Value>,
     /// All global variables
-    globals: HashMap<String, Value>,
-    /// All to-be-garbage-collected objects
-    pub objects: Vec<RawObject>,
+    pub globals: HashMap<String, (Value, bool)>, // if bool is true, then it's a public variable
 }
 
 impl<'a> VM<'a> {
@@ -76,29 +67,15 @@ impl<'a> VM<'a> {
             ip: bytecode.as_ptr(),
             filename,
             source,
-            stack: Box::new([Value::Null; STACK_MAX]),
-            stack_top: ptr::null_mut(),
+            stack: vec![],
             globals: HashMap::new(),
-            objects: vec![],
         }
-    }
-
-    pub fn update(
-        &mut self,
-        bytecode: &'a Vec<u8>,
-        values: &'a Vec<Value>,
-        positions: &'a HashMap<usize, Position>,
-    ) {
-        self.bytecode = bytecode;
-        self.ip = self.bytecode.as_ptr();
-        self.values = values;
-        self.positions = positions;
     }
 
     /// The heart of the VM
     pub fn run(&mut self) {
         let mut instruction = OpCode::u8_to_opcode(unsafe { *self.ip }).unwrap();
-        self.stack_top = &mut self.stack[0] as *mut Value;
+        println!("bytecode: {:?}", self.bytecode);
 
         loop {
             if self.execute_once(instruction) {
@@ -106,15 +83,11 @@ impl<'a> VM<'a> {
             }
             instruction = OpCode::u8_to_opcode(read_byte!(self)).unwrap();
         }
-
-        // rudimentary garbage collection
-        for obj in self.objects.clone() {
-            obj.free();
-        }
     }
 
     fn execute_once(&mut self, instruction: OpCode) -> bool {
         let mut br = false;
+        println!("inst: {:#?}", instruction);
         match instruction {
             OpCode::Return => {
                 br = true;
@@ -153,14 +126,16 @@ impl<'a> VM<'a> {
                 self.popn(n);
             }
             OpCode::PopExceptLast => {
-                let v = unsafe { *self.stack_top.sub(1) };
-                unsafe { self.stack_top.sub(2) };
+                let v = self.stack.pop().unwrap();
+                self.stack.pop();
                 self.push(v);
             }
             OpCode::PopExceptLastN => {
-                let v = unsafe { *self.stack_top.sub(1) };
+                let v = self.stack.pop().unwrap();
                 let n = read_byte!(self) as usize;
-                unsafe { self.stack_top.sub(n + 1) };
+                for _ in 0..n {
+                    self.stack.pop();
+                }
                 self.push(v);
             }
             OpCode::DefineGlobal => {
@@ -171,16 +146,13 @@ impl<'a> VM<'a> {
             }
             OpCode::GetGlobal => {
                 match self.pop() {
-                    Value::Object(obj) => match obj {
-                        RawObject::Atom(var_name) => {
-                            let var_name = unsafe { var_name.read() };
-                            match self.globals.get(&var_name) {
-                                Some(v) => self.push(*v),
-                                None => {} // TODO: report error
-                            }
+                    Value::Atom(var_name) => {
+                        let var_name = var_name.as_str().to_string();
+                        match self.globals.get(&var_name) {
+                            Some(v) => self.push(v.0.clone()),
+                            None => {} // TODO: report error
                         }
-                        _ => todo!(), // does not happen
-                    },
+                    }
                     _ => todo!(), // does not happen
                 }
             }
@@ -198,9 +170,7 @@ impl<'a> VM<'a> {
                     let element = self.pop();
                     list.push(Box::new(element));
                 }
-                self.push(Value::Object(RawObject::List(
-                    &mut list as *mut Vec<Box<Value>>,
-                )));
+                self.push(list.into());
             }
             OpCode::InitObj => {
                 let length = self.read_2bytes() as usize;
@@ -215,19 +185,14 @@ impl<'a> VM<'a> {
                     self.execute_once(inst);
                     let value = self.pop();
                     match key {
-                        Value::Object(obj) => match obj {
-                            RawObject::Atom(v) => {
-                                let key = unsafe { v.read() };
-                                map.insert(key, Box::new(value));
-                            }
-                            _ => todo!(), // does not happen
-                        },
-                        _ => {} // TODO: report error
+                        Value::Atom(v) => {
+                            let key = v.as_str().to_string();
+                            map.insert(key, Box::new(value));
+                        }
+                        _ => todo!(), // does not happen
                     }
-                    self.push(Value::Object(RawObject::Object(
-                        &mut map as *mut HashMap<String, Box<Value>>,
-                    )));
                 }
+                self.push(map.clone().into());
             }
         }
         br
@@ -236,101 +201,89 @@ impl<'a> VM<'a> {
     fn define_or_set_global(&mut self, define: bool) {
         let right = self.pop();
         let left = self.pop();
+        let mut public = false;
+        if define {
+            public = if read_byte!(self) == 1 { true } else { false };
+        }
         match left {
-            Value::Object(left_obj) => match left_obj {
-                RawObject::Atom(v) => {
-                    let var_name = unsafe { v.read() };
-                    if define {
-                        self.define_global(var_name, right);
-                    } else {
-                        self.set_global(var_name, right);
-                    }
+            Value::Atom(v) => {
+                let var_name = v.as_str().to_string();
+                if define {
+                    self.define_global(var_name, right, public);
+                } else {
+                    self.set_global(var_name, right);
                 }
-                RawObject::List(list) => {
-                    let left = unsafe { list.read() };
-                    match right {
-                        Value::Object(right_obj) => match right_obj {
-                            RawObject::List(list) => {
-                                let right = unsafe { list.read() };
-                                if right.len() != left.len() {
-                                    // TODO: report error
-                                }
-                                for (l, r) in left.into_iter().zip(right.into_iter()) {
-                                    match *l {
-                                        Value::Object(left_obj) => match left_obj {
-                                            RawObject::Atom(v) => {
-                                                let var_name = unsafe { v.read() };
-                                                if define {
-                                                    self.define_global(var_name, *r);
-                                                } else {
-                                                    self.set_global(var_name, *r);
-                                                }
-                                            }
-                                            _ => todo!(), // does not happen
-                                        },
-                                        Value::Empty => continue,
-                                        _ => todo!(), // does not happen
+            }
+            Value::List(list) => {
+                let left = list.borrow();
+                match right {
+                    Value::List(list) => {
+                        let right = list.borrow();
+                        if right.len() != left.len() {
+                            // TODO: report error
+                        }
+                        for (l, r) in left.clone().into_iter().zip(right.clone().into_iter()) {
+                            match *l {
+                                Value::Atom(v) => {
+                                    let var_name = v.as_str().to_string();
+                                    if define {
+                                        self.define_global(var_name, *r, public);
+                                    } else {
+                                        self.set_global(var_name, *r);
                                     }
                                 }
+                                Value::Empty => continue,
+                                _ => todo!(), // does not happen
                             }
-                            _ => {} // TODO: report error
-                        },
-                        _ => {} // TODO: report error
+                        }
                     }
+                    _ => {} // TODO: report error
                 }
-                RawObject::Object(map) => {
-                    let assignee = unsafe { map.read() };
-                    match right {
-                        Value::Object(right_obj) => match right_obj {
-                            RawObject::Object(map) => {
-                                let right = unsafe { map.read() };
-                                for (k, assignee) in assignee.into_iter() {
-                                    match right.get(&k) {
-                                        Some(v) => match *assignee {
-                                            Value::Object(assignee_obj) => match assignee_obj {
-                                                RawObject::Atom(assignee) => {
-                                                    let var_name = unsafe { assignee.read() };
-                                                    if define {
-                                                        self.define_global(var_name, **v);
-                                                    } else {
-                                                        self.set_global(var_name, **v);
-                                                    }
-                                                }
-                                                _ => todo!(), // does not happen
-                                            },
-                                            _ => todo!(), // does not happen
-                                        },
-                                        None => {} // TODO: report error
+            }
+            Value::Object(map) => {
+                let assignee = map.borrow();
+                match right {
+                    Value::Object(map) => {
+                        let right = map.borrow();
+                        for (k, assignee) in assignee.clone().into_iter() {
+                            match right.get(&k) {
+                                Some(v) => match *assignee {
+                                    Value::Atom(assignee) => {
+                                        let var_name = assignee.as_str().to_string();
+                                        if define {
+                                            self.define_global(var_name, (**v).clone(), public);
+                                        } else {
+                                            self.set_global(var_name, (**v).clone());
+                                        }
                                     }
-                                }
+                                    _ => todo!(), // does not happen
+                                },
+                                None => {} // TODO: report error
                             }
-                            _ => {} // TODO: report error
-                        },
-                        _ => {} // TODO: report error
+                        }
                     }
+                    _ => {} // TODO: report error
                 }
-                _ => {} // TODO: report error
-            },
+            }
             _ => {} // TODO: report error
         }
     }
 
     /// Pushes a Value onto the stack
     fn push(&mut self, value: Value) {
-        unsafe { *self.stack_top = value }
-        self.stack_top = unsafe { self.stack_top.add(1) };
+        self.stack.push(value);
     }
 
     /// Pops a Value from the stack
     fn pop(&mut self) -> Value {
-        self.popn(1);
-        unsafe { *self.stack_top }
+        self.stack.pop().unwrap()
     }
 
     /// Pops n times from the stack
     fn popn(&mut self, n: u8) {
-        self.stack_top = unsafe { self.stack_top.sub(n as usize) };
-        // TODO: actually pops Values
+        for _ in 0..n {
+            self.stack.pop();
+        }
     }
 
     fn read_2bytes(&mut self) -> u16 {
@@ -342,57 +295,31 @@ impl<'a> VM<'a> {
     fn read_constant(&mut self, long: bool) -> Value {
         if long {
             let constant = self.read_2bytes();
-            self.values[constant as usize]
+            self.values[constant as usize].clone()
         } else {
-            self.values[read_byte!(self) as usize]
+            self.values[read_byte!(self) as usize].clone()
         }
     }
 
     /// Defines a global variable
-    fn define_global(&mut self, name: String, value: Value) {
+    fn define_global(&mut self, name: String, value: Value, public: bool) {
         if self.globals.contains_key(&name) {
             // TODO: report error
         } else {
-            self.globals.insert(name, value);
+            self.globals.insert(name, (value, public));
         }
     }
 
     /// Sets a Value to a global variable
     fn set_global(&mut self, name: String, value: Value) {
-        if self.globals.contains_key(&name) {
-            self.globals.insert(name, value);
-        } else {
-            // TODO: report error
+        match self.globals.get(&name) {
+            Some(v) => {
+                self.globals.insert(name, (value, v.1));
+            }
+            None => {
+                // TODO: report error
+            }
         }
-    }
-
-    /// Peeks a Value from the stack
-    fn peek(&mut self, n: usize) -> *mut Value {
-        unsafe { self.stack_top.sub(n + 1) }
-    }
-
-    pub fn new_string(&mut self, mut v: String) -> Value {
-        let raw_obj = RawObject::String(&mut v as *mut String);
-        self.objects.push(raw_obj);
-        Value::Object(raw_obj.clone())
-    }
-
-    pub fn new_atom(&mut self, mut v: String) -> Value {
-        let raw_obj = RawObject::Atom(&mut v as *const String);
-        self.objects.push(raw_obj);
-        Value::Object(raw_obj.clone())
-    }
-
-    pub fn new_list(&mut self, mut list: Vec<Box<Value>>) -> Value {
-        let raw_obj = RawObject::List(&mut list as *mut Vec<Box<Value>>);
-        self.objects.push(raw_obj);
-        Value::Object(raw_obj.clone())
-    }
-
-    pub fn new_obj(&mut self, mut obj: HashMap<String, Box<Value>>) -> Value {
-        let raw_obj = RawObject::Object(&mut obj as *mut HashMap<String, Box<Value>>);
-        self.objects.push(raw_obj);
-        Value::Object(raw_obj.clone())
     }
 }
 
@@ -410,8 +337,6 @@ mod tests {
 
         let mut vm = VM::new("input", &source, &bytecode, &values, &positions);
         vm.run();
-
-        assert_eq!(unsafe { *vm.stack_top }, Value::Int(6));
     }
 
     #[test]
@@ -423,7 +348,38 @@ mod tests {
 
         let mut vm = VM::new("input", &source, &bytecode, &values, &positions);
         vm.run();
+    }
 
-        assert_eq!(unsafe { *vm.stack_top }, Value::Bool(true));
+    #[test]
+    fn test_global() {
+        let bytecode: Vec<u8> = vec![
+            1, 0, 1, 1, 9, 0, 12, 19, 2, 0, 1, 2, 1, 3, 19, 2, 0, 1, 4, 1, 5, 9, 0, 12, 20, 1, 0,
+            1, 6, 1, 7, 20, 1, 0, 1, 8, 1, 9, 9, 0, 12, 1, 10, 1, 11, 10, 1, 12, 10, 4, 1, 13, 10,
+            4, 1, 14, 10, 4, 9, 0, 12, 0,
+        ];
+        let values: Vec<Value> = vec![
+            "a".into(),
+            Value::Int(1),
+            "b".into(),
+            "c".into(),
+            Value::Int(2),
+            Value::Int(3),
+            "d".into(),
+            "d".into(),
+            "d".into(),
+            Value::Int(4),
+            "e".into(),
+            "a".into(),
+            "b".into(),
+            "c".into(),
+            "d".into(),
+        ];
+        let positions = HashMap::new();
+        let source = "a := 1 [b, c] := [2, 3] {d: d} := {d: 4} e := a+b+c+d".to_string();
+
+        let mut vm = VM::new("input", &source, &bytecode, &values, &positions);
+        vm.run();
+
+        assert_eq!(vm.globals.get("e"), Some(&(Value::Int(10), false)));
     }
 }
