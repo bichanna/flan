@@ -47,9 +47,11 @@ pub struct VM<'a> {
     /// Instruction pointer, holds the current instruction being executed
     ip: *const u8,
     /// This stack can be safely accessed without bound checking
-    stack: Vec<Value>,
+    pub stack: Vec<Value>,
     /// All global variables
     pub globals: HashMap<String, (Value, bool)>, // if bool is true, then it's a public variable
+    /// Only used for debugging
+    last_value: Option<Value>,
 }
 
 impl<'a> VM<'a> {
@@ -69,13 +71,14 @@ impl<'a> VM<'a> {
             source,
             stack: vec![],
             globals: HashMap::new(),
+            last_value: None,
+            second_last_value: None,
         }
     }
 
     /// The heart of the VM
     pub fn run(&mut self) {
         let mut instruction = OpCode::u8_to_opcode(unsafe { *self.ip }).unwrap();
-        println!("bytecode: {:?}", self.bytecode);
 
         loop {
             if self.execute_once(instruction) {
@@ -87,7 +90,6 @@ impl<'a> VM<'a> {
 
     fn execute_once(&mut self, instruction: OpCode) -> bool {
         let mut br = false;
-        println!("inst: {:#?}", instruction);
         match instruction {
             OpCode::Return => {
                 br = true;
@@ -132,10 +134,8 @@ impl<'a> VM<'a> {
             }
             OpCode::PopExceptLastN => {
                 let v = self.stack.pop().unwrap();
-                let n = read_byte!(self) as usize;
-                for _ in 0..n {
-                    self.stack.pop();
-                }
+                let n = read_byte!(self);
+                self.popn(n);
                 self.push(v);
             }
             OpCode::DefineGlobal => {
@@ -156,11 +156,121 @@ impl<'a> VM<'a> {
                     _ => todo!(), // does not happen
                 }
             }
-            OpCode::DefineLocal => {}
-            OpCode::GetLocal => {}
-            OpCode::SetLocalVar => {}
-            OpCode::SetLocalList => {}
-            OpCode::SetLocalObj => {}
+            OpCode::DefineLocal => {
+                let right = self.pop();
+                let left = self.pop();
+                match left {
+                    Value::Atom(_) => {
+                        self.push(right);
+                    }
+                    Value::List(list) => {
+                        let left = list.borrow();
+                        match right {
+                            Value::List(list) => {
+                                let right = list.borrow();
+                                if right.len() != left.len() {
+                                    // TODO: report error
+                                }
+                                for (l, r) in
+                                    left.clone().into_iter().zip(right.clone().into_iter())
+                                {
+                                    match *l {
+                                        Value::Atom(_) => {
+                                            self.push(*r);
+                                        }
+                                        Value::Empty => continue,
+                                        _ => todo!(), // does not happen
+                                    }
+                                }
+                            }
+                            _ => {} // TODO: report error
+                        }
+                    }
+                    Value::Object(obj) => {
+                        let assignee = obj.borrow();
+                        match right {
+                            Value::Object(map) => {
+                                let right = map.borrow();
+                                for (k, assignee) in assignee.clone().into_iter() {
+                                    match right.get(&k) {
+                                        Some(v) => match *assignee {
+                                            Value::Atom(_) => {
+                                                self.push((**v).clone());
+                                            }
+                                            _ => todo!(), // does not happen
+                                        },
+                                        None => {} // TODO: report error
+                                    }
+                                }
+                            }
+                            _ => {} // TODO: report error
+                        }
+                    }
+                    _ => todo!(), // does not happen
+                }
+            }
+            OpCode::GetLocal => {
+                let slot = read_byte!(self);
+                let value = self.stack[slot as usize].clone();
+                self.push(value);
+            }
+            OpCode::SetLocalVar => {
+                let right = self.pop();
+                let slot = read_byte!(self) as usize;
+                self.stack[slot] = right.clone();
+                self.push(right);
+            }
+            OpCode::SetLocalList => {
+                let right = self.pop();
+                match right.clone() {
+                    Value::List(list) => {
+                        for value in list.borrow().clone().into_iter() {
+                            let inst = OpCode::u8_to_opcode(read_byte!(self)).unwrap();
+                            self.execute_once(inst);
+                            let var = self.pop();
+                            match var {
+                                Value::Atom(_) => {
+                                    let slot = read_byte!(self) as usize;
+                                    self.stack[slot] = *value;
+                                }
+                                Value::Empty => {
+                                    read_byte!(self);
+                                    continue;
+                                }
+                                _ => todo!(), // does not happen
+                            }
+                        }
+                    }
+                    _ => {} // TODO: report error
+                }
+                self.push(right);
+            }
+            OpCode::SetLocalObj => {
+                let right = self.pop();
+                let length = self.read_2bytes() as usize;
+                match right.clone() {
+                    Value::Object(obj) => {
+                        let obj = obj.borrow().clone();
+                        for _ in 0..length {
+                            let inst = OpCode::u8_to_opcode(read_byte!(self)).unwrap();
+                            self.execute_once(inst);
+                            match self.pop() {
+                                Value::Atom(key) => {
+                                    let key = key.as_str().to_string();
+                                    if obj.contains_key(&key) {
+                                        let value = obj.get(&key).unwrap();
+                                        let slot = read_byte!(self) as usize;
+                                        self.stack[slot] = (**value).clone();
+                                    }
+                                }
+                                _ => {} // TODO: report error
+                            };
+                        }
+                    }
+                    _ => {} // TODO: report error
+                }
+                self.push(right);
+            }
             OpCode::InitList => {
                 let length = self.read_2bytes() as usize;
                 let mut list: Vec<Box<Value>> = Vec::new();
@@ -209,14 +319,14 @@ impl<'a> VM<'a> {
             Value::Atom(v) => {
                 let var_name = v.as_str().to_string();
                 if define {
-                    self.define_global(var_name, right, public);
+                    self.define_global(var_name, right.clone(), public);
                 } else {
-                    self.set_global(var_name, right);
+                    self.set_global(var_name, right.clone());
                 }
             }
             Value::List(list) => {
                 let left = list.borrow();
-                match right {
+                match right.clone() {
                     Value::List(list) => {
                         let right = list.borrow();
                         if right.len() != left.len() {
@@ -242,7 +352,7 @@ impl<'a> VM<'a> {
             }
             Value::Object(map) => {
                 let assignee = map.borrow();
-                match right {
+                match right.clone() {
                     Value::Object(map) => {
                         let right = map.borrow();
                         for (k, assignee) in assignee.clone().into_iter() {
@@ -267,16 +377,26 @@ impl<'a> VM<'a> {
             }
             _ => {} // TODO: report error
         }
+        if define {
+            self.push(right);
+        }
     }
 
     /// Pushes a Value onto the stack
     fn push(&mut self, value: Value) {
+        if cfg!(feature = "debug") {
+            self.last_value = Some(value.clone());
+        }
         self.stack.push(value);
     }
 
     /// Pops a Value from the stack
     fn pop(&mut self) -> Value {
-        self.stack.pop().unwrap()
+        let value = self.stack.pop().unwrap();
+        if cfg!(feature = "debug") {
+            self.last_value = Some(value.clone());
+        }
+        value
     }
 
     /// Pops n times from the stack
@@ -327,6 +447,9 @@ impl<'a> VM<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::compiler::Compiler;
+    use crate::frontend::lexer::Lexer;
+    use crate::frontend::parser::Parser;
 
     #[test]
     fn test_binary() {
@@ -350,36 +473,81 @@ mod tests {
         vm.run();
     }
 
+    fn get_bytecode(source: &String) -> (Vec<u8>, Vec<Value>, HashMap<usize, (usize, usize)>) {
+        // for tokenizing
+        let (ts, tr) = crossbeam_channel::unbounded();
+        // for parsing
+        let (ps, pr) = crossbeam_channel::unbounded();
+        // for compiling
+        let (cs, cr) = crossbeam_channel::bounded(1);
+
+        let mut compiler = Compiler::new(&source, "input", "test", &pr, &cs);
+
+        std::thread::scope(|s| {
+            s.spawn(|| {
+                Lexer::new(&source, "input", &ts);
+            });
+
+            s.spawn(|| {
+                Parser::new(&source, "input", &tr, &ps);
+            });
+        });
+        compiler.start();
+        (cr.recv().unwrap(), compiler.values, compiler.positions)
+    }
+
     #[test]
     fn test_global() {
-        let bytecode: Vec<u8> = vec![
-            1, 0, 1, 1, 9, 0, 12, 19, 2, 0, 1, 2, 1, 3, 19, 2, 0, 1, 4, 1, 5, 9, 0, 12, 20, 1, 0,
-            1, 6, 1, 7, 20, 1, 0, 1, 8, 1, 9, 9, 0, 12, 1, 10, 1, 11, 10, 1, 12, 10, 4, 1, 13, 10,
-            4, 1, 14, 10, 4, 9, 0, 12, 0,
-        ];
-        let values: Vec<Value> = vec![
-            "a".into(),
-            Value::Int(1),
-            "b".into(),
-            "c".into(),
-            Value::Int(2),
-            Value::Int(3),
-            "d".into(),
-            "d".into(),
-            "d".into(),
-            Value::Int(4),
-            "e".into(),
-            "a".into(),
-            "b".into(),
-            "c".into(),
-            "d".into(),
-        ];
-        let positions = HashMap::new();
         let source = "a := 1 [b, c] := [2, 3] {d: d} := {d: 4} e := a+b+c+d".to_string();
-
+        let (bytecode, values, positions) = get_bytecode(&source);
         let mut vm = VM::new("input", &source, &bytecode, &values, &positions);
         vm.run();
 
         assert_eq!(vm.globals.get("e"), Some(&(Value::Int(10), false)));
+    }
+
+    #[test]
+    fn test_local_def() {
+        let source = "{ a := 1 [b, c] := [2, 3] {d: d} := {d: 4} a+b+c+d }".to_string();
+        let (bytecode, values, positions) = get_bytecode(&source);
+        let mut vm = VM::new("input", &source, &bytecode, &values, &positions);
+        vm.run();
+
+        assert_eq!(vm.last_value, Some(Value::Int(10)));
+    }
+
+    #[test]
+    fn test_local_set_var() {
+        let source = "{ a := 1 a = 100 }".to_string();
+        let (bytecode, values, positions) = get_bytecode(&source);
+        let mut vm = VM::new("input", &source, &bytecode, &values, &positions);
+        vm.run();
+
+        assert_eq!(vm.last_value, Some(Value::Int(100)));
+    }
+
+    #[test]
+    fn test_local_set_list() {
+        let source = "{ a := 1 [a, _] = [100, 200] }".to_string();
+        let (bytecode, values, positions) = get_bytecode(&source);
+        let mut vm = VM::new("input", &source, &bytecode, &values, &positions);
+        vm.run();
+
+        assert_eq!(
+            vm.last_value,
+            Some(vec![Box::new(Value::Int(100)), Box::new(Value::Int(200))].into())
+        );
+    }
+
+    #[test]
+    fn test_local_set_obj() {
+        let source = "{ a := 1 {A: a} = {A: 100} }".to_string();
+        let (bytecode, values, positions) = get_bytecode(&source);
+        let mut vm = VM::new("input", &source, &bytecode, &values, &positions);
+        vm.run();
+
+        let mut value = HashMap::new();
+        value.insert("A".to_string(), Box::new(Value::Int(100)));
+        assert_eq!(vm.last_value, Some(value.into()));
     }
 }
