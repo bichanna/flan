@@ -12,3 +12,6 @@ repository = "https://github.com/bichanna/impala"
 [dependencies]
 crossbeam-channel = "0.5"
 byteorder = "1"
+
+[features]
+debug = []
