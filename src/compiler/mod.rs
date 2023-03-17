@@ -405,7 +405,6 @@ impl<'a> Compiler<'a> {
                                 let mut length = [0u8; 2];
                                 LittleEndian::write_u16(&mut length, values.len() as u16);
 
-                                self.write_opcode(OpCode::InitList, token.position);
                                 for b in length {
                                     self.write_byte(b, token.position);
                                 }
@@ -431,7 +430,6 @@ impl<'a> Compiler<'a> {
                                 let mut length = [0u8; 2];
                                 LittleEndian::write_u16(&mut length, keys.len() as u16);
 
-                                self.write_opcode(OpCode::InitObj, token.position);
                                 for b in length {
                                     self.write_byte(b, token.position);
                                 }
@@ -445,7 +443,6 @@ impl<'a> Compiler<'a> {
                             }
                             _ => todo!(), // does not happen
                         }
-                        self.compile_expr(right);
                     }
                 }
             }
@@ -769,7 +766,7 @@ mod tests {
     #[test]
     fn test_local_set_var() {
         let source = r#"{ a := 123 a = 321 }"#;
-        let expected: Vec<u8> = vec![1, 0, 1, 1, 14, 1, 2, 16, 0, 1, 3, 21, 12, 0];
+        let expected: Vec<u8> = vec![1, 0, 1, 1, 14, 1, 2, 16, 0, 21, 12, 0];
         compile!(source, expected);
     }
 
@@ -777,8 +774,8 @@ mod tests {
     fn test_local_set_list() {
         let source = r#"{ [a, b, c] := [1, 2, 3] [a, b, c] = [3, 2, 1] }"#;
         let expected: Vec<u8> = vec![
-            19, 3, 0, 1, 0, 1, 1, 1, 2, 19, 3, 0, 1, 3, 1, 4, 1, 5, 14, 17, 19, 3, 0, 1, 6, 0, 1,
-            7, 1, 1, 8, 2, 19, 3, 0, 1, 9, 1, 10, 1, 11, 22, 3, 12, 0,
+            19, 3, 0, 1, 0, 1, 1, 1, 2, 19, 3, 0, 1, 3, 1, 4, 1, 5, 14, 17, 3, 0, 1, 6, 0, 1, 7, 1,
+            1, 8, 2, 22, 3, 12, 0,
         ];
         compile!(source, expected);
     }
@@ -786,9 +783,7 @@ mod tests {
     #[test]
     fn test_local_set_obj() {
         let source = r#"{ a := 100 {a: a} = {a: 10} }"#;
-        let expected: Vec<u8> = vec![
-            1, 0, 1, 1, 14, 18, 20, 1, 0, 1, 2, 1, 3, 0, 20, 1, 0, 1, 4, 1, 5, 21, 12, 0,
-        ];
+        let expected: Vec<u8> = vec![1, 0, 1, 1, 14, 18, 1, 0, 1, 2, 1, 3, 0, 21, 12, 0];
         compile!(source, expected);
     }
 
