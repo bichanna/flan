@@ -33,7 +33,7 @@ pub struct Compiler<'a> {
     recv: &'a Receiver<Expr>,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Local {
     pub name: Token,
     pub depth: u32,
@@ -352,34 +352,12 @@ impl<'a> Compiler<'a> {
                         self.compile_expr(&mut *right);
                         self.write_opcode(OpCode::DefineLocal, token.position);
                     } else {
-                        fn followed_by_u8arg(compiler: &mut Compiler, v: &mut Expr) {
-                            match v {
-                                Expr::Variable { ref mut name } => {
-                                    let result = compiler.resolve_local(&name);
-                                    if result < 0 {
-                                        compiler.compile_error(
-                                            &name,
-                                            format!("local variable {} not defined", name.value),
-                                        );
-                                    }
-                                    let value: Value = name.value.clone().as_str().into();
-                                    compiler.write_constant(value, true, name.position);
-                                    // u8 argument
-                                    compiler.write_byte(result as u8, name.position);
-                                }
-                                Expr::Underscore { token } => {
-                                    compiler.write_constant(Value::Empty, true, token.position);
-                                    compiler.write_byte(0, token.position);
-                                }
-                                _ => todo!(), // does not happen
-                            }
-                        }
+                        self.compile_expr(&mut *right);
 
                         match **left {
                             Expr::Variable { ref name } => {
                                 let result = self.resolve_local(name);
                                 if result >= 0 {
-                                    self.compile_expr(&mut *right);
                                     self.write_opcode(OpCode::SetLocalVar, name.position);
                                     self.write_byte(result as u8, name.position);
                                 } else {
@@ -402,15 +380,35 @@ impl<'a> Compiler<'a> {
                                             .to_string(),
                                     )
                                 }
-                                let mut length = [0u8; 2];
-                                LittleEndian::write_u16(&mut length, values.len() as u16);
 
-                                for b in length {
-                                    self.write_byte(b, token.position);
-                                }
-
+                                // u8 args & CONSTs
                                 for v in values {
-                                    followed_by_u8arg(self, &mut *v);
+                                    match **v {
+                                        Expr::Variable { ref name } => {
+                                            let result = self.resolve_local(&name);
+                                            if result < 0 {
+                                                self.compile_error(
+                                                    &name,
+                                                    format!(
+                                                        "local variable {} not defined",
+                                                        name.value
+                                                    ),
+                                                );
+                                            }
+                                            self.write_constant(
+                                                name.value.as_str().into(),
+                                                true,
+                                                name.position,
+                                            );
+                                            // u8 argument
+                                            self.write_byte(result as u8, name.position);
+                                        }
+                                        Expr::Underscore { ref token } => {
+                                            self.write_constant(Value::Empty, true, token.position);
+                                            self.write_byte(0u8, token.position);
+                                        }
+                                        _ => todo!(), // does not happen
+                                    }
                                 }
                             }
                             Expr::ObjectLiteral {
@@ -430,15 +428,32 @@ impl<'a> Compiler<'a> {
                                 let mut length = [0u8; 2];
                                 LittleEndian::write_u16(&mut length, keys.len() as u16);
 
+                                // u16 arg
                                 for b in length {
                                     self.write_byte(b, token.position);
                                 }
 
+                                // u8 args
                                 for (k, v) in &mut keys.into_iter().zip(values.into_iter()) {
                                     let key = self.token_to_string(k);
                                     self.write_constant(key, true, token.position);
-
-                                    followed_by_u8arg(self, &mut **v);
+                                    match **v {
+                                        Expr::Variable { ref mut name } => {
+                                            let result = self.resolve_local(&name);
+                                            if result < 0 {
+                                                self.compile_error(
+                                                    &name,
+                                                    format!(
+                                                        "local variable {} not defined",
+                                                        name.value
+                                                    ),
+                                                );
+                                            }
+                                            // u8 argument
+                                            self.write_byte(result as u8, name.position);
+                                        }
+                                        _ => todo!(), // does not happen
+                                    }
                                 }
                             }
                             _ => todo!(), // does not happen
@@ -772,10 +787,10 @@ mod tests {
 
     #[test]
     fn test_local_set_list() {
-        let source = r#"{ [a, b, c] := [1, 2, 3] [a, b, c] = [3, 2, 1] }"#;
+        let source = r#"{ [a, _] := [1, 2] [a, _, _] = [3, 2, 1] }"#;
         let expected: Vec<u8> = vec![
-            19, 3, 0, 1, 0, 1, 1, 1, 2, 19, 3, 0, 1, 3, 1, 4, 1, 5, 14, 17, 3, 0, 1, 6, 0, 1, 7, 1,
-            1, 8, 2, 22, 3, 12, 0,
+            19, 2, 0, 1, 0, 1, 1, 19, 2, 0, 1, 2, 1, 3, 14, 19, 3, 0, 1, 4, 1, 5, 1, 6, 17, 1, 7,
+            0, 1, 8, 0, 1, 9, 0, 21, 12, 0,
         ];
         compile!(source, expected);
     }
@@ -783,7 +798,9 @@ mod tests {
     #[test]
     fn test_local_set_obj() {
         let source = r#"{ a := 100 {a: a} = {a: 10} }"#;
-        let expected: Vec<u8> = vec![1, 0, 1, 1, 14, 18, 1, 0, 1, 2, 1, 3, 0, 21, 12, 0];
+        let expected: Vec<u8> = vec![
+            1, 0, 1, 1, 14, 20, 1, 0, 1, 2, 1, 3, 18, 1, 0, 1, 4, 0, 21, 12, 0,
+        ];
         compile!(source, expected);
     }
 
