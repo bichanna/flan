@@ -307,7 +307,217 @@ impl<'a> VM<'a> {
                 }
                 self.push(map.clone().into());
             }
-            OpCode::Match => {}
+            OpCode::Match => {
+                let target = self.pop();
+                let cond = self.pop();
+                let next = if read_byte!(self) == 1 { true } else { false };
+                let jump = self.read_2bytes() as usize;
+                let mut body_run = false;
+                match cond.clone() {
+                    Value::Empty => {}
+                    Value::Null => match target {
+                        Value::Null | Value::Empty => {}
+                        Value::Var(var_name) => todo!(), // TODO: fix this later
+                        _ => {
+                            self.jumpf(jump);
+                            body_run = true;
+                        }
+                    },
+                    Value::Int(int) => match target {
+                        Value::Empty => {}
+                        Value::Int(t_int) if int == t_int => {}
+                        Value::Var(var_name) => todo!(), // TODO: fix this later
+                        _ => {
+                            self.jumpf(jump);
+                            body_run = true;
+                        }
+                    },
+                    Value::Bool(payload) => match target {
+                        Value::Empty => {}
+                        Value::Bool(t_bool) if payload == t_bool => {}
+                        Value::Var(var_name) => todo!(), // TODO: fix this later
+                        _ => {
+                            self.jumpf(jump);
+                            body_run = true;
+                        }
+                    },
+                    Value::Float(float) => match target {
+                        Value::Empty => {}
+                        Value::Float(t_float) if float == t_float => {}
+                        Value::Var(var_name) => todo!(), // TODO: fix this later
+                        _ => {
+                            self.jumpf(jump);
+                            body_run = true;
+                        }
+                    },
+                    Value::String(string) => match target {
+                        Value::Empty => {}
+                        Value::String(t_str) if string == t_str => {}
+                        Value::Var(var_name) => todo!(), // TODO: fix this later
+                        _ => {
+                            self.jumpf(jump);
+                            body_run = true;
+                        }
+                    },
+                    Value::Atom(atom) => match target {
+                        Value::Empty => {}
+                        Value::Atom(t_atom) if atom == t_atom => {}
+                        Value::Var(var_name) => todo!(), // TODO: fix this later
+                        _ => {
+                            self.jumpf(jump);
+                            body_run = true;
+                        }
+                    },
+                    Value::List(list) => match target {
+                        Value::Empty => {}
+                        Value::Var(var_name) => todo!(), // TODO: fix this later
+                        Value::List(t_list) => {
+                            let list = list.borrow().clone();
+                            let t_list = t_list.borrow().clone();
+                            if list.len() != t_list.len() {
+                                todo!() // TODO: report error
+                            }
+                            for (l, r) in list.into_iter().zip(t_list.into_iter()) {
+                                match *l {
+                                    Value::Empty => continue,
+                                    Value::Null => match *r {
+                                        Value::Null | Value::Empty => continue,
+                                        _ => {
+                                            self.jumpf(jump);
+                                            body_run = true;
+                                            break;
+                                        }
+                                    },
+                                    Value::Int(l_int) => match *r {
+                                        Value::Int(r_int) if l_int == r_int => continue,
+                                        Value::Empty => continue,
+                                        _ => {
+                                            self.jumpf(jump);
+                                            body_run = true;
+                                            break;
+                                        }
+                                    },
+                                    Value::Float(l_float) => match *r {
+                                        Value::Float(r_float) if l_float == r_float => continue,
+                                        Value::Empty => continue,
+                                        _ => {
+                                            self.jumpf(jump);
+                                            body_run = true;
+                                            break;
+                                        }
+                                    },
+                                    Value::String(l_str) => match *r {
+                                        Value::String(r_str) if l_str == r_str => continue,
+                                        Value::Empty => continue,
+                                        _ => {
+                                            self.jumpf(jump);
+                                            body_run = true;
+                                            break;
+                                        }
+                                    },
+                                    Value::Atom(l_atom) => match *r {
+                                        Value::Atom(r_atom) if l_atom == r_atom => continue,
+                                        Value::Empty => continue,
+                                        _ => {
+                                            self.jumpf(jump);
+                                            body_run = true;
+                                            break;
+                                        }
+                                    },
+                                    Value::Var(var_name) => todo!(), // TODO: fix this later
+                                    _ => {
+                                        self.jumpf(jump);
+                                        body_run = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        _ => {
+                            self.jumpf(jump);
+                            body_run = true;
+                        }
+                    },
+                    Value::Object(obj) => match target {
+                        Value::Empty => {}
+                        Value::Var(var_name) => todo!(), // TODO: fix this later
+                        Value::Object(t_obj) => {
+                            let obj = obj.borrow().clone();
+                            let t_obj = t_obj.borrow().clone();
+                            if obj.len() != t_obj.len() {
+                                todo!() // TODO: report error
+                            }
+                            for (l_key, l_val) in obj.into_iter() {
+                                if t_obj.contains_key(&l_key) {
+                                    let t_val = (**t_obj.get(&l_key).unwrap()).clone();
+                                    match *l_val {
+                                        Value::Empty => continue,
+                                        Value::Null => match t_val {
+                                            Value::Empty => continue,
+                                            Value::Null => continue,
+                                            _ => {
+                                                self.jumpf(jump);
+                                                body_run = true;
+                                                break;
+                                            }
+                                        },
+                                        Value::Int(l_int) => match t_val {
+                                            Value::Empty => continue,
+                                            Value::Int(r_int) if l_int == r_int => continue,
+                                            _ => {
+                                                self.jumpf(jump);
+                                                body_run = true;
+                                                break;
+                                            }
+                                        },
+                                        Value::Float(l_float) => match t_val {
+                                            Value::Empty => continue,
+                                            Value::Float(r_float) if l_float == r_float => continue,
+                                            _ => {
+                                                self.jumpf(jump);
+                                                body_run = true;
+                                                break;
+                                            }
+                                        },
+                                        Value::String(l_str) => match t_val {
+                                            Value::Empty => continue,
+                                            Value::String(r_str) if l_str == r_str => continue,
+                                            _ => {
+                                                self.jumpf(jump);
+                                                body_run = true;
+                                                break;
+                                            }
+                                        },
+                                        Value::Atom(l_atom) => match t_val {
+                                            Value::Empty => continue,
+                                            Value::Atom(r_atom) if l_atom == r_atom => continue,
+                                            _ => {
+                                                self.jumpf(jump);
+                                                body_run = true;
+                                                break;
+                                            }
+                                        },
+                                        Value::Var(var_name) => todo!(), // TODO: fix this later
+                                        _ => {
+                                            self.jumpf(jump);
+                                            body_run = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        _ => {
+                            self.jumpf(jump);
+                            body_run = true;
+                        }
+                    },
+                    Value::Var(var_name) => todo!(), // TODO: report error
+                }
+                if !body_run && next {
+                    self.push(cond);
+                }
+            }
         }
         br
     }
@@ -421,6 +631,10 @@ impl<'a> VM<'a> {
     fn read_3bytes(&mut self) -> u32 {
         let bytes = [read_byte!(self), read_byte!(self), read_byte!(self)];
         LittleEndian::read_u24(&bytes)
+    }
+
+    fn jumpf(&mut self, offset: usize) {
+        unsafe { self.ip.add(offset) };
     }
 
     /// Reads a Value and returns it
