@@ -16,6 +16,8 @@
  -------------------------
 Almost nothing works currently...
 
+See [TODO list](./TODO.md)
+
 ## Examples
 
 ```js
