@@ -103,6 +103,8 @@ impl<'a> Compiler<'a> {
                     self.debug_print_long_length_instruction("OP_INIT_LIST", offset)
                 }
                 OpCode::InitObj => self.debug_print_long_length_instruction("OP_INIT_OBJ", offset),
+                OpCode::Match => self.debug_print_simple_instruction("OP_MATCH", offset),
+                OpCode::Jump => self.debug_print_long_length_instruction("OP_JUMP", offset),
             }
         } else {
             println!("Unknown opcode {:?}", instruction);

@@ -8,7 +8,7 @@ use byteorder::{ByteOrder, LittleEndian};
 use crossbeam_channel::{Receiver, Sender};
 
 use self::opcode::{OpCode, Position};
-use crate::frontend::ast::Expr;
+use crate::frontend::ast::{Expr, MatchBranch};
 use crate::frontend::token::{Token, TokenType};
 use crate::vm::value::Value;
 
@@ -562,6 +562,90 @@ impl<'a> Compiler<'a> {
 
                 self.end_scope();
             }
+            Expr::Match {
+                token,
+                ref mut condition,
+                ref mut branches,
+            } => {
+                fn compile_match_branch(
+                    compiler: &mut Compiler,
+                    condition: Option<&mut Box<Expr>>,
+                    branches: &mut Vec<MatchBranch>,
+                    token: &Token,
+                ) {
+                    let mut branch = branches.remove(0);
+
+                    // compile condition expression if there's one
+                    if let Some(condition) = condition {
+                        compiler.compile_expr(condition);
+                    }
+
+                    // compile target expression
+                    compiler.compile_expr(&mut branch.target);
+
+                    // Match opcode
+                    compiler.write_opcode(OpCode::Match, token.position);
+
+                    // if there's next branch, write 1, otherwise 0
+                    if branches.len() > 0 {
+                        compiler.write_byte(1, token.position);
+                    } else {
+                        compiler.write_byte(0, token.position);
+                    }
+
+                    // for backpatching
+                    compiler.write_byte(255, token.position);
+                    compiler.write_byte(255, token.position);
+                    let prev = compiler.bytecode.len();
+
+                    // compile the body
+                    compiler.compile_expr(&mut branch.body);
+
+                    // apply patch
+                    let length = compiler.bytecode.len() - prev - 1;
+                    let index = prev - 2;
+                    if length > std::u16::MAX as usize {
+                        compiler.compile_error(token, "target expression too big".to_string());
+                    }
+                    let mut buff = [0u8; 2];
+                    LittleEndian::write_u16(&mut buff, length as u16);
+                    compiler.bytecode[index] = buff[0];
+                    compiler.bytecode[index + 1] = buff[1];
+
+                    // if this match branch is the last one, just return and do not add Jump opcode
+                    if branches.len() == 0 {
+                        return;
+                    }
+
+                    // Jump opcode
+                    compiler.write_opcode(OpCode::Jump, token.position);
+
+                    // another backpatching
+                    compiler.write_byte(255, token.position);
+                    compiler.write_byte(255, token.position);
+                    compiler.write_byte(255, token.position);
+                    let prev = compiler.bytecode.len();
+
+                    // compile the next match branch, recursively
+                    compile_match_branch(compiler, None, branches, token);
+
+                    // apply patch
+                    let length = compiler.bytecode.len() - prev - 1;
+                    let index = prev - 3;
+                    if length > 16_777_215 {
+                        // max of unsigned 24 bits
+                        compiler.compile_error(token, "match expression too big".to_string());
+                    }
+                    let mut buff = [0u8; 3];
+                    LittleEndian::write_u24(&mut buff, length as u32);
+                    compiler.bytecode[index] = buff[0];
+                    compiler.bytecode[index + 1] = buff[1];
+                    compiler.bytecode[index + 2] = buff[2];
+                }
+
+                // compile all match branches recursively
+                compile_match_branch(self, Some(condition), branches, token);
+            }
             _ => {}
         }
     }
@@ -808,6 +892,15 @@ mod tests {
     fn test_local_get() {
         let source = r#"{ a := 123 a }"#;
         let expected: Vec<u8> = vec![1, 0, 1, 1, 14, 15, 0, 21, 12, 0];
+        compile!(source, expected);
+    }
+
+    #[test]
+    fn test_match_expr() {
+        let source = r#"match true { true -> { "Hello" + ", world" }, false -> 0 }"#;
+        let expected: Vec<u8> = vec![
+            1, 0, 1, 1, 23, 1, 4, 0, 1, 2, 1, 3, 4, 24, 7, 0, 0, 1, 4, 23, 0, 1, 0, 1, 5, 12, 0,
+        ];
         compile!(source, expected);
     }
 }

@@ -30,6 +30,8 @@ pub enum OpCode {
     InitObj,
     PopExceptLast,
     PopExceptLastN,
+    Match,
+    Jump,
 }
 
 impl OpCode {
@@ -58,6 +60,8 @@ impl OpCode {
             20 => Some(Self::InitObj),
             21 => Some(Self::PopExceptLast),
             22 => Some(Self::PopExceptLastN),
+            23 => Some(Self::Match),
+            24 => Some(Self::Jump),
             _ => None,
         }
     }
