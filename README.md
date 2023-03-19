@@ -9,9 +9,12 @@
 </div>
 
 **WARNING!! THIS LANGUAGE IS IN DEVELOPMENT AND FOR LEARNING PURPOSES. ANYTHING CAN CHANGE AT ANY MOMENT.**
-
+ --------------------------------------------------------------------------------------------------------
 **IMP**ure function**A**l **LA**nguage is a high-level, dynamically- and strongly-typed, functional programming language that runs on a virtual machine.
 **Impala** is my highschool Computer Science project written in Rust.
+
+ -------------------------
+Almost nothing works currently...
 
 ## Examples
 
