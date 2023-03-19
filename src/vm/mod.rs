@@ -72,7 +72,6 @@ impl<'a> VM<'a> {
             stack: vec![],
             globals: HashMap::new(),
             last_value: None,
-            second_last_value: None,
         }
     }
 
@@ -137,6 +136,10 @@ impl<'a> VM<'a> {
                 let n = read_byte!(self);
                 self.popn(n);
                 self.push(v);
+            }
+            OpCode::Jump => {
+                let jump = self.read_3bytes();
+                unsafe { self.ip.add(jump as usize) };
             }
             OpCode::DefineGlobal => {
                 self.define_or_set_global(true);
@@ -304,6 +307,7 @@ impl<'a> VM<'a> {
                 }
                 self.push(map.clone().into());
             }
+            OpCode::Match => {}
         }
         br
     }
@@ -409,6 +413,11 @@ impl<'a> VM<'a> {
     fn read_2bytes(&mut self) -> u16 {
         let bytes = [read_byte!(self), read_byte!(self)];
         LittleEndian::read_u16(&bytes)
+    }
+
+    fn read_3bytes(&mut self) -> u32 {
+        let bytes = [read_byte!(self), read_byte!(self), read_byte!(self)];
+        LittleEndian::read_u24(&bytes)
     }
 
     /// Reads a Value and returns it
