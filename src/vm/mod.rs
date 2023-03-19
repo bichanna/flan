@@ -149,7 +149,7 @@ impl<'a> VM<'a> {
             }
             OpCode::GetGlobal => {
                 match self.pop() {
-                    Value::Atom(var_name) => {
+                    Value::Var(var_name) => {
                         let var_name = var_name.as_str().to_string();
                         match self.globals.get(&var_name) {
                             Some(v) => self.push(v.0.clone()),
@@ -163,7 +163,7 @@ impl<'a> VM<'a> {
                 let right = self.pop();
                 let left = self.pop();
                 match left {
-                    Value::Atom(_) => {
+                    Value::Var(_) => {
                         self.push(right);
                     }
                     Value::List(list) => {
@@ -178,7 +178,7 @@ impl<'a> VM<'a> {
                                     left.clone().into_iter().zip(right.clone().into_iter())
                                 {
                                     match *l {
-                                        Value::Atom(_) => {
+                                        Value::Var(_) => {
                                             self.push(*r);
                                         }
                                         Value::Empty => continue,
@@ -197,7 +197,7 @@ impl<'a> VM<'a> {
                                 for (k, assignee) in assignee.clone().into_iter() {
                                     match right.get(&k) {
                                         Some(v) => match *assignee {
-                                            Value::Atom(_) => {
+                                            Value::Var(_) => {
                                                 self.push((**v).clone());
                                             }
                                             _ => todo!(), // does not happen
@@ -232,7 +232,7 @@ impl<'a> VM<'a> {
                             self.execute_once(inst);
                             let var = self.pop();
                             match var {
-                                Value::Atom(_) => {
+                                Value::Var(_) => {
                                     let slot = read_byte!(self) as usize;
                                     self.stack[slot] = *value;
                                 }
@@ -258,7 +258,7 @@ impl<'a> VM<'a> {
                             let inst = OpCode::u8_to_opcode(read_byte!(self)).unwrap();
                             self.execute_once(inst);
                             match self.pop() {
-                                Value::Atom(key) => {
+                                Value::Var(key) => {
                                     let key = key.as_str().to_string();
                                     if obj.contains_key(&key) {
                                         let value = obj.get(&key).unwrap();
@@ -298,7 +298,7 @@ impl<'a> VM<'a> {
                     self.execute_once(inst);
                     let value = self.pop();
                     match key {
-                        Value::Atom(v) => {
+                        Value::Var(v) => {
                             let key = v.as_str().to_string();
                             map.insert(key, Box::new(value));
                         }
@@ -320,7 +320,7 @@ impl<'a> VM<'a> {
             public = if read_byte!(self) == 1 { true } else { false };
         }
         match left {
-            Value::Atom(v) => {
+            Value::Var(v) => {
                 let var_name = v.as_str().to_string();
                 if define {
                     self.define_global(var_name, right.clone(), public);
@@ -338,7 +338,7 @@ impl<'a> VM<'a> {
                         }
                         for (l, r) in left.clone().into_iter().zip(right.clone().into_iter()) {
                             match *l {
-                                Value::Atom(v) => {
+                                Value::Var(v) => {
                                     let var_name = v.as_str().to_string();
                                     if define {
                                         self.define_global(var_name, *r, public);
@@ -362,7 +362,7 @@ impl<'a> VM<'a> {
                         for (k, assignee) in assignee.clone().into_iter() {
                             match right.get(&k) {
                                 Some(v) => match *assignee {
-                                    Value::Atom(assignee) => {
+                                    Value::Var(assignee) => {
                                         let var_name = assignee.as_str().to_string();
                                         if define {
                                             self.define_global(var_name, (**v).clone(), public);

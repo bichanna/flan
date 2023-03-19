@@ -165,7 +165,7 @@ impl<'a> Compiler<'a> {
 
                 for (k, v) in keys.into_iter().zip(values.into_iter()) {
                     // write constant key
-                    let key = self.token_to_string(k);
+                    let key = self.token_to_var(k);
                     self.write_constant(key, true, token.position);
                     // write value expression
                     self.compile_expr(&mut *v);
@@ -183,7 +183,7 @@ impl<'a> Compiler<'a> {
                     // global variables
                     match **left {
                         Expr::Variable { ref mut name } => {
-                            let var = self.token_to_string(name);
+                            let var = self.token_to_var(name);
                             self.write_constant(var, true, token.position)
                         }
                         Expr::ListLiteral {
@@ -208,7 +208,7 @@ impl<'a> Compiler<'a> {
                             for v in values {
                                 match **v {
                                     Expr::Variable { ref mut name } => {
-                                        let var = self.token_to_string(name);
+                                        let var = self.token_to_var(name);
                                         self.write_constant(var, true, name.position);
                                     }
                                     Expr::Underscore { ref mut token } => {
@@ -241,12 +241,12 @@ impl<'a> Compiler<'a> {
 
                             for (k, v) in keys.into_iter().zip(values.into_iter()) {
                                 // write constant key
-                                let key = self.token_to_string(k);
+                                let key = self.token_to_var(k);
                                 self.write_constant(key, true, token.position);
                                 // write value expression
                                 match **v {
                                     Expr::Variable { ref mut name } => {
-                                        let var = self.token_to_string(name);
+                                        let var = self.token_to_var(name);
                                         self.write_constant(var, true, token.position);
                                     }
                                     _ => todo!(), // does not happen
@@ -273,7 +273,7 @@ impl<'a> Compiler<'a> {
                         self.check_local(left);
                         match **left {
                             Expr::Variable { ref mut name } => {
-                                let var = self.token_to_string(name);
+                                let var = self.token_to_var(name);
                                 self.write_constant(var, true, token.position);
                                 self.add_local((*name).clone());
                             }
@@ -300,7 +300,7 @@ impl<'a> Compiler<'a> {
                                 for v in values {
                                     match **v {
                                         Expr::Variable { ref mut name } => {
-                                            let var = self.token_to_string(&mut *name);
+                                            let var = self.token_to_var(&mut *name);
                                             self.write_constant(var, true, name.position);
                                             self.add_local((*name).clone());
                                         }
@@ -334,12 +334,12 @@ impl<'a> Compiler<'a> {
 
                                 for (k, v) in keys.into_iter().zip(values.into_iter()) {
                                     // write constant key
-                                    let key = self.token_to_string(k);
+                                    let key = self.token_to_var(k);
                                     self.write_constant(key, true, token.position);
                                     // write value expression
                                     match **v {
                                         Expr::Variable { ref mut name } => {
-                                            let var = self.token_to_string(name);
+                                            let var = self.token_to_var(name);
                                             self.write_constant(var, true, token.position);
                                             self.add_local((*name).clone());
                                         }
@@ -396,7 +396,7 @@ impl<'a> Compiler<'a> {
                                                 );
                                             }
                                             self.write_constant(
-                                                name.value.as_str().into(),
+                                                Value::new_var(name.value.clone()),
                                                 true,
                                                 name.position,
                                             );
@@ -435,7 +435,7 @@ impl<'a> Compiler<'a> {
 
                                 // u8 args
                                 for (k, v) in &mut keys.into_iter().zip(values.into_iter()) {
-                                    let key = self.token_to_string(k);
+                                    let key = self.token_to_var(k);
                                     self.write_constant(key, true, token.position);
                                     match **v {
                                         Expr::Variable { ref mut name } => {
@@ -474,7 +474,7 @@ impl<'a> Compiler<'a> {
                         );
                     }
                 } else {
-                    let var = self.token_to_string(name);
+                    let var = self.token_to_var(name);
                     self.write_constant(var, true, name.position);
                     self.write_opcode(OpCode::GetGlobal, name.position);
                 }
@@ -706,9 +706,9 @@ impl<'a> Compiler<'a> {
         // self.positions.entry(self.bytecode.len() - 1).or_insert(pos);
     }
 
-    /// Converts a Token to Value::Atom
-    fn token_to_string(&mut self, token: &mut Token) -> Value {
-        token.value.clone().as_str().into()
+    /// Converts a Token to Value::Var
+    fn token_to_var(&mut self, token: &mut Token) -> Value {
+        Value::new_var(token.value.clone())
     }
 
     /// Checks

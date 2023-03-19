@@ -11,6 +11,7 @@ pub enum Value {
     Float(f64),
     String(Rc<RefCell<String>>),
     Atom(Rc<String>),
+    Var(Rc<String>),
     Object(Rc<RefCell<HashMap<String, Box<Value>>>>),
     List(Rc<RefCell<Vec<Box<Value>>>>),
 }
@@ -24,6 +25,7 @@ impl Value {
             Value::Int(v) => format!("{}", v),
             Value::Float(v) => format!("{}", v),
             Value::String(v) => format!("{}", v.borrow()),
+            Value::Var(v) => format!("var:{}", v),
             Value::Atom(v) => format!(":{}", v),
             Value::List(list) => {
                 let list = list.borrow();
@@ -59,9 +61,14 @@ impl Value {
             Value::Float(_) => "float".to_string(),
             Value::String(_) => "string".to_string(),
             Value::Atom(_) => "atom".to_string(),
+            Value::Var(_) => "variable".to_string(),
             Value::List(_) => "list".to_string(),
             Value::Object(_) => "object".to_string(),
         }
+    }
+
+    pub fn new_var(name: String) -> Self {
+        Self::Var(Rc::new(name))
     }
 }
 
