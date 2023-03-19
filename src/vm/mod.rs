@@ -69,7 +69,7 @@ impl<'a> VM<'a> {
             ip: bytecode.as_ptr(),
             filename,
             source,
-            stack: vec![],
+            stack: Vec::with_capacity(20),
             globals: HashMap::new(),
             last_value: None,
         }
@@ -392,6 +392,9 @@ impl<'a> VM<'a> {
             self.last_value = Some(value.clone());
         }
         self.stack.push(value);
+        if self.stack.capacity() == self.stack.len() {
+            self.stack.reserve(10);
+        }
     }
 
     /// Pops a Value from the stack

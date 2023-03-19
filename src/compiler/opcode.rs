@@ -32,6 +32,22 @@ pub enum OpCode {
     PopExceptLastN,
     Match,
     Jump,
+    // JumpLong
+    // JumpShort
+    // Load1
+    // Load2
+    // LoadU8
+    // LoadI8
+    // LoadU16
+    // LoadF8
+    // LoadF16
+    // LoadNull
+    // LoadTrue
+    // LoadFalse
+    // LoadEmpty
+    // LoadEmptyList
+    // LoadEmptyObj
+    // LoadEmptyStr
 }
 
 impl OpCode {
