@@ -5,11 +5,12 @@ use std::collections::HashMap;
 use std::process;
 
 use byteorder::{ByteOrder, LittleEndian};
-use crossbeam_channel::{Receiver, Sender};
+use crossbeam_channel::Receiver;
 
 use self::opcode::{OpCode, Position};
 use crate::frontend::ast::{Expr, MatchBranch};
 use crate::frontend::token::{Token, TokenType};
+use crate::vm::function::{FuncType, Function};
 use crate::vm::value::Value;
 
 pub struct Compiler<'a> {
@@ -19,17 +20,17 @@ pub struct Compiler<'a> {
     source: &'a String,
     /// The name of this Compiler, used for debugging
     name: &'a str,
-    /// The compiled bytecode
-    pub bytecode: Vec<u8>,
     /// For simplicity's sake, we'll put all constants in here
     pub values: Vec<Value>,
     /// Position information used for runtime errors
     pub positions: HashMap<usize, Position>,
+    /// Current function type
+    function: Box<Function>,
+    type_: FuncType,
     /// Local variables
     pub locals: Vec<Local>,
-    score_depth: u32,
+    scope_depth: u32,
 
-    sender: &'a Sender<Vec<u8>>,
     recv: &'a Receiver<Expr>,
 }
 
@@ -51,28 +52,31 @@ impl<'a> Compiler<'a> {
         filename: &'a str,
         name: &'static str,
         recv: &'a Receiver<Expr>,
-        sender: &'a Sender<Vec<u8>>,
+        type_: FuncType,
     ) -> Self {
         Self {
             filename,
             source,
             name,
-            bytecode: vec![],
             positions: HashMap::new(),
             values: Vec::with_capacity(15),
-            locals: Vec::with_capacity(2),
-            score_depth: 0,
-            sender,
             recv,
+            function: Box::new(Function::new("".to_string())),
+            type_: FuncType::Script,
+            locals: Vec::with_capacity(3),
+            scope_depth: 0,
         }
     }
 
-    pub fn start(&mut self) {
-        self.compile();
-        self.sender.send(self.bytecode.to_owned()).unwrap();
+    fn current_bytecode(&mut self) -> &mut Vec<u8> {
+        &mut self.function.bytecode
     }
 
-    fn compile(&mut self) {
+    pub fn start(&mut self) -> Function {
+        self.compile()
+    }
+
+    fn compile(&mut self) -> Function {
         loop {
             let expr = self.recv.recv().unwrap();
             match expr {
@@ -84,6 +88,8 @@ impl<'a> Compiler<'a> {
             }
         }
         self.write_opcode(OpCode::Return, (0, 0));
+
+        (*self.function).clone()
     }
 
     fn compile_expr(&mut self, expr: &mut Expr) {
@@ -179,7 +185,7 @@ impl<'a> Compiler<'a> {
                 ref mut left,
                 ref mut right,
             } => {
-                if self.score_depth == 0 {
+                if self.scope_depth == 0 {
                     // global variables
                     match **left {
                         Expr::Variable { ref mut name } => {
@@ -462,7 +468,7 @@ impl<'a> Compiler<'a> {
                 }
             }
             Expr::Variable { ref mut name } => {
-                if self.score_depth != 0 {
+                if self.scope_depth != 0 {
                     let result = self.resolve_local(name);
                     if result >= 0 {
                         self.write_opcode(OpCode::GetLocal, name.position);
@@ -537,7 +543,7 @@ impl<'a> Compiler<'a> {
                 // calculate the number of pops needed to remove all the unused values
                 let mut pop_nums = 0;
                 for local in self.locals.clone().into_iter().rev() {
-                    if local.depth > self.score_depth - 1 {
+                    if local.depth > self.scope_depth - 1 {
                         pop_nums += 1;
                     }
                 }
@@ -555,7 +561,7 @@ impl<'a> Compiler<'a> {
 
                 // remove all local variables
                 while self.locals.len() > 0
-                    && self.locals.last().unwrap().depth > self.score_depth - 1
+                    && self.locals.last().unwrap().depth > self.scope_depth - 1
                 {
                     self.locals.pop();
                 }
@@ -596,21 +602,21 @@ impl<'a> Compiler<'a> {
                     // for backpatching
                     compiler.write_byte(255, token.position);
                     compiler.write_byte(255, token.position);
-                    let prev = compiler.bytecode.len();
+                    let prev = compiler.current_bytecode().len();
 
                     // compile the body
                     compiler.compile_expr(&mut branch.body);
 
                     // apply patch
-                    let length = compiler.bytecode.len() - prev - 1;
+                    let length = compiler.current_bytecode().len() - prev - 1;
                     let index = prev - 2;
                     if length > std::u16::MAX as usize {
                         compiler.compile_error(token, "target expression too big".to_string());
                     }
                     let mut buff = [0u8; 2];
                     LittleEndian::write_u16(&mut buff, length as u16);
-                    compiler.bytecode[index] = buff[0];
-                    compiler.bytecode[index + 1] = buff[1];
+                    compiler.current_bytecode()[index] = buff[0];
+                    compiler.current_bytecode()[index + 1] = buff[1];
 
                     // if this match branch is the last one, just return and do not add Jump opcode
                     if branches.len() == 0 {
@@ -624,13 +630,13 @@ impl<'a> Compiler<'a> {
                     compiler.write_byte(255, token.position);
                     compiler.write_byte(255, token.position);
                     compiler.write_byte(255, token.position);
-                    let prev = compiler.bytecode.len();
+                    let prev = compiler.current_bytecode().len();
 
                     // compile the next match branch, recursively
                     compile_match_branch(compiler, None, branches, token);
 
                     // apply patch
-                    let length = compiler.bytecode.len() - prev - 1;
+                    let length = compiler.current_bytecode().len() - prev - 1;
                     let index = prev - 3;
                     if length > 16_777_215 {
                         // max of unsigned 24 bits
@@ -638,9 +644,9 @@ impl<'a> Compiler<'a> {
                     }
                     let mut buff = [0u8; 3];
                     LittleEndian::write_u24(&mut buff, length as u32);
-                    compiler.bytecode[index] = buff[0];
-                    compiler.bytecode[index + 1] = buff[1];
-                    compiler.bytecode[index + 2] = buff[2];
+                    compiler.current_bytecode()[index] = buff[0];
+                    compiler.current_bytecode()[index + 1] = buff[1];
+                    compiler.current_bytecode()[index + 2] = buff[2];
                 }
 
                 // compile all match branches recursively
@@ -651,7 +657,7 @@ impl<'a> Compiler<'a> {
     }
 
     fn add_local(&mut self, token: Token) {
-        let local = Local::new(token, self.score_depth);
+        let local = Local::new(token, self.scope_depth);
         self.locals.push(local);
     }
 
@@ -701,8 +707,9 @@ impl<'a> Compiler<'a> {
 
     /// Writes a byte to the bytecode vector
     fn write_byte(&mut self, byte: u8, pos: Position) {
-        self.bytecode.push(byte);
-        self.positions.insert(self.bytecode.len() - 1, pos);
+        self.current_bytecode().push(byte);
+        let length = self.current_bytecode().len();
+        self.positions.insert(length - 1, pos);
         // self.positions.entry(self.bytecode.len() - 1).or_insert(pos);
     }
 
@@ -714,7 +721,7 @@ impl<'a> Compiler<'a> {
     /// Checks
     fn check_local(&self, left: &Expr) {
         for local in &self.locals {
-            if local.depth < self.score_depth {
+            if local.depth < self.scope_depth {
                 break;
             }
 
@@ -772,11 +779,11 @@ impl<'a> Compiler<'a> {
     }
 
     fn begin_scope(&mut self) {
-        self.score_depth += 1;
+        self.scope_depth += 1;
     }
 
     fn end_scope(&mut self) {
-        self.score_depth -= 1;
+        self.scope_depth -= 1;
     }
 
     fn compile_error(&self, token: &Token, message: String) {

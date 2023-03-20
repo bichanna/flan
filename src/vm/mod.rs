@@ -1,3 +1,4 @@
+pub mod function;
 pub mod value;
 
 use std::collections::HashMap;
@@ -513,6 +514,10 @@ impl<'a> VM<'a> {
                         }
                     },
                     Value::Var(var_name) => todo!(), // TODO: report error
+                    _ => {
+                        self.jumpf(jump);
+                        body_run = true;
+                    }
                 }
                 if !body_run && next {
                     self.push(cond);
@@ -672,6 +677,7 @@ impl<'a> VM<'a> {
 // Tests
 #[cfg(test)]
 mod tests {
+    use super::function::FuncType;
     use super::*;
     use crate::compiler::Compiler;
     use crate::frontend::lexer::Lexer;
@@ -704,10 +710,8 @@ mod tests {
         let (ts, tr) = crossbeam_channel::unbounded();
         // for parsing
         let (ps, pr) = crossbeam_channel::unbounded();
-        // for compiling
-        let (cs, cr) = crossbeam_channel::bounded(1);
 
-        let mut compiler = Compiler::new(&source, "input", "test", &pr, &cs);
+        let mut compiler = Compiler::new(&source, "input", "test", &pr, FuncType::Script);
 
         std::thread::scope(|s| {
             s.spawn(|| {
@@ -718,8 +722,11 @@ mod tests {
                 Parser::new(&source, "input", &tr, &ps);
             });
         });
-        compiler.start();
-        (cr.recv().unwrap(), compiler.values, compiler.positions)
+        (
+            compiler.start().bytecode,
+            compiler.values,
+            compiler.positions,
+        )
     }
 
     #[test]
