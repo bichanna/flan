@@ -32,19 +32,14 @@ pub enum OpCode {
     PopExceptLastN,
     Match,
     Jump,
-    // JumpLong
-    // JumpShort
-    // Load1
-    // Load2
-    // Load3
-    // LoadU8
-    // LoadI8
-    // LoadF8
-    // LoadF16
-    // LoadTrue
-    // LoadFalse
-    // LoadEmpty
-    // LoadNull
+    Load1,
+    Load2,
+    Load3,
+    LoadU8,
+    LoadTrue,
+    LoadFalse,
+    LoadEmpty,
+    LoadNull,
 }
 
 impl OpCode {
@@ -75,6 +70,14 @@ impl OpCode {
             22 => Some(Self::PopExceptLastN),
             23 => Some(Self::Match),
             24 => Some(Self::Jump),
+            25 => Some(Self::Load1),
+            26 => Some(Self::Load2),
+            27 => Some(Self::Load3),
+            28 => Some(Self::LoadU8),
+            29 => Some(Self::LoadTrue),
+            30 => Some(Self::LoadFalse),
+            31 => Some(Self::LoadEmpty),
+            32 => Some(Self::LoadNull),
             _ => None,
         }
     }

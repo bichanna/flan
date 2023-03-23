@@ -101,6 +101,17 @@ impl<'a> VM<'a> {
                 let value = self.read_constant(true);
                 self.push(value);
             }
+            OpCode::Load1 => self.push(Value::Int(1)),
+            OpCode::Load2 => self.push(Value::Int(2)),
+            OpCode::Load3 => self.push(Value::Int(3)),
+            OpCode::LoadU8 => {
+                let value = read_byte!(self);
+                self.push(Value::Int(value as i64));
+            }
+            OpCode::LoadTrue => self.push(Value::Bool(true)),
+            OpCode::LoadFalse => self.push(Value::Bool(false)),
+            OpCode::LoadNull => self.push(Value::Null),
+            OpCode::LoadEmpty => self.push(Value::Empty),
             OpCode::Negate => {
                 push_or_err!(self, -self.pop());
             }

@@ -112,16 +112,31 @@ impl<'a> Compiler<'a> {
                 self.write_constant(value, true, token.position);
             }
             Expr::IntegerLiteral { token, value } => {
-                self.write_constant(Value::Int(*value), true, token.position);
+                if *value == 1 {
+                    self.write_opcode(OpCode::Load1, token.position);
+                } else if *value == 2 {
+                    self.write_opcode(OpCode::Load2, token.position);
+                } else if *value == 3 {
+                    self.write_opcode(OpCode::Load3, token.position);
+                } else if *value < std::u8::MAX as i64 && *value > std::u8::MIN as i64 {
+                    self.write_opcode(OpCode::LoadU8, token.position);
+                    self.write_byte(*value as u8, token.position);
+                } else {
+                    self.write_constant(Value::Int(*value), true, token.position);
+                }
             }
             Expr::FloatLiteral { token, value } => {
                 self.write_constant(Value::Float(*value), true, token.position);
             }
             Expr::BoolLiteral { token, payload } => {
-                self.write_constant(Value::Bool(*payload), true, token.position);
+                if *payload {
+                    self.write_opcode(OpCode::LoadTrue, token.position);
+                } else {
+                    self.write_opcode(OpCode::LoadFalse, token.position);
+                }
             }
-            Expr::Underscore { token } => self.write_constant(Value::Empty, true, token.position),
-            Expr::Null { token } => self.write_constant(Value::Null, true, token.position),
+            Expr::Underscore { token } => self.write_opcode(OpCode::LoadEmpty, token.position),
+            Expr::Null { token } => self.write_opcode(OpCode::LoadNull, token.position),
             Expr::ListLiteral { token, values } => {
                 let val_len = values.len();
 
@@ -809,14 +824,14 @@ mod tests {
     #[test]
     fn test_binary() {
         let source = r#"1 + 1"#;
-        let expected: Vec<u8> = vec![1, 0, 1, 1, 4, 12, 0];
+        let expected: Vec<u8> = vec![25, 25, 4, 12, 0];
         compile!(source, expected);
     }
 
     #[test]
     fn test_unary() {
         let source = "not false";
-        let expected: Vec<u8> = vec![1, 0, 3, 12, 0];
+        let expected: Vec<u8> = vec![30, 3, 12, 0];
         compile!(source, expected);
     }
 
@@ -844,16 +859,14 @@ mod tests {
     #[test]
     fn test_local_def_var() {
         let source = r#"{ a := 123 a + 3 }"#;
-        let expected: Vec<u8> = vec![1, 0, 1, 1, 14, 15, 0, 1, 2, 4, 21, 12, 0];
+        let expected: Vec<u8> = vec![1, 0, 28, 123, 14, 15, 0, 27, 4, 21, 12, 0];
         compile!(source, expected);
     }
 
     #[test]
     fn test_local_def_list() {
         let source = r#"{ [a, b] := [1, 2] null }"#;
-        let expected: Vec<u8> = vec![
-            1, 0, 1, 1, 19, 2, 0, 1, 2, 1, 3, 19, 2, 0, 14, 1, 4, 22, 2, 12, 0,
-        ];
+        let expected: Vec<u8> = vec![1, 0, 1, 1, 19, 2, 0, 25, 26, 19, 2, 0, 14, 32, 22, 2, 12, 0];
         compile!(source, expected);
     }
 
@@ -861,7 +874,7 @@ mod tests {
     fn test_local_def_obj() {
         let source = r#"{ {a: b} := {a: 123} null }"#;
         let expected: Vec<u8> = vec![
-            1, 0, 1, 1, 20, 1, 0, 1, 2, 1, 3, 20, 1, 0, 14, 1, 4, 21, 12, 0,
+            1, 0, 1, 1, 20, 1, 0, 1, 2, 28, 123, 20, 1, 0, 14, 32, 21, 12, 0,
         ];
         compile!(source, expected);
     }
@@ -869,7 +882,7 @@ mod tests {
     #[test]
     fn test_local_set_var() {
         let source = r#"{ a := 123 a = 321 }"#;
-        let expected: Vec<u8> = vec![1, 0, 1, 1, 14, 1, 2, 16, 0, 21, 12, 0];
+        let expected: Vec<u8> = vec![1, 0, 28, 123, 14, 1, 1, 16, 0, 21, 12, 0];
         compile!(source, expected);
     }
 
@@ -877,8 +890,8 @@ mod tests {
     fn test_local_set_list() {
         let source = r#"{ [a, _] := [1, 2] [a, _, _] = [3, 2, 1] }"#;
         let expected: Vec<u8> = vec![
-            1, 0, 1, 1, 19, 2, 0, 1, 2, 1, 3, 19, 2, 0, 14, 1, 4, 1, 5, 1, 6, 19, 3, 0, 17, 1, 7,
-            0, 1, 8, 0, 1, 9, 0, 21, 12, 0,
+            1, 0, 1, 1, 19, 2, 0, 25, 26, 19, 2, 0, 14, 27, 26, 25, 19, 3, 0, 17, 1, 2, 0, 1, 3, 0,
+            1, 4, 0, 21, 12, 0,
         ];
         compile!(source, expected);
     }
@@ -887,7 +900,7 @@ mod tests {
     fn test_local_set_obj() {
         let source = r#"{ a := 100 {a: a} = {a: 10} }"#;
         let expected: Vec<u8> = vec![
-            1, 0, 1, 1, 14, 1, 2, 1, 3, 20, 1, 0, 18, 1, 0, 1, 4, 0, 21, 12, 0,
+            1, 0, 28, 100, 14, 1, 1, 28, 10, 20, 1, 0, 18, 1, 0, 1, 2, 0, 21, 12, 0,
         ];
         compile!(source, expected);
     }
@@ -895,7 +908,7 @@ mod tests {
     #[test]
     fn test_local_get() {
         let source = r#"{ a := 123 a }"#;
-        let expected: Vec<u8> = vec![1, 0, 1, 1, 14, 15, 0, 21, 12, 0];
+        let expected: Vec<u8> = vec![1, 0, 28, 123, 14, 15, 0, 21, 12, 0];
         compile!(source, expected);
     }
 
@@ -903,7 +916,7 @@ mod tests {
     fn test_match_expr() {
         let source = r#"match true { true -> { "Hello" + ", world" }, false -> 0 }"#;
         let expected: Vec<u8> = vec![
-            1, 0, 1, 1, 23, 1, 4, 0, 1, 2, 1, 3, 4, 24, 7, 0, 0, 1, 4, 23, 0, 1, 0, 1, 5, 12, 0,
+            29, 29, 23, 1, 4, 0, 1, 0, 1, 1, 4, 24, 6, 0, 0, 30, 23, 0, 1, 0, 1, 2, 12, 0,
         ];
         compile!(source, expected);
     }

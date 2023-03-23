@@ -100,6 +100,14 @@ impl<'a> Compiler<'a> {
                 OpCode::InitObj => self.debug_print_long_length_instruction("OP_INIT_OBJ", offset),
                 OpCode::Match => self.debug_print_simple_instruction("OP_MATCH", offset),
                 OpCode::Jump => self.debug_print_long_length_instruction("OP_JUMP", offset),
+                OpCode::Load1 => self.debug_print_simple_instruction("OP_LOAD1", offset),
+                OpCode::Load2 => self.debug_print_simple_instruction("OP_LOAD2", offset),
+                OpCode::Load3 => self.debug_print_simple_instruction("OP_LOAD3", offset),
+                OpCode::LoadU8 => self.debug_print_length_instruction("OP_LOAD_U8", offset),
+                OpCode::LoadTrue => self.debug_print_simple_instruction("OP_LOAD_TRUE", offset),
+                OpCode::LoadFalse => self.debug_print_simple_instruction("OP_LOAD_FALSE", offset),
+                OpCode::LoadEmpty => self.debug_print_simple_instruction("OP_LOAD_EMPTY", offset),
+                OpCode::LoadNull => self.debug_print_simple_instruction("OP_LOAD_NULL", offset),
             }
         } else {
             println!("Unknown opcode {:?}", instruction);
