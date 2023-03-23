@@ -36,18 +36,15 @@ pub enum OpCode {
     // JumpShort
     // Load1
     // Load2
+    // Load3
     // LoadU8
     // LoadI8
-    // LoadU16
     // LoadF8
     // LoadF16
-    // LoadNull
     // LoadTrue
     // LoadFalse
     // LoadEmpty
-    // LoadEmptyList
-    // LoadEmptyObj
-    // LoadEmptyStr
+    // LoadNull
 }
 
 impl OpCode {

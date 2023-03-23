@@ -278,25 +278,20 @@ impl<'a> VM<'a> {
                 let length = self.read_2bytes() as usize;
                 let mut list: Vec<Box<Value>> = Vec::new();
                 for _ in 0..length {
-                    let inst = OpCode::u8_to_opcode(read_byte!(self)).unwrap();
-                    self.execute_once(inst);
                     let element = self.pop();
                     list.push(Box::new(element));
                 }
+                list.reverse();
                 self.push(list.into());
             }
             OpCode::InitObj => {
                 let length = self.read_2bytes() as usize;
                 let mut map: HashMap<String, Box<Value>> = HashMap::new();
                 for _ in 0..length {
-                    // get key
-                    let mut inst = OpCode::u8_to_opcode(read_byte!(self)).unwrap();
-                    self.execute_once(inst);
-                    let key = self.pop();
                     // get value
-                    inst = OpCode::u8_to_opcode(read_byte!(self)).unwrap();
-                    self.execute_once(inst);
                     let value = self.pop();
+                    // get key
+                    let key = self.pop();
                     match key {
                         Value::Var(v) => {
                             let key = v.as_str().to_string();

@@ -123,19 +123,25 @@ impl<'a> Compiler<'a> {
             Expr::Underscore { token } => self.write_constant(Value::Empty, true, token.position),
             Expr::Null { token } => self.write_constant(Value::Null, true, token.position),
             Expr::ListLiteral { token, values } => {
-                if values.len() > std::u16::MAX as usize {
+                let val_len = values.len();
+
+                // compile the values first
+                for v in values {
+                    self.compile_expr(&mut *v);
+                }
+
+                // check the length of the list
+                if val_len > std::u16::MAX as usize {
                     self.compile_error(token, "list literal too big".to_string());
                 }
 
-                let mut length = [0u8; 2];
-                LittleEndian::write_u16(&mut length, values.len() as u16);
-
                 self.write_opcode(OpCode::InitList, token.position);
+
+                // write the length
+                let mut length = [0u8; 2];
+                LittleEndian::write_u16(&mut length, val_len as u16);
                 for b in length {
                     self.write_byte(b, token.position);
-                }
-                for v in values {
-                    self.compile_expr(&mut *v);
                 }
             }
             Expr::ObjectLiteral {
@@ -143,24 +149,27 @@ impl<'a> Compiler<'a> {
                 keys,
                 values,
             } => {
-                if values.len() > std::u16::MAX as usize {
-                    self.compile_error(token, "object literal too big".to_string());
-                }
-
-                let mut length = [0u8; 2];
-                LittleEndian::write_u16(&mut length, keys.len() as u16);
-
-                self.write_opcode(OpCode::InitObj, token.position);
-                for b in length {
-                    self.write_byte(b, token.position);
-                }
-
+                // compile the initial keys and values
                 for (k, v) in keys.into_iter().zip(values.into_iter()) {
                     // write constant key
                     let key = self.token_to_var(k);
                     self.write_constant(key, true, token.position);
                     // write value expression
                     self.compile_expr(&mut *v);
+                }
+
+                // check the length of the object
+                if values.len() > std::u16::MAX as usize {
+                    self.compile_error(token, "object literal too big".to_string());
+                }
+
+                self.write_opcode(OpCode::InitObj, token.position);
+
+                // write the length
+                let mut length = [0u8; 2];
+                LittleEndian::write_u16(&mut length, keys.len() as u16);
+                for b in length {
+                    self.write_byte(b, token.position);
                 }
             }
             Expr::Group { ref mut expr } => self.compile_expr(&mut *expr),
@@ -188,14 +197,7 @@ impl<'a> Compiler<'a> {
                                     "list literal too big for destructuring assignment".to_string(),
                                 );
                             }
-
-                            let mut length = [0u8; 2];
-                            LittleEndian::write_u16(&mut length, values.len() as u16);
-
-                            self.write_opcode(OpCode::InitList, token.position);
-                            for b in length {
-                                self.write_byte(b, token.position);
-                            }
+                            let len = values.len();
 
                             for v in values {
                                 match **v {
@@ -208,6 +210,15 @@ impl<'a> Compiler<'a> {
                                     }
                                     _ => todo!(), // does not happen
                                 }
+                            }
+
+                            self.write_opcode(OpCode::InitList, token.position);
+
+                            // write length
+                            let mut length = [0u8; 2];
+                            LittleEndian::write_u16(&mut length, len as u16);
+                            for b in length {
+                                self.write_byte(b, token.position);
                             }
                         }
                         Expr::ObjectLiteral {
@@ -223,14 +234,6 @@ impl<'a> Compiler<'a> {
                                 );
                             }
 
-                            let mut length = [0u8; 2];
-                            LittleEndian::write_u16(&mut length, keys.len() as u16);
-
-                            self.write_opcode(OpCode::InitObj, token.position);
-                            for b in length {
-                                self.write_byte(b, token.position);
-                            }
-
                             for (k, v) in keys.into_iter().zip(values.into_iter()) {
                                 // write constant key
                                 let key = self.token_to_var(k);
@@ -243,6 +246,15 @@ impl<'a> Compiler<'a> {
                                     }
                                     _ => todo!(), // does not happen
                                 }
+                            }
+
+                            self.write_opcode(OpCode::InitObj, token.position);
+
+                            // write length
+                            let mut length = [0u8; 2];
+                            LittleEndian::write_u16(&mut length, keys.len() as u16);
+                            for b in length {
+                                self.write_byte(b, token.position);
                             }
                         }
                         _ => todo!(), // does not happen
@@ -283,12 +295,6 @@ impl<'a> Compiler<'a> {
 
                                 let mut length = [0u8; 2];
                                 LittleEndian::write_u16(&mut length, values.len() as u16);
-
-                                self.write_opcode(OpCode::InitList, token.position);
-                                for b in length {
-                                    self.write_byte(b, token.position);
-                                }
-
                                 for v in values {
                                     match **v {
                                         Expr::Variable { ref mut name } => {
@@ -301,6 +307,11 @@ impl<'a> Compiler<'a> {
                                         }
                                         _ => todo!(), // does not happen
                                     }
+                                }
+
+                                self.write_opcode(OpCode::InitList, token.position);
+                                for b in length {
+                                    self.write_byte(b, token.position);
                                 }
                             }
                             Expr::ObjectLiteral {
@@ -319,11 +330,6 @@ impl<'a> Compiler<'a> {
                                 let mut length = [0u8; 2];
                                 LittleEndian::write_u16(&mut length, keys.len() as u16);
 
-                                self.write_opcode(OpCode::InitObj, token.position);
-                                for b in length {
-                                    self.write_byte(b, token.position);
-                                }
-
                                 for (k, v) in keys.into_iter().zip(values.into_iter()) {
                                     // write constant key
                                     let key = self.token_to_var(k);
@@ -337,6 +343,11 @@ impl<'a> Compiler<'a> {
                                         }
                                         _ => todo!(), // does not happen
                                     }
+                                }
+
+                                self.write_opcode(OpCode::InitObj, token.position);
+                                for b in length {
+                                    self.write_byte(b, token.position);
                                 }
                             }
                             _ => todo!(), // does not happen
@@ -841,7 +852,7 @@ mod tests {
     fn test_local_def_list() {
         let source = r#"{ [a, b] := [1, 2] null }"#;
         let expected: Vec<u8> = vec![
-            19, 2, 0, 1, 0, 1, 1, 19, 2, 0, 1, 2, 1, 3, 14, 1, 4, 22, 2, 12, 0,
+            1, 0, 1, 1, 19, 2, 0, 1, 2, 1, 3, 19, 2, 0, 14, 1, 4, 22, 2, 12, 0,
         ];
         compile!(source, expected);
     }
@@ -850,7 +861,7 @@ mod tests {
     fn test_local_def_obj() {
         let source = r#"{ {a: b} := {a: 123} null }"#;
         let expected: Vec<u8> = vec![
-            20, 1, 0, 1, 0, 1, 1, 20, 1, 0, 1, 2, 1, 3, 14, 1, 4, 21, 12, 0,
+            1, 0, 1, 1, 20, 1, 0, 1, 2, 1, 3, 20, 1, 0, 14, 1, 4, 21, 12, 0,
         ];
         compile!(source, expected);
     }
@@ -866,7 +877,7 @@ mod tests {
     fn test_local_set_list() {
         let source = r#"{ [a, _] := [1, 2] [a, _, _] = [3, 2, 1] }"#;
         let expected: Vec<u8> = vec![
-            19, 2, 0, 1, 0, 1, 1, 19, 2, 0, 1, 2, 1, 3, 14, 19, 3, 0, 1, 4, 1, 5, 1, 6, 17, 1, 7,
+            1, 0, 1, 1, 19, 2, 0, 1, 2, 1, 3, 19, 2, 0, 14, 1, 4, 1, 5, 1, 6, 19, 3, 0, 17, 1, 7,
             0, 1, 8, 0, 1, 9, 0, 21, 12, 0,
         ];
         compile!(source, expected);
@@ -876,7 +887,7 @@ mod tests {
     fn test_local_set_obj() {
         let source = r#"{ a := 100 {a: a} = {a: 10} }"#;
         let expected: Vec<u8> = vec![
-            1, 0, 1, 1, 14, 20, 1, 0, 1, 2, 1, 3, 18, 1, 0, 1, 4, 0, 21, 12, 0,
+            1, 0, 1, 1, 14, 1, 2, 1, 3, 20, 1, 0, 18, 1, 0, 1, 4, 0, 21, 12, 0,
         ];
         compile!(source, expected);
     }
