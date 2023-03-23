@@ -1,4 +1,3 @@
-pub mod function;
 pub mod value;
 
 use std::collections::HashMap;
@@ -677,7 +676,6 @@ impl<'a> VM<'a> {
 // Tests
 #[cfg(test)]
 mod tests {
-    use super::function::FuncType;
     use super::*;
     use crate::compiler::Compiler;
     use crate::frontend::lexer::Lexer;
@@ -711,7 +709,7 @@ mod tests {
         // for parsing
         let (ps, pr) = crossbeam_channel::unbounded();
 
-        let mut compiler = Compiler::new(&source, "input", "test", &pr, FuncType::Script);
+        let mut compiler = Compiler::new(&source, "input", "test", &pr);
 
         std::thread::scope(|s| {
             s.spawn(|| {
@@ -722,11 +720,8 @@ mod tests {
                 Parser::new(&source, "input", &tr, &ps);
             });
         });
-        (
-            compiler.start().bytecode,
-            compiler.values,
-            compiler.positions,
-        )
+        compiler.compile();
+        (compiler.bytecode, compiler.values, compiler.positions)
     }
 
     #[test]
