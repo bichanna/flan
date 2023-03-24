@@ -90,6 +90,7 @@ impl<'a> Parser<'a> {
         if self.check_current(TokenType::Equal)
             || self.check_current(TokenType::ColonEq)
             || self.check_current(TokenType::PipeEq)
+            || self.check_current(TokenType::DollarEq)
         {
             let init = if self.current.kind == TokenType::ColonEq
                 || self.current.kind == TokenType::PipeEq
@@ -103,6 +104,11 @@ impl<'a> Parser<'a> {
             } else {
                 false
             };
+            let mutable = if self.current.kind == TokenType::DollarEq {
+                true
+            } else {
+                false
+            };
 
             self.advance();
             let value = Box::new(self.assignment()?);
@@ -111,6 +117,7 @@ impl<'a> Parser<'a> {
                 Expr::Assign {
                     init: _,
                     public: _,
+                    mutable: _,
                     token: _,
                     left: _,
                     right: _,
@@ -141,6 +148,7 @@ impl<'a> Parser<'a> {
                         token: token.clone(),
                         init,
                         public,
+                        mutable,
                         left: Box::new(expr),
                         right: value,
                     });
@@ -164,6 +172,7 @@ impl<'a> Parser<'a> {
                     return Ok(Expr::Assign {
                         init,
                         public,
+                        mutable,
                         token: token.clone(),
                         left: Box::new(expr),
                         right: value,
@@ -173,6 +182,7 @@ impl<'a> Parser<'a> {
                     return Ok(Expr::Assign {
                         init,
                         public,
+                        mutable,
                         token: name.clone(),
                         left: Box::new(expr),
                         right: value,
@@ -208,6 +218,7 @@ impl<'a> Parser<'a> {
                         token: token.clone(),
                         init: false,
                         public: false,
+                        mutable: false,
                         left: Box::new(expr.clone()),
                         right: Box::new(Expr::Binary {
                             left: Box::new(expr),
@@ -231,6 +242,7 @@ impl<'a> Parser<'a> {
                         token: token.clone(),
                         init: false,
                         public: false,
+                        mutable: false,
                         left: Box::new(expr.clone()),
                         right: Box::new(Expr::Binary {
                             left: Box::new(expr),
@@ -632,6 +644,7 @@ impl<'a> Parser<'a> {
                 Some(name) => Ok(Expr::Assign {
                     init: true,
                     public,
+                    mutable: false,
                     token: name.clone(),
                     left: Box::new(Expr::Variable { name }),
                     right: Box::new(right),

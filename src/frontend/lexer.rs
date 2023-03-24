@@ -105,7 +105,14 @@ impl<'a> Lexer<'a> {
                 }
                 ';' => self.add_no_value_token(TokenType::SColon),
                 '@' => self.add_no_value_token(TokenType::At),
-                '$' => self.add_no_value_token(TokenType::Dollar),
+                '$' => {
+                    if self.next_char() == '=' {
+                        self.add_no_value_token(TokenType::DollarEq);
+                        self.advance();
+                    } else {
+                        self.add_no_value_token(TokenType::Dollar);
+                    }
+                }
                 '^' => self.add_no_value_token(TokenType::Caret),
                 '#' => self.add_no_value_token(TokenType::Hash),
                 ',' => self.add_no_value_token(TokenType::Comma),

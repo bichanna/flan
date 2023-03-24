@@ -19,6 +19,7 @@ macro_rules! push_or_err {
         match $value {
             Ok(v) => $self.push(v),
             Err(_msg) => {
+                todo!()
                 // TODO: Report error
             }
         }
@@ -49,7 +50,9 @@ pub struct VM<'a> {
     /// This stack can be safely accessed without bound checking
     pub stack: Vec<Value>,
     /// All global variables
-    pub globals: HashMap<String, (Value, bool)>, // if bool is true, then it's a public variable
+    /// If the first bool is true, then it's a public variable. If the second bool is true, it's
+    /// then mutable
+    pub globals: HashMap<String, (Value, bool, bool)>,
     /// Only used for debugging
     last_value: Option<Value>,
 }
@@ -164,7 +167,7 @@ impl<'a> VM<'a> {
                         let var_name = var_name.as_str().to_string();
                         match self.globals.get(&var_name) {
                             Some(v) => self.push(v.0.clone()),
-                            None => {} // TODO: report error
+                            None => todo!(), // TODO: report error
                         }
                     }
                     _ => todo!(), // does not happen
@@ -183,7 +186,7 @@ impl<'a> VM<'a> {
                             Value::List(list) => {
                                 let right = list.borrow();
                                 if right.len() != left.len() {
-                                    // TODO: report error
+                                    todo!() // TODO: report error
                                 }
                                 for (l, r) in
                                     left.clone().into_iter().zip(right.clone().into_iter())
@@ -197,7 +200,7 @@ impl<'a> VM<'a> {
                                     }
                                 }
                             }
-                            _ => {} // TODO: report error
+                            _ => todo!(), // TODO: report error
                         }
                     }
                     Value::Object(obj) => {
@@ -213,11 +216,11 @@ impl<'a> VM<'a> {
                                             }
                                             _ => todo!(), // does not happen
                                         },
-                                        None => {} // TODO: report error
+                                        None => todo!(), // TODO: report error
                                     }
                                 }
                             }
-                            _ => {} // TODO: report error
+                            _ => todo!(), // TODO: report error
                         }
                     }
                     _ => todo!(), // does not happen
@@ -255,7 +258,7 @@ impl<'a> VM<'a> {
                             }
                         }
                     }
-                    _ => {} // TODO: report error
+                    _ => todo!(), // TODO: report error
                 }
                 self.push(right);
             }
@@ -277,11 +280,11 @@ impl<'a> VM<'a> {
                                         self.stack[slot] = (**value).clone();
                                     }
                                 }
-                                _ => {} // TODO: report error
+                                _ => todo!(), // TODO: report error
                             };
                         }
                     }
-                    _ => {} // TODO: report error
+                    _ => todo!(), // TODO: report error
                 }
                 self.push(right);
             }
@@ -539,11 +542,13 @@ impl<'a> VM<'a> {
         if define {
             public = if read_byte!(self) == 1 { true } else { false };
         }
+        let mutable = if read_byte!(self) == 1 { true } else { false };
+
         match left {
             Value::Var(v) => {
                 let var_name = v.as_str().to_string();
                 if define {
-                    self.define_global(var_name, right.clone(), public);
+                    self.define_global(var_name, right.clone(), public, mutable);
                 } else {
                     self.set_global(var_name, right.clone());
                 }
@@ -554,14 +559,14 @@ impl<'a> VM<'a> {
                     Value::List(list) => {
                         let right = list.borrow();
                         if right.len() != left.len() {
-                            // TODO: report error
+                            todo!() // TODO: report error
                         }
                         for (l, r) in left.clone().into_iter().zip(right.clone().into_iter()) {
                             match *l {
                                 Value::Var(v) => {
                                     let var_name = v.as_str().to_string();
                                     if define {
-                                        self.define_global(var_name, *r, public);
+                                        self.define_global(var_name, *r, public, mutable);
                                     } else {
                                         self.set_global(var_name, *r);
                                     }
@@ -571,7 +576,7 @@ impl<'a> VM<'a> {
                             }
                         }
                     }
-                    _ => {} // TODO: report error
+                    _ => todo!(), // TODO: report error
                 }
             }
             Value::Object(map) => {
@@ -585,21 +590,26 @@ impl<'a> VM<'a> {
                                     Value::Var(assignee) => {
                                         let var_name = assignee.as_str().to_string();
                                         if define {
-                                            self.define_global(var_name, (**v).clone(), public);
+                                            self.define_global(
+                                                var_name,
+                                                (**v).clone(),
+                                                public,
+                                                mutable,
+                                            );
                                         } else {
                                             self.set_global(var_name, (**v).clone());
                                         }
                                     }
                                     _ => todo!(), // does not happen
                                 },
-                                None => {} // TODO: report error
+                                None => todo!(), // TODO: report error
                             }
                         }
                     }
-                    _ => {} // TODO: report error
+                    _ => todo!(), // TODO: report error
                 }
             }
-            _ => {} // TODO: report error
+            _ => todo!(), // TODO: report error
         }
         if define {
             self.push(right);
@@ -658,11 +668,11 @@ impl<'a> VM<'a> {
     }
 
     /// Defines a global variable
-    fn define_global(&mut self, name: String, value: Value, public: bool) {
+    fn define_global(&mut self, name: String, value: Value, public: bool, mutable: bool) {
         if self.globals.contains_key(&name) {
-            // TODO: report error
+            todo!() // TODO: report error
         } else {
-            self.globals.insert(name, (value, public));
+            self.globals.insert(name, (value, public, mutable));
         }
     }
 
@@ -670,10 +680,14 @@ impl<'a> VM<'a> {
     fn set_global(&mut self, name: String, value: Value) {
         match self.globals.get(&name) {
             Some(v) => {
-                self.globals.insert(name, (value, v.1));
+                if v.2 {
+                    self.globals.insert(name, (value, v.1, v.2));
+                } else {
+                    todo!() // TODO: report error
+                }
             }
             None => {
-                // TODO: report error
+                todo!() // TODO: report error
             }
         }
     }
@@ -737,7 +751,9 @@ mod tests {
         let mut vm = VM::new("input", &source, &bytecode, &values, &positions);
         vm.run();
 
-        assert_eq!(vm.globals.get("e"), Some(&(Value::Int(10), false)));
+        println!("{:#?}", vm.globals);
+
+        assert_eq!(vm.globals.get("e"), Some(&(Value::Int(10), false, false)));
     }
 
     #[test]

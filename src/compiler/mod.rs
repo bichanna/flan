@@ -192,6 +192,7 @@ impl<'a> Compiler<'a> {
                 token,
                 init,
                 public,
+                mutable,
                 ref mut left,
                 ref mut right,
             } => {
@@ -278,11 +279,8 @@ impl<'a> Compiler<'a> {
                     self.compile_expr(&mut *right);
                     if *init {
                         self.write_opcode(OpCode::DefineGlobal, token.position);
-                        if *public {
-                            self.write_byte(1, token.position);
-                        } else {
-                            self.write_byte(0, token.position);
-                        }
+                        self.write_byte(if *public { 1 } else { 0 }, token.position);
+                        self.write_byte(if *mutable { 1 } else { 0 }, token.position);
                     } else {
                         self.write_opcode(OpCode::SetGlobal, token.position);
                     }
@@ -517,6 +515,7 @@ impl<'a> Compiler<'a> {
                     Expr::Assign {
                         init,
                         public: _,
+                        mutable: _,
                         ref token,
                         left: _,
                         right: _,
@@ -540,6 +539,7 @@ impl<'a> Compiler<'a> {
                         Expr::Assign {
                             init,
                             public: _,
+                            mutable: _,
                             ref token,
                             left: _,
                             right: _,
@@ -838,7 +838,7 @@ mod tests {
     #[test]
     fn test_global_def() {
         let source = r#"name := "nobu""#;
-        let expected: Vec<u8> = vec![1, 0, 1, 1, 9, 0, 12, 0];
+        let expected: Vec<u8> = vec![1, 0, 1, 1, 9, 0, 0, 12, 0];
         compile!(source, expected);
     }
 

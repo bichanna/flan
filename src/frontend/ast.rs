@@ -61,6 +61,7 @@ pub enum Expr {
     Assign {
         init: bool,
         public: bool,
+        mutable: bool,
         token: Token,
         left: Box<Expr>,
         right: Box<Expr>,
@@ -193,11 +194,13 @@ impl Expr {
                 right,
                 init,
                 public,
+                mutable,
             } => {
                 format!(
-                    "(assign{}{} {} {})",
+                    "(assign{}{}{} {} {})",
                     if *public { "P" } else { "" },
                     if *init { "I" } else { "" },
+                    if *mutable { "M" } else { "" },
                     left.print(),
                     right.print()
                 )
