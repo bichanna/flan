@@ -2,6 +2,8 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use super::function::Function;
+
 #[derive(Clone, PartialEq, Debug)]
 pub enum Value {
     Null,
@@ -14,6 +16,7 @@ pub enum Value {
     Var(Rc<String>),
     Object(Rc<RefCell<HashMap<String, Box<Value>>>>),
     List(Rc<RefCell<Vec<Box<Value>>>>),
+    Function(Rc<Function>),
 }
 
 impl Value {
@@ -49,6 +52,16 @@ impl Value {
                         .join(",\n")
                 )
             }
+            Value::Function(func) => {
+                format!(
+                    "fn{}",
+                    if let Some(name) = &func.name {
+                        " ".to_string() + name.as_str()
+                    } else {
+                        "".to_string()
+                    }
+                )
+            }
         }
     }
 
@@ -64,6 +77,7 @@ impl Value {
             Value::Var(_) => "variable".to_string(),
             Value::List(_) => "list".to_string(),
             Value::Object(_) => "object".to_string(),
+            Value::Function(_) => "function".to_string(),
         }
     }
 

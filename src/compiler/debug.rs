@@ -12,7 +12,7 @@ macro_rules! compile {
         // for parsing
         let (ps, pr) = crossbeam_channel::unbounded();
 
-        let mut compiler = Compiler::new(&source, "input", "test", &pr);
+        let mut compiler = Compiler::new(&source, "input", "test", FuncType::TopLevel, &pr);
 
         std::thread::scope(|s| {
             s.spawn(|| {
@@ -26,7 +26,7 @@ macro_rules! compile {
 
         compiler.compile();
 
-        assert_eq!(compiler.bytecode, $expected);
+        assert_eq!(compiler.function.bytecode, $expected);
     };
 }
 
@@ -35,7 +35,7 @@ impl<'a> Compiler<'a> {
         println!("=== {} ===", self.name);
 
         let mut offset: usize = 0;
-        while offset < self.bytecode.len() {
+        while offset < self.function.bytecode.len() {
             offset = self.disasemble_instruction(offset);
         }
     }
@@ -52,7 +52,7 @@ impl<'a> Compiler<'a> {
             print!("{:>6} ", pos_str(self.positions.get(&offset).unwrap()));
         }
 
-        let instruction = OpCode::u8_to_opcode(self.bytecode[offset]);
+        let instruction = OpCode::u8_to_opcode(self.function.bytecode[offset]);
         if let Some(instruction) = instruction {
             match instruction {
                 OpCode::Return => self.debug_print_simple_instruction("OP_RETURN", offset),
@@ -121,60 +121,65 @@ impl<'a> Compiler<'a> {
     }
 
     fn debug_print_constant_instruction(&mut self, name: &str, offset: usize) -> usize {
-        let constant = self.bytecode[offset + 1];
+        let constant = self.function.bytecode[offset + 1];
         println!(
             "{:-16} {:>4} '{:#?}'",
             name,
             constant,
-            self.values[constant as usize].print()
+            self.function.values[constant as usize].print()
         );
         offset + 2
     }
 
     fn debug_print_lconstant_instruction(&mut self, name: &str, offset: usize) -> usize {
-        let constant =
-            LittleEndian::read_u16(&[self.bytecode[offset + 1], self.bytecode[offset + 2]]);
+        let constant = LittleEndian::read_u16(&[
+            self.function.bytecode[offset + 1],
+            self.function.bytecode[offset + 2],
+        ]);
         println!(
             "{:-16} {:>4} '{:#?}'",
             name,
             constant,
-            self.values[constant as usize].print()
+            self.function.values[constant as usize].print()
         );
         offset + 3
     }
 
     fn debug_print_length_instruction(&mut self, name: &str, offset: usize) -> usize {
-        let length = self.bytecode[offset + 1] as usize;
+        let length = self.function.bytecode[offset + 1] as usize;
         println!("{:-16} length: {}", name, length);
         offset + 2
     }
 
     fn debug_print_long_length_instruction(&mut self, name: &str, offset: usize) -> usize {
-        let bytes = [self.bytecode[offset + 1], self.bytecode[offset + 2]];
+        let bytes = [
+            self.function.bytecode[offset + 1],
+            self.function.bytecode[offset + 2],
+        ];
         let length = LittleEndian::read_u16(&bytes) as usize;
         println!("{:-16} length: {}", name, length);
         offset + 3
     }
 
     fn debug_print_set_local_list(&mut self, offset: &mut usize) {
-        let length = self.bytecode[*offset + 1] as usize;
+        let length = self.function.bytecode[*offset + 1] as usize;
         println!("{:-16} length: {}", "OP_SET_LOCAL_LIST", length);
         *offset += 2;
         for _ in 0..length {
             *offset = self.disasemble_instruction(*offset);
-            println!("      u8arg: {}", self.bytecode[*offset + 1]);
+            println!("      u8arg: {}", self.function.bytecode[*offset + 1]);
             *offset += 1;
         }
     }
 
     fn debug_print_set_local_obj(&mut self, offset: &mut usize) {
-        let length = self.bytecode[*offset + 1] as usize;
+        let length = self.function.bytecode[*offset + 1] as usize;
         println!("{:-16} length: {}", "OP_SET_LOCAL_OBJ", length);
         *offset += 2;
         for _ in 0..length {
             *offset = self.disasemble_instruction(*offset);
             *offset = self.disasemble_instruction(*offset);
-            println!("      u8arg: {}", self.bytecode[*offset + 1]);
+            println!("      u8arg: {}", self.function.bytecode[*offset + 1]);
             *offset += 1;
         }
     }
