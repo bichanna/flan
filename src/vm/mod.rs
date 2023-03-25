@@ -290,7 +290,7 @@ impl<'a> VM<'a> {
             }
             OpCode::InitList => {
                 let length = self.read_2bytes() as usize;
-                let mut list: Vec<Box<Value>> = Vec::new();
+                let mut list: Vec<Box<Value>> = Vec::with_capacity(length);
                 for _ in 0..length {
                     let element = self.pop();
                     list.push(Box::new(element));
@@ -300,7 +300,7 @@ impl<'a> VM<'a> {
             }
             OpCode::InitObj => {
                 let length = self.read_2bytes() as usize;
-                let mut map: HashMap<String, Box<Value>> = HashMap::new();
+                let mut map: HashMap<String, Box<Value>> = HashMap::with_capacity(length);
                 for _ in 0..length {
                     // get value
                     let value = self.pop();
