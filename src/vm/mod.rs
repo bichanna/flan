@@ -1,6 +1,8 @@
 pub mod value;
 
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use byteorder::{ByteOrder, LittleEndian};
 
@@ -296,7 +298,7 @@ impl<'a> VM<'a> {
                     list.push(Box::new(element));
                 }
                 list.reverse();
-                self.push(list.into());
+                self.push(Value::List(Rc::new(RefCell::new(list))));
             }
             OpCode::InitObj => {
                 let length = self.read_2bytes() as usize;
@@ -314,7 +316,7 @@ impl<'a> VM<'a> {
                         _ => todo!(), // does not happen
                     }
                 }
-                self.push(map.clone().into());
+                self.push(Value::Object(Rc::new(RefCell::new(map))));
             }
             OpCode::Match => {
                 let target = self.pop();
