@@ -9,7 +9,6 @@ use byteorder::{ByteOrder, LittleEndian};
 
 use self::value::Value;
 use crate::compiler::opcode::{OpCode, Position};
-use crate::vm::function::FuncType;
 
 macro_rules! read_byte {
     ($self: expr) => {{
@@ -733,7 +732,7 @@ mod tests {
         // for parsing
         let (ps, pr) = crossbeam_channel::unbounded();
 
-        let mut compiler = Compiler::new(&source, "input", "test", FuncType::TopLevel, &pr);
+        let mut compiler = Compiler::new(&source, "input", "test", &pr);
 
         std::thread::scope(|s| {
             s.spawn(|| {
@@ -745,11 +744,7 @@ mod tests {
             });
         });
         compiler.compile();
-        (
-            compiler.function.bytecode,
-            compiler.function.values,
-            compiler.positions,
-        )
+        (compiler.bytecode, compiler.values, compiler.positions)
     }
 
     #[test]

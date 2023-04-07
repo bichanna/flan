@@ -10,7 +10,6 @@ use crossbeam_channel::Receiver;
 use self::opcode::{OpCode, Position};
 use crate::frontend::ast::{Expr, MatchBranch};
 use crate::frontend::token::{Token, TokenType};
-use crate::vm::function::{FuncType, Function};
 use crate::vm::value::Value;
 
 pub struct Compiler<'a> {
@@ -20,14 +19,15 @@ pub struct Compiler<'a> {
     source: &'a String,
     /// The name of this Compiler, used for debugging
     name: &'a str,
+    /// For simplicity's sake, we'll put all constants in here
+    pub values: Vec<Value>,
     /// Position information used for runtime errors
     pub positions: HashMap<usize, Position>,
     /// Local variables
     pub locals: Vec<Local>,
     scope_depth: u32,
-    /// Top-level function
-    pub function: Box<Function>,
-    pub func_type: FuncType,
+    /// The compiled bytecode
+    pub bytecode: Vec<u8>,
 
     recv: &'a Receiver<Expr>,
 }
@@ -49,7 +49,6 @@ impl<'a> Compiler<'a> {
         source: &'a String,
         filename: &'a str,
         name: &'static str,
-        func_type: FuncType,
         recv: &'a Receiver<Expr>,
     ) -> Self {
         Self {
@@ -57,11 +56,11 @@ impl<'a> Compiler<'a> {
             source,
             name,
             positions: HashMap::new(),
+            values: Vec::with_capacity(15),
             recv,
             locals: Vec::with_capacity(3),
             scope_depth: 0,
-            function: Box::new(Function::new(None)),
-            func_type,
+            bytecode: Vec::with_capacity(15),
         }
     }
 
@@ -615,21 +614,21 @@ impl<'a> Compiler<'a> {
                     // for backpatching
                     compiler.write_byte(255, token.position);
                     compiler.write_byte(255, token.position);
-                    let prev = compiler.function.bytecode.len();
+                    let prev = compiler.bytecode.len();
 
                     // compile the body
                     compiler.compile_expr(&mut branch.body);
 
                     // apply patch
-                    let length = compiler.function.bytecode.len() - prev - 1;
+                    let length = compiler.bytecode.len() - prev - 1;
                     let index = prev - 2;
                     if length > std::u16::MAX as usize {
                         compiler.compile_error(token, "target expression too big".to_string());
                     }
                     let mut buff = [0u8; 2];
                     LittleEndian::write_u16(&mut buff, length as u16);
-                    compiler.function.bytecode[index] = buff[0];
-                    compiler.function.bytecode[index + 1] = buff[1];
+                    compiler.bytecode[index] = buff[0];
+                    compiler.bytecode[index + 1] = buff[1];
 
                     // if this match branch is the last one, just return and do not add Jump opcode
                     if branches.len() == 0 {
@@ -643,13 +642,13 @@ impl<'a> Compiler<'a> {
                     compiler.write_byte(255, token.position);
                     compiler.write_byte(255, token.position);
                     compiler.write_byte(255, token.position);
-                    let prev = compiler.function.bytecode.len();
+                    let prev = compiler.bytecode.len();
 
                     // compile the next match branch, recursively
                     compile_match_branch(compiler, None, branches, token);
 
                     // apply patch
-                    let length = compiler.function.bytecode.len() - prev - 1;
+                    let length = compiler.bytecode.len() - prev - 1;
                     let index = prev - 3;
                     if length > 16_777_215 {
                         // max of unsigned 24 bits
@@ -657,9 +656,9 @@ impl<'a> Compiler<'a> {
                     }
                     let mut buff = [0u8; 3];
                     LittleEndian::write_u24(&mut buff, length as u32);
-                    compiler.function.bytecode[index] = buff[0];
-                    compiler.function.bytecode[index + 1] = buff[1];
-                    compiler.function.bytecode[index + 2] = buff[2];
+                    compiler.bytecode[index] = buff[0];
+                    compiler.bytecode[index + 1] = buff[1];
+                    compiler.bytecode[index + 2] = buff[2];
                 }
 
                 // compile all match branches recursively
@@ -693,8 +692,8 @@ impl<'a> Compiler<'a> {
 
     /// Add a constant to the values vector and adds the index to the bytecode vector
     fn write_constant(&mut self, value: Value, include_opcode: bool, pos: Position) {
-        self.function.values.push(value);
-        if self.function.values.len() > std::u8::MAX as usize - 1 {
+        self.values.push(value);
+        if self.values.len() > std::u8::MAX as usize - 1 {
             // use OP_LCONSTANT
             if include_opcode {
                 let byte = OpCode::ConstantLong as u8;
@@ -703,7 +702,7 @@ impl<'a> Compiler<'a> {
 
             // convert the constant index into two u8's and writes the bytes to the bytecode vector
             let mut bytes = [0u8; 2];
-            LittleEndian::write_u16(&mut bytes, (self.function.values.len() - 1) as u16);
+            LittleEndian::write_u16(&mut bytes, (self.values.len() - 1) as u16);
             for byte in bytes {
                 self.write_byte(byte, pos);
             }
@@ -714,14 +713,14 @@ impl<'a> Compiler<'a> {
                 self.write_byte(byte, pos);
             }
 
-            self.write_byte((self.function.values.len() - 1) as u8, pos)
+            self.write_byte((self.values.len() - 1) as u8, pos)
         }
     }
 
     /// Writes a byte to the bytecode vector
     fn write_byte(&mut self, byte: u8, pos: Position) {
-        self.function.bytecode.push(byte);
-        let length = self.function.bytecode.len();
+        self.bytecode.push(byte);
+        let length = self.bytecode.len();
         self.positions.insert(length - 1, pos);
         // self.positions.entry(self.bytecode.len() - 1).or_insert(pos);
     }
@@ -817,7 +816,6 @@ impl<'a> Compiler<'a> {
 #[cfg(test)]
 mod tests {
     use crate::compile;
-    use crate::compiler::FuncType;
     use crate::frontend::lexer::Lexer;
     use crate::frontend::parser::Parser;
 

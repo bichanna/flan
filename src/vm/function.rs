@@ -11,19 +11,13 @@ pub struct Function {
     pub values: Vec<Value>,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum FuncType {
-    TopLevel,
-    Function,
-}
-
 impl Function {
     pub fn new(name: Option<String>) -> Self {
         Self {
             arity: 0,
-            bytecode: Vec::with_capacity(32),
+            bytecode: Vec::with_capacity(15),
             name,
-            values: Vec::with_capacity(12),
+            values: Vec::with_capacity(5),
         }
     }
 }
