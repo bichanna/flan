@@ -18,7 +18,7 @@ names |> each() ~ (name) println("Hello, {{}}!", name)
 ```
 
 ```javascript
-i{range, each} := import(:range)
+i{each} := import(:std)
 
 fn fizzBuzz n = match [n % 3, n % 5] these
     [0, 0] -> "fizzbuzz",
@@ -26,5 +26,5 @@ fn fizzBuzz n = match [n % 3, n % 5] these
     [_, 0] -> "buzz",
     _ -> str(n)
 
-range(0, 100) |> each() <~ println() <| fizzBuzz(it)
+(0..=100) |> each() <~ println() <| fizzBuzz(it)
 ```
