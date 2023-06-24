@@ -1,0 +1,14 @@
+[package]
+name = "flan"
+version = "0.0.0"
+edition = "2021"
+
+description = "Functional LANguage"
+license-file = "LICENSE.txt"
+keywords = ["language"]
+categories = ["compilers", "virtual machines"]
+authors = ["Nobuharu Shimazu <nobu.bichanna@gmail.com>"]
+repository = "https://github.com/bichanna/flan"
+
+[dependencies]
+byteorder = "1"
