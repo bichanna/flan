@@ -1,5 +1,5 @@
 <div align="center">
-    <h1>The Flan Scripting Language</h1>
+    <h1>Flan - slighty functional scripting language</h1>
 </div><br>
 <div align="center">
 </div>
