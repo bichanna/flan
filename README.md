@@ -4,10 +4,10 @@
 <div align="center">
 </div>
 
-**🚧WARNING!! THIS LANGUAGE IS IN DEVELOPMENT🚧**
+**🚧WARNING!! THIS PROJECT IS IN DEVELOPMENT🚧**
 --------------------------------------------------------------------------------------------------------
 
-Flan is a **F**unctional **LAN**guage
+Flan is an acronym for "**F**unctional **LAN**guage," while I happen to have a fondness for flan - a delicious custard dessert topped with caramel sauce.
 
 Nothing works currently, but here are some examples:
 ```javascript
