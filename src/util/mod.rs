@@ -46,9 +46,17 @@ where
     pub fn prev_peek(&self) -> Option<&I::Item> {
         self.prev.as_ref()
     }
+}
+
+impl<I> Iterator for PrevPeekable<I>
+where
+    I: Iterator,
+    <I as Iterator>::Item: Clone,
+{
+    type Item = I::Item;
 
     /// Returns the next item in the iterator
-    pub fn next(&mut self) -> Option<I::Item> {
+    fn next(&mut self) -> Option<I::Item> {
         if self.iterator.peek().is_some() {
             self.prev = replace(&mut self.current, self.iterator.next());
             return self.current.clone();
