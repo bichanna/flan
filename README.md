@@ -20,7 +20,7 @@ names |> each() ~ (name) println("Hello, {{}}!", name)
 ```javascript
 i{each} := import(:std)
 
-fn fizzBuzz n = match [n % 3, n % 5] these
+fn fizzBuzz n = where [n % 3, n % 5] match
     [0, 0] -> "fizzbuzz",
     [0, _] -> "fizz",
     [_, 0] -> "buzz",
