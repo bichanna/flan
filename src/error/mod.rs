@@ -62,6 +62,11 @@ impl Stack {
     pub fn last_path_index() -> usize {
         unsafe { PATHS.len() - 1 }
     }
+
+    pub fn report(&self, code: i32) {
+        println!("{}", self);
+        exit(code);
+    }
 }
 
 impl fmt::Display for Stack {
