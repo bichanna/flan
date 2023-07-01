@@ -12,7 +12,7 @@ where
     /// The item before the current item
     prev: Option<I::Item>,
     /// The current item
-    current: Option<I::Item>,
+    pub current: Option<I::Item>,
     /// Keeps track of whether the iterator has reached the end or not
     finished: bool,
 }
