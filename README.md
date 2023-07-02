@@ -11,14 +11,14 @@ Flan is an acronym for "**F**unctional **LAN**guage," while I happen to have a f
 
 Nothing works currently, but here are some examples:
 ```javascript
-i{each, println} := import(:std, :fmt)
+i{each, println} := import("std", "fmt")
 
 names := ["Nobu", "Sol", "Damian", "Thomas", "Diego"]
 names |> each() ~ (name) println("Hello, {{}}!", name)
 ```
 
 ```javascript
-i{each} := import(:std)
+i{each} := import("std")
 
 fn fizzBuzz n = where [n % 3, n % 5] match
     [0, 0] -> "fizzbuzz",
