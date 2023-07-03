@@ -1,3 +1,6 @@
+test:
+    cargo test -- --nocapture
+
 check:
     cargo clippy --verbose
 
