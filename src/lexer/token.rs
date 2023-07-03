@@ -3,13 +3,34 @@ use crate::error::Position;
 use std::sync::Arc;
 
 /// Token for the lexer
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Token {
     pub kind: TokenType,
     pub pos: Position,
 }
 
-#[derive(Clone, PartialEq)]
+impl TokenType {
+    /// Returns the TokenType of the keyword if the given &str is a keyword
+    pub fn get_type(value: &str) -> Option<TokenType> {
+        match value.to_lowercase().as_str() {
+            "if" => Some(TokenType::If),
+            "fn" => Some(TokenType::Func),
+            "match" => Some(TokenType::Match),
+            "or" => Some(TokenType::Or),
+            "and" => Some(TokenType::And),
+            "not" => Some(TokenType::Not),
+            "true" => Some(TokenType::True),
+            "false" => Some(TokenType::False),
+            "else" => Some(TokenType::Else),
+            "where" => Some(TokenType::Where),
+            "then" => Some(TokenType::Then),
+            "import" => Some(TokenType::Import),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
     Int(i64),
     Float(f64),

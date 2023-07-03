@@ -23,8 +23,6 @@ struct Lexer<'a> {
     col: usize,
     /// Current character
     current: char,
-    /// Character counter
-    c: usize,
 }
 
 impl<'a> Lexer<'a> {
@@ -59,7 +57,6 @@ impl<'a> Lexer<'a> {
             col: 1,
             chars,
             current: current_char.unwrap(),
-            c: 0,
         };
 
         lexer.tokenize();
@@ -70,6 +67,7 @@ impl<'a> Lexer<'a> {
     fn tokenize(&mut self) {
         let mut revert = false;
         while !self.is_end() {
+            revert = false;
             match self.current {
                 n if n.is_whitespace() => {}
                 '(' => self.append(TokenType::LParen),
@@ -82,7 +80,13 @@ impl<'a> Lexer<'a> {
                 '~' => self.append(TokenType::Tilde),
                 ':' => match self.peek() {
                     '=' => self.append_and_advance(TokenType::ColonEq),
-                    _ => self.report_error(&format!("expected ':=' but got '{}'", self.current)),
+                    _ => {
+                        self.advance();
+                        let value =
+                            self.build_str(|l| l.current.is_alphanumeric() || l.current == '_');
+                        self.append(TokenType::Atom(Arc::from(value)));
+                        revert = true;
+                    }
                 },
                 '|' => match self.peek() {
                     '>' => self.append_and_advance(TokenType::BarGT),
@@ -159,7 +163,7 @@ impl<'a> Lexer<'a> {
                     } else if value == "i" && self.current == '}' {
                         self.append_and_advance(TokenType::ILBrace);
                     } else {
-                        if let Some(keyword) = Self::keyword(&value) {
+                        if let Some(keyword) = TokenType::get_type(&value) {
                             self.append(keyword);
                         } else {
                             self.append(TokenType::Id(Arc::from(value.as_str())));
@@ -232,11 +236,6 @@ impl<'a> Lexer<'a> {
     }
 
     /// Checks if the lexer is at the end of the source or not
-    fn is_strict_end(&mut self) -> bool {
-        self.is_end() || self.chars.peek().is_none()
-    }
-
-    /// Checks if the lexer is at the end of the source or not
     fn is_end(&mut self) -> bool {
         self.chars.current.is_none()
     }
@@ -244,7 +243,6 @@ impl<'a> Lexer<'a> {
     /// Advances on character forward
     fn advance(&mut self) {
         if let Some(next_char) = self.chars.next() {
-            self.c += 1;
             if std::mem::replace(&mut self.current, next_char) == '\n' {
                 self.line += 1;
                 self.col = 1;
@@ -262,25 +260,6 @@ impl<'a> Lexer<'a> {
             *next_char
         } else {
             '\0'
-        }
-    }
-
-    /// Returns the TokenType of the keyword if the given &str is a keyword
-    fn keyword(value: &str) -> Option<TokenType> {
-        match value.to_lowercase().as_str() {
-            "if" => Some(TokenType::If),
-            "fn" => Some(TokenType::Func),
-            "match" => Some(TokenType::Match),
-            "or" => Some(TokenType::Or),
-            "and" => Some(TokenType::And),
-            "not" => Some(TokenType::Not),
-            "true" => Some(TokenType::True),
-            "false" => Some(TokenType::False),
-            "else" => Some(TokenType::Else),
-            "where" => Some(TokenType::Where),
-            "then" => Some(TokenType::Then),
-            "import" => Some(TokenType::Import),
-            _ => None,
         }
     }
 
@@ -323,5 +302,83 @@ impl<'a> Lexer<'a> {
             self.path_idx,
         )
         .report(1);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn tokenize(src: &str) -> Vec<Token> {
+        // converting the contents of the file into Chars
+        let mut chars = PrevPeekable::new(src.chars());
+        let current_char = chars.next();
+
+        // it's an empty file!
+        if current_char.is_none() {
+            std::process::exit(0);
+        }
+
+        let mut lexer = Lexer {
+            path_idx: 0,
+            tokens: vec![],
+            line: 1,
+            col: 1,
+            chars,
+            current: current_char.unwrap(),
+        };
+
+        lexer.tokenize();
+        lexer.tokens
+    }
+
+    #[test]
+    fn math_expr() {
+        let expr = "1 + 3.2 / 4 * 2.2 - 1";
+        let tokens = tokenize(expr);
+        assert_eq!(tokens.len(), 9 + 1);
+        assert_eq!(tokens[0].kind, TokenType::Int(1));
+        assert_eq!(tokens[1].kind, TokenType::Plus);
+        assert_eq!(tokens[2].kind, TokenType::Float(3.2));
+        assert_eq!(tokens[3].kind, TokenType::Div);
+        assert_eq!(tokens[4].kind, TokenType::Int(4));
+        assert_eq!(tokens[5].kind, TokenType::Mult);
+        assert_eq!(tokens[6].kind, TokenType::Float(2.2));
+        assert_eq!(tokens[7].kind, TokenType::Minus);
+        assert_eq!(tokens[8].kind, TokenType::Int(1));
+    }
+
+    #[test]
+    fn primitive_types() {
+        let expr = "true false 1 1.23 0xABC \"Hello, world\" :someAtom variable";
+        let tokens = tokenize(expr);
+        assert_eq!(tokens.len(), 8 + 1);
+        assert_eq!(tokens[0].kind, TokenType::True);
+        assert_eq!(tokens[1].kind, TokenType::False);
+        assert_eq!(tokens[2].kind, TokenType::Int(1));
+        assert_eq!(tokens[3].kind, TokenType::Float(1.23));
+        assert_eq!(tokens[4].kind, TokenType::Int(2748));
+        assert_eq!(tokens[5].kind, TokenType::Str("Hello, world".to_string()));
+        assert_eq!(tokens[6].kind, TokenType::Atom(Arc::from("someAtom")));
+        assert_eq!(tokens[7].kind, TokenType::Id(Arc::from("variable")));
+    }
+
+    #[test]
+    fn keywords() {
+        let expr = "fn if where match then and or else true not false import";
+        let tokens = tokenize(expr);
+        assert_eq!(tokens.len(), 12 + 1);
+        assert_eq!(tokens[0].kind, TokenType::Func);
+        assert_eq!(tokens[1].kind, TokenType::If);
+        assert_eq!(tokens[2].kind, TokenType::Where);
+        assert_eq!(tokens[3].kind, TokenType::Match);
+        assert_eq!(tokens[4].kind, TokenType::Then);
+        assert_eq!(tokens[5].kind, TokenType::And);
+        assert_eq!(tokens[6].kind, TokenType::Or);
+        assert_eq!(tokens[7].kind, TokenType::Else);
+        assert_eq!(tokens[8].kind, TokenType::True);
+        assert_eq!(tokens[9].kind, TokenType::Not);
+        assert_eq!(tokens[10].kind, TokenType::False);
+        assert_eq!(tokens[11].kind, TokenType::Import);
     }
 }
