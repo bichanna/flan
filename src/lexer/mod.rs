@@ -27,7 +27,7 @@ struct Lexer<'a> {
 
 impl<'a> Lexer<'a> {
     /// The public interface for the lexer
-    pub fn get_tokens(path: &str) -> Vec<Token> {
+    pub fn tokenize(path: &str) -> Vec<Token> {
         Stack::add_path(path);
 
         let file = File::open(path);
@@ -59,12 +59,12 @@ impl<'a> Lexer<'a> {
             current: current_char.unwrap(),
         };
 
-        lexer.tokenize();
+        lexer._tokenize();
         lexer.tokens
     }
 
     /// Tokenizes the source
-    fn tokenize(&mut self) {
+    fn _tokenize(&mut self) {
         let mut revert = false;
         while !self.is_end() {
             revert = false;
@@ -328,7 +328,7 @@ mod tests {
             current: current_char.unwrap(),
         };
 
-        lexer.tokenize();
+        lexer._tokenize();
         lexer.tokens
     }
 
