@@ -304,38 +304,37 @@ impl<'a> Lexer<'a> {
         .report(1);
     }
 }
+pub fn test_tokenize(src: &str) -> Vec<Token> {
+    // converting the contents of the file into Chars
+    let mut chars = PrevPeekable::new(src.chars());
+    let current_char = chars.next();
+
+    // it's an empty file!
+    if current_char.is_none() {
+        std::process::exit(0);
+    }
+
+    let mut lexer = Lexer {
+        path_idx: 0,
+        tokens: vec![],
+        line: 1,
+        col: 1,
+        chars,
+        current: current_char.unwrap(),
+    };
+
+    lexer._tokenize();
+    lexer.tokens
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn tokenize(src: &str) -> Vec<Token> {
-        // converting the contents of the file into Chars
-        let mut chars = PrevPeekable::new(src.chars());
-        let current_char = chars.next();
-
-        // it's an empty file!
-        if current_char.is_none() {
-            std::process::exit(0);
-        }
-
-        let mut lexer = Lexer {
-            path_idx: 0,
-            tokens: vec![],
-            line: 1,
-            col: 1,
-            chars,
-            current: current_char.unwrap(),
-        };
-
-        lexer._tokenize();
-        lexer.tokens
-    }
-
     #[test]
     fn math_expr() {
         let expr = "1 + 3.2 / 4 * 2.2 - 1";
-        let tokens = tokenize(expr);
+        let tokens = test_tokenize(expr);
         assert_eq!(tokens.len(), 9 + 1);
         assert_eq!(tokens[0].kind, TokenType::Int(1));
         assert_eq!(tokens[1].kind, TokenType::Plus);
@@ -351,7 +350,7 @@ mod tests {
     #[test]
     fn primitive_types() {
         let expr = "true false 1 1.23 0xABC \"Hello, world\" :someAtom variable";
-        let tokens = tokenize(expr);
+        let tokens = test_tokenize(expr);
         assert_eq!(tokens.len(), 8 + 1);
         assert_eq!(tokens[0].kind, TokenType::True);
         assert_eq!(tokens[1].kind, TokenType::False);
@@ -366,7 +365,7 @@ mod tests {
     #[test]
     fn keywords() {
         let expr = "fn if where match then and or else true not false import case";
-        let tokens = tokenize(expr);
+        let tokens = test_tokenize(expr);
         assert_eq!(tokens.len(), 13 + 1);
         assert_eq!(tokens[0].kind, TokenType::Func);
         assert_eq!(tokens[1].kind, TokenType::If);
