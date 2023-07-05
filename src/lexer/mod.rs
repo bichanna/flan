@@ -365,9 +365,9 @@ mod tests {
 
     #[test]
     fn keywords() {
-        let expr = "fn if where match then and or else true not false import";
+        let expr = "fn if where match then and or else true not false import case";
         let tokens = tokenize(expr);
-        assert_eq!(tokens.len(), 12 + 1);
+        assert_eq!(tokens.len(), 13 + 1);
         assert_eq!(tokens[0].kind, TokenType::Func);
         assert_eq!(tokens[1].kind, TokenType::If);
         assert_eq!(tokens[2].kind, TokenType::Where);
@@ -380,5 +380,6 @@ mod tests {
         assert_eq!(tokens[9].kind, TokenType::Not);
         assert_eq!(tokens[10].kind, TokenType::False);
         assert_eq!(tokens[11].kind, TokenType::Import);
+        assert_eq!(tokens[12].kind, TokenType::Case);
     }
 }

@@ -23,6 +23,7 @@ impl TokenType {
             "false" => Some(TokenType::False),
             "else" => Some(TokenType::Else),
             "where" => Some(TokenType::Where),
+            "case" => Some(TokenType::Case),
             "then" => Some(TokenType::Then),
             "import" => Some(TokenType::Import),
             _ => None,
@@ -80,6 +81,7 @@ pub enum TokenType {
     Where,  // where
     Match,  // match
     Then,   // then
+    Case,   // case
     And,    // and
     Or,     // or
     Else,   // else
