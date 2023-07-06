@@ -166,6 +166,8 @@ impl<'a> Lexer<'a> {
                     } else {
                         if let Some(keyword) = TokenType::get_type(&value) {
                             self.append(keyword);
+                        } else if value == "_" {
+                            self.append(TokenType::Empty);
                         } else {
                             self.append(TokenType::Id(Arc::from(value.as_str())));
                         }
