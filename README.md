@@ -18,13 +18,13 @@ names |> each() ~ (name) println("Hello, {{}}!", name)
 ```
 
 ```javascript
-i{each} := import("std")
+i{each, range} := import("std")
 
 fn fizzBuzz(n) = where [n % 3, n % 5] match
-    case [0, 0] -> "fizzbuzz",
-    case [0, _] -> "fizz",
-    case [_, 0] -> "buzz",
-    _ then str(n)
+    case [0, 0] -> "fizzbuzz"
+    case [0, _] -> "fizz"
+    case [_, 0] -> "buzz"
+    _ -> str(n)
 
-(0..=100) |> each() <~ println() <| fizzBuzz(it)
+range(101) |> each() <~ println() <| fizzBuzz(it)
 ```
