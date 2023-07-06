@@ -51,6 +51,7 @@ pub enum TokenType {
     Plus,     // +
     PlusEq,   // +=
     Minus,    // -
+    MinusGT,  // ->
     MinusEq,  // -=
     Mult,     // *
     MultEq,   // *=

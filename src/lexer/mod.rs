@@ -97,6 +97,7 @@ impl<'a> Lexer<'a> {
                     _ => self.append(TokenType::Plus),
                 },
                 '-' => match self.peek() {
+                    '>' => self.append_and_advance(TokenType::MinusGT),
                     '=' => self.append_and_advance(TokenType::MinusEq),
                     _ => self.append(TokenType::Minus),
                 },
@@ -159,9 +160,9 @@ impl<'a> Lexer<'a> {
                     let value = self.build_str(|l| l.current.is_alphanumeric() || l.current == '_');
 
                     if value == "s" && self.current == '{' {
-                        self.append_and_advance(TokenType::SLBrace);
-                    } else if value == "i" && self.current == '}' {
-                        self.append_and_advance(TokenType::ILBrace);
+                        self.append(TokenType::SLBrace);
+                    } else if value == "i" && self.current == '{' {
+                        self.append(TokenType::ILBrace);
                     } else {
                         if let Some(keyword) = TokenType::get_type(&value) {
                             self.append(keyword);
