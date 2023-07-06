@@ -1,7 +1,8 @@
-pub mod error;
-pub mod lexer;
-pub mod parser;
-pub mod util;
+mod error;
+mod lexer;
+mod parser;
+mod util;
+mod vm;
 
 fn main() {
     println!("Hello, world!");
