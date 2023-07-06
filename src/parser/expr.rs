@@ -83,11 +83,11 @@ pub enum Expr {
         pos: Position,
     },
     Import {
-        exprs: Vec<Box<Expr>>,
+        exprs: Vec<Expr>,
         pos: Position,
     },
     Block {
-        exprs: Vec<Box<Expr>>,
+        exprs: Vec<Expr>,
         pos: Position,
     },
     Str {
@@ -112,12 +112,12 @@ pub enum Expr {
     },
     Empty(Position),
     List {
-        elems: Vec<Box<Expr>>,
+        elems: Vec<Expr>,
         pos: Position,
     },
     Obj {
         keys: Vec<Token>,
-        vals: Vec<Box<Expr>>,
+        vals: Vec<Expr>,
         pos: Position,
     },
     Panic {

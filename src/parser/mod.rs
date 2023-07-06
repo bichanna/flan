@@ -69,8 +69,8 @@ impl Parser {
             }
 
             // check for destructuring assignment
-            fn check(p: &mut Parser, pos: Position, v: Box<Expr>, msg: &str) {
-                match v.as_ref() {
+            fn check(p: &mut Parser, pos: Position, v: Expr, msg: &str) {
+                match v {
                     Expr::Var { name: _, pos: _ }
                     | Expr::Get {
                         inst: _,
@@ -463,11 +463,11 @@ impl Parser {
             TokenType::LBracket => {
                 self.advance();
                 let token = self.previous();
-                let mut elems: Vec<Box<Expr>> = vec![];
+                let mut elems: Vec<Expr> = vec![];
 
                 // appends elements of the list
                 while !self.is_end() && !self.matches(TokenType::RBracket) {
-                    elems.push(Box::new(self.expression()));
+                    elems.push(self.expression());
                     if self.matches(TokenType::RBracket) || !self.matches(TokenType::Comma) {
                         break;
                     } else {
@@ -509,10 +509,10 @@ impl Parser {
                     .clone()
                     .into_iter()
                     .map(|t| match t.clone().kind {
-                        TokenType::Id(v) => Box::new(Expr::Atom { val: v, pos: t.pos }),
+                        TokenType::Id(v) => Expr::Atom { val: v, pos: t.pos },
                         _ => todo!(), // does not happen
                     })
-                    .collect::<Vec<Box<Expr>>>();
+                    .collect::<Vec<Expr>>();
 
                 Expr::Obj {
                     keys,
@@ -547,13 +547,13 @@ impl Parser {
                     .clone()
                     .into_iter()
                     .map(|t| match t.clone().kind {
-                        TokenType::Id(v) => Box::new(Expr::Var {
+                        TokenType::Id(v) => Expr::Var {
                             name: v,
                             pos: t.pos,
-                        }),
+                        },
                         _ => todo!(), // does not happen
                     })
-                    .collect::<Vec<Box<Expr>>>();
+                    .collect::<Vec<Expr>>();
 
                 Expr::Obj {
                     keys,
@@ -602,12 +602,12 @@ impl Parser {
                             }
                         };
                         let mut keys: Vec<Token> = vec![key];
-                        let mut vals: Vec<Box<Expr>> = vec![];
+                        let mut vals: Vec<Expr> = vec![];
 
                         if self.previous().kind != TokenType::MinusGT {
                             self.report_err("expected '->'");
                         }
-                        vals.push(Box::new(self.expression()));
+                        vals.push(self.expression());
 
                         if self.matches(TokenType::Comma) {
                             self.advance();
@@ -619,7 +619,7 @@ impl Parser {
                                 }
                                 keys.push(self.previous());
                                 self.expect(TokenType::MinusGT, "expected '->'");
-                                vals.push(Box::new(self.expression()));
+                                vals.push(self.expression());
 
                                 if self.matches(TokenType::RBrace)
                                     || !self.matches(TokenType::Comma)
@@ -640,11 +640,10 @@ impl Parser {
                         }
                     } else {
                         // it's a block
-                        let mut exprs: Vec<Box<Expr>> = vec![];
-                        exprs.push(Box::new(first_expr));
+                        let mut exprs: Vec<Expr> = vec![first_expr];
 
                         while !self.matches(TokenType::RBrace) && !self.is_end() {
-                            exprs.push(Box::new(self.expression()));
+                            exprs.push(self.expression());
                         }
 
                         self.expect(TokenType::RBrace, "expected '}' after a block");
@@ -741,15 +740,15 @@ impl Parser {
             TokenType::Import => {
                 self.advance();
                 let token = self.previous();
-                let mut args: Vec<Box<Expr>> = vec![];
+                let mut args: Vec<Expr> = vec![];
 
                 self.expect(TokenType::LParen, "expected '('");
 
                 if !self.matches(TokenType::RParen) {
-                    args.push(Box::new(self.expression()));
+                    args.push(self.expression());
                     while self.matches(TokenType::Comma) {
                         self.advance();
-                        args.push(Box::new(self.expression()));
+                        args.push(self.expression());
                     }
                 }
 
