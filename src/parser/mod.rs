@@ -760,6 +760,33 @@ impl Parser {
                     pos: token.pos,
                 }
             }
+            // recover expression
+            TokenType::Recover => {
+                self.advance();
+                let token = self.previous();
+                let recoveree = self.expression();
+
+                self.expect(TokenType::MinusGT, "expected '->'");
+
+                let body = self.expression();
+
+                Expr::Recover {
+                    recoveree: Box::new(recoveree),
+                    body: Box::new(body),
+                    pos: token.pos,
+                }
+            }
+            // panic expression
+            TokenType::Panic => {
+                self.advance();
+                let token = self.previous();
+                let expr = self.expression();
+
+                Expr::Panic {
+                    expr: Box::new(expr),
+                    pos: token.pos,
+                }
+            }
             _ => {
                 self.report_err(&format!("unexpected token: {:?}", self.current.kind));
                 Expr::Empty((0, 0)) // dummy
@@ -982,6 +1009,20 @@ mod tests {
     #[test]
     fn callback_expr() {
         let expr = "[1, 2, 3] |> map() ~ (each) println(each)";
+        let exprs = parse(expr);
+        // println!("{:#?}", exprs);
+    }
+
+    #[test]
+    fn recover_expr() {
+        let expr = "recover 1 / 0 -> println(\"recovered!\")";
+        let exprs = parse(expr);
+        // println!("{:#?}", exprs);
+    }
+
+    #[test]
+    fn panic_expr() {
+        let expr = "panic \"Waaa something bad happened\"";
         let exprs = parse(expr);
         // println!("{:#?}", exprs);
     }

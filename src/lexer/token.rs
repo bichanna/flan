@@ -26,6 +26,8 @@ impl TokenType {
             "case" => Some(TokenType::Case),
             "then" => Some(TokenType::Then),
             "import" => Some(TokenType::Import),
+            "recover" => Some(TokenType::Recover),
+            "panic" => Some(TokenType::Panic),
             _ => None,
         }
     }
@@ -77,19 +79,21 @@ pub enum TokenType {
     DotEq,    // ..=
     LDot,     // ..<
 
-    Func,   // fn
-    If,     // if
-    Where,  // where
-    Match,  // match
-    Then,   // then
-    Case,   // case
-    And,    // and
-    Or,     // or
-    Else,   // else
-    True,   // true
-    Not,    // not
-    False,  // false
-    Import, // import
+    Func,    // fn
+    If,      // if
+    Where,   // where
+    Match,   // match
+    Then,    // then
+    Case,    // case
+    And,     // and
+    Or,      // or
+    Else,    // else
+    True,    // true
+    Not,     // not
+    False,   // false
+    Import,  // import
+    Recover, // recover
+    Panic,   // panic
 
     EOF, // end of file
 }

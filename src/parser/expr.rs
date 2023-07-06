@@ -120,4 +120,13 @@ pub enum Expr {
         vals: Vec<Box<Expr>>,
         pos: Position,
     },
+    Panic {
+        expr: Box<Expr>,
+        pos: Position,
+    },
+    Recover {
+        recoveree: Box<Expr>,
+        body: Box<Expr>,
+        pos: Position,
+    },
 }
