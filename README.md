@@ -21,9 +21,9 @@ names |> each() ~ (name) println("Hello, {{}}!", name)
 i{each} := import("std")
 
 fn fizzBuzz(n) = where [n % 3, n % 5] match
-    case [0, 0] then "fizzbuzz",
-    case [0, _] then "fizz",
-    case [_, 0] then "buzz",
+    case [0, 0] -> "fizzbuzz",
+    case [0, _] -> "fizz",
+    case [_, 0] -> "buzz",
     _ then str(n)
 
 (0..=100) |> each() <~ println() <| fizzBuzz(it)
