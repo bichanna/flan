@@ -875,8 +875,6 @@ mod tests {
     use super::*;
     use crate::lexer::test_tokenize;
 
-    use std::mem::discriminant;
-
     fn parse(src: &str) -> Vec<Expr> {
         let tokens = test_tokenize(src);
         let mut tokens = PrevPeekable::new(tokens.into_iter());
