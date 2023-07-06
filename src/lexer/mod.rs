@@ -235,7 +235,7 @@ impl<'a> Lexer<'a> {
                 self.advance();
             }
         }
-        self.append(TokenType::EOF);
+        self.append(TokenType::Eof);
     }
 
     /// Checks if the lexer is at the end of the source or not

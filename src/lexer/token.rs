@@ -95,5 +95,5 @@ pub enum TokenType {
     Recover, // recover
     Panic,   // panic
 
-    EOF, // end of file
+    Eof, // end of file
 }
