@@ -2,6 +2,7 @@
 name = "flan"
 version = "0.0.0"
 edition = "2021"
+rust-version = "1.56.1"
 
 description = "Functional LANguage"
 license-file = "LICENSE.txt"
