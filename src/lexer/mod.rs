@@ -67,7 +67,6 @@ impl<'a> Lexer<'a> {
     fn _tokenize(&mut self) {
         let mut revert = false;
         while !self.is_end() {
-            revert = false;
             match self.current {
                 n if n.is_whitespace() => {}
                 '(' => self.append(TokenType::LParen),
@@ -233,6 +232,7 @@ impl<'a> Lexer<'a> {
             }
             if !revert {
                 self.advance();
+                revert = false;
             }
         }
         self.append(TokenType::Eof);
