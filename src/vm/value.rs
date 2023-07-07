@@ -1,17 +1,27 @@
+use std::any::Any;
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
 
+use dyn_clone::{clone_trait_object, DynClone};
+
 /// Every value in Flan implements this trait
-pub trait ValueTrait<T: fmt::Display = Self>: fmt::Display + Clone {
+pub trait ValueTrait: fmt::Display + DynClone {
     fn truthy(&self) -> bool;
+    fn as_any(&self) -> &dyn Any;
 }
+
+clone_trait_object!(ValueTrait);
 
 #[derive(Clone)]
 pub struct FEmpty;
 impl ValueTrait for FEmpty {
     fn truthy(&self) -> bool {
-        false
+        true
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }
 impl fmt::Display for FEmpty {
@@ -21,10 +31,14 @@ impl fmt::Display for FEmpty {
 }
 
 #[derive(Clone)]
-pub struct FStr(String);
+pub struct FStr(pub String);
 impl ValueTrait for FStr {
     fn truthy(&self) -> bool {
         !self.0.is_empty()
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }
 impl fmt::Display for FStr {
@@ -34,10 +48,14 @@ impl fmt::Display for FStr {
 }
 
 #[derive(Clone)]
-pub struct FAtom(Arc<str>);
+pub struct FAtom(pub Arc<str>);
 impl ValueTrait for FAtom {
     fn truthy(&self) -> bool {
         true
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }
 impl fmt::Display for FAtom {
@@ -47,10 +65,14 @@ impl fmt::Display for FAtom {
 }
 
 #[derive(Clone)]
-pub struct FVar(Arc<str>);
+pub struct FVar(pub Arc<str>);
 impl ValueTrait for FVar {
     fn truthy(&self) -> bool {
         false
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }
 impl fmt::Display for FVar {
@@ -60,10 +82,14 @@ impl fmt::Display for FVar {
 }
 
 #[derive(Clone)]
-pub struct FInt(i64);
+pub struct FInt(pub i64);
 impl ValueTrait for FInt {
     fn truthy(&self) -> bool {
         self.0 != 0
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }
 impl fmt::Display for FInt {
@@ -73,10 +99,14 @@ impl fmt::Display for FInt {
 }
 
 #[derive(Clone)]
-pub struct FFloat(f64);
+pub struct FFloat(pub f64);
 impl ValueTrait for FFloat {
     fn truthy(&self) -> bool {
         self.0 != 0.0
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }
 impl fmt::Display for FFloat {
@@ -86,10 +116,14 @@ impl fmt::Display for FFloat {
 }
 
 #[derive(Clone)]
-pub struct FBool(bool);
+pub struct FBool(pub bool);
 impl ValueTrait for FBool {
     fn truthy(&self) -> bool {
         self.0
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }
 impl fmt::Display for FBool {
@@ -99,13 +133,17 @@ impl fmt::Display for FBool {
 }
 
 #[derive(Clone)]
-pub struct FList<T: ValueTrait>(Vec<T>);
-impl<T: ValueTrait> ValueTrait for FList<T> {
+pub struct FList(pub Vec<Box<dyn ValueTrait>>);
+impl ValueTrait for FList {
     fn truthy(&self) -> bool {
         !self.0.is_empty()
     }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 }
-impl<T: ValueTrait> fmt::Display for FList<T> {
+impl fmt::Display for FList {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let list = self
             .0
@@ -119,13 +157,17 @@ impl<T: ValueTrait> fmt::Display for FList<T> {
 }
 
 #[derive(Clone)]
-pub struct FObj<T: ValueTrait>(HashMap<Arc<str>, T>);
-impl<T: ValueTrait> ValueTrait for FObj<T> {
+pub struct FObj(pub HashMap<Arc<str>, Box<dyn ValueTrait>>);
+impl ValueTrait for FObj {
     fn truthy(&self) -> bool {
         !self.0.is_empty()
     }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 }
-impl<T: ValueTrait> fmt::Display for FObj<T> {
+impl fmt::Display for FObj {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut obj = self
             .0

@@ -12,4 +12,6 @@ authors = ["Nobuharu Shimazu <nobu.bichanna@gmail.com>"]
 repository = "https://github.com/bichanna/flan"
 
 [dependencies]
-byteorder = "1"
+num-traits = "0.2"
+num-derive = "0.4"
+dyn-clone = "1.0"
