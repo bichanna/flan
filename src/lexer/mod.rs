@@ -232,8 +232,8 @@ impl<'a> Lexer<'a> {
             }
             if !revert {
                 self.advance();
-                revert = false;
             }
+            revert = false;
         }
         self.append(TokenType::Eof);
     }
