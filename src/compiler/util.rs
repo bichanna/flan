@@ -66,6 +66,11 @@ impl MemorySlice {
         self.positions.insert(self.bytecode.len() - 1, pos);
     }
 
+    /// Writes multple bytes to `bytecode`
+    pub fn write_bytes(&mut self, bytes: &[u8], pos: Position) {
+        bytes.iter().for_each(|b| self.write_byte(*b, pos));
+    }
+
     /// Writes a byte to `bytecode` at the specified index
     pub fn write_byte_with_index(&mut self, index: usize, b: u8) {
         self.bytecode[index] = b;
@@ -98,8 +103,9 @@ mod test {
         mem_slice.write_opcode(OpCode::Return, pos);
         mem_slice.write_byte_with_index(0, 100);
         mem_slice.add_const(Box::new(FInt(100)), pos);
+        mem_slice.write_bytes(&[1, 2, 3], pos);
 
-        assert_eq!(mem_slice.bytecode, vec![100, 0, 1, 0]);
+        assert_eq!(mem_slice.bytecode, vec![100, 0, 1, 0, 1, 2, 3]);
         assert_eq!(mem_slice.constants.len(), 1);
     }
 }
