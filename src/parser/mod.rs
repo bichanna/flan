@@ -9,9 +9,13 @@ use crate::util::PrevPeekable;
 pub mod expr;
 
 struct Parser {
+    /// The tokens being parsed
     tokens: PrevPeekable<IntoIter<Token>>,
+    /// The current token being parsed
     current: Token,
+    /// The path index of the source being tokenized
     path_idx: usize,
+    /// The parsed expressions
     exprs: Vec<Expr>,
 }
 
