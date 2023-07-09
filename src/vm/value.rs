@@ -9,6 +9,42 @@ use dyn_clone::{clone_trait_object, DynClone};
 pub trait ValueTrait: fmt::Display + DynClone {
     fn truthy(&self) -> bool;
     fn as_any(&self) -> &dyn Any;
+
+    fn force_as_empty(&self) -> FEmpty {
+        self.as_any().downcast_ref::<FEmpty>().unwrap().clone()
+    }
+
+    fn force_as_str(&self) -> FStr {
+        self.as_any().downcast_ref::<FStr>().unwrap().clone()
+    }
+
+    fn force_as_atom(&self) -> FAtom {
+        self.as_any().downcast_ref::<FAtom>().unwrap().clone()
+    }
+
+    fn force_as_var(&self) -> FVar {
+        self.as_any().downcast_ref::<FVar>().unwrap().clone()
+    }
+
+    fn force_as_int(&self) -> FInt {
+        self.as_any().downcast_ref::<FInt>().unwrap().clone()
+    }
+
+    fn force_as_float(&self) -> FFloat {
+        self.as_any().downcast_ref::<FFloat>().unwrap().clone()
+    }
+
+    fn force_as_list(&self) -> FList {
+        self.as_any().downcast_ref::<FList>().unwrap().clone()
+    }
+
+    fn force_as_obj(&self) -> FObj {
+        self.as_any().downcast_ref::<FObj>().unwrap().clone()
+    }
+
+    fn force_as_bool(&self) -> FBool {
+        self.as_any().downcast_ref::<FBool>().unwrap().clone()
+    }
 }
 
 clone_trait_object!(ValueTrait);
