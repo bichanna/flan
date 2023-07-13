@@ -4,10 +4,13 @@
 <div align="center">
 </div>
 
+[![Rust CI](https://github.com/bichanna/flan/actions/workflows/rust-ci.yml/badge.svg?event=push)](https://github.com/bichanna/flan/actions/workflows/rust-ci.yml)
+[![Rust Version](https://img.shields.io/badge/rustc-1.56%2B-blue?logo=rust)](https://www.rust-lang.org/tools/install)
+
 **🚧WARNING!! THIS PROJECT IS IN DEVELOPMENT🚧**
 --------------------------------------------------------------------------------------------------------
 
-Flan is an acronym for "**F**unctional **LAN**guage," while I happen to have a fondness for flan - a delicious custard dessert topped with caramel sauce.
+Flan is an acronym for "**F**unctional **LAN**guage," and I happen to have a fondness for flan - a delicious custard dessert topped with caramel sauce.
 
 Nothing works currently, but here are some examples:
 ```javascript
