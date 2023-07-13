@@ -185,7 +185,10 @@ impl ops::Rem for Box<dyn ValueTrait> {
             } else if let Some(b) = as_t!(rhs, FFloat) {
                 Ok(Box::new(FFloat(a.0 as f64 % b.0)))
             } else {
-                Err(format!("cannot % int by {}", rhs.type_str()))
+                Err(format!(
+                    "cannot modulus operation with int and {}",
+                    rhs.type_str()
+                ))
             }
         } else if let Some(a) = as_t!(self, FFloat) {
             if let Some(b) = as_t!(rhs, FFloat) {
@@ -193,11 +196,14 @@ impl ops::Rem for Box<dyn ValueTrait> {
             } else if let Some(b) = as_t!(rhs, FInt) {
                 Ok(Box::new(FFloat(a.0 - b.0 as f64)))
             } else {
-                Err(format!("cannot % float by {}", rhs.type_str()))
+                Err(format!(
+                    "cannot modulus operation with float by {}",
+                    rhs.type_str()
+                ))
             }
         } else {
             Err(format!(
-                "cannot % {} by {}",
+                "cannot modulus operation with {} by {}",
                 self.type_str(),
                 rhs.type_str(),
             ))
