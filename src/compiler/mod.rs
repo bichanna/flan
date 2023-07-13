@@ -113,7 +113,14 @@ impl Compiler {
 
             Expr::Unary { right, op } => {
                 self.compile_expr(*right);
-                self.mem_slice.write_opcode(OpCode::Negate, op.pos);
+                self.mem_slice.write_opcode(
+                    if let TokenType::Bang = op.kind {
+                        OpCode::NegateBool
+                    } else {
+                        OpCode::Negate
+                    },
+                    op.pos,
+                );
             }
 
             Expr::Logic { left, right, op } => {

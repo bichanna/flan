@@ -4,7 +4,7 @@ pub enum OpCode {
     LoadConst,
     LoadLongConst,
     Negate,
-    Bang,
+    NegateBool,
     Add,
     Sub,
     Mult,
