@@ -5,6 +5,7 @@
 </div>
 
 [![Rust CI](https://github.com/bichanna/flan/actions/workflows/rust-ci.yml/badge.svg?event=push)](https://github.com/bichanna/flan/actions/workflows/rust-ci.yml)
+![GitHub](https://img.shields.io/github/license/bichanna/flan)
 [![Rust Version](https://img.shields.io/badge/rustc-1.56%2B-blue?logo=rust)](https://www.rust-lang.org/tools/install)
 
 **🚧WARNING!! THIS PROJECT IS IN DEVELOPMENT🚧**
