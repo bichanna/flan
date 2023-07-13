@@ -1,6 +1,7 @@
 use std::any::Any;
 use std::collections::HashMap;
 use std::fmt;
+use std::ops;
 use std::sync::Arc;
 
 use dyn_clone::{clone_trait_object, DynClone};
@@ -9,45 +10,200 @@ use dyn_clone::{clone_trait_object, DynClone};
 pub trait ValueTrait: fmt::Display + DynClone {
     fn truthy(&self) -> bool;
     fn as_any(&self) -> &dyn Any;
-
-    fn force_as_empty(&self) -> FEmpty {
-        self.as_any().downcast_ref::<FEmpty>().unwrap().clone()
-    }
-
-    fn force_as_str(&self) -> FStr {
-        self.as_any().downcast_ref::<FStr>().unwrap().clone()
-    }
-
-    fn force_as_atom(&self) -> FAtom {
-        self.as_any().downcast_ref::<FAtom>().unwrap().clone()
-    }
-
-    fn force_as_var(&self) -> FVar {
-        self.as_any().downcast_ref::<FVar>().unwrap().clone()
-    }
-
-    fn force_as_int(&self) -> FInt {
-        self.as_any().downcast_ref::<FInt>().unwrap().clone()
-    }
-
-    fn force_as_float(&self) -> FFloat {
-        self.as_any().downcast_ref::<FFloat>().unwrap().clone()
-    }
-
-    fn force_as_list(&self) -> FList {
-        self.as_any().downcast_ref::<FList>().unwrap().clone()
-    }
-
-    fn force_as_obj(&self) -> FObj {
-        self.as_any().downcast_ref::<FObj>().unwrap().clone()
-    }
-
-    fn force_as_bool(&self) -> FBool {
-        self.as_any().downcast_ref::<FBool>().unwrap().clone()
-    }
+    fn type_str(&self) -> String;
 }
 
 clone_trait_object!(ValueTrait);
+
+macro_rules! as_t {
+    ($val: expr, $type: ty) => {
+        $val.as_any().downcast_ref::<$type>()
+    };
+}
+
+macro_rules! force_as_t {
+    ($val: expr, $type: ty) => {
+        as_t($val, $type).unwrap()
+    };
+}
+
+impl ops::Add for Box<dyn ValueTrait> {
+    type Output = Result<Box<dyn ValueTrait>, String>;
+
+    /// Tries to add two values together
+    fn add(self, rhs: Self) -> Self::Output {
+        if let Some(a) = as_t!(self, FInt) {
+            if let Some(b) = as_t!(rhs, FInt) {
+                Ok(Box::new(FInt(a.0 + b.0)))
+            } else if let Some(b) = as_t!(rhs, FFloat) {
+                Ok(Box::new(FFloat(a.0 as f64 + b.0)))
+            } else {
+                Err(format!("cannot add int and {}", rhs.type_str()))
+            }
+        } else if let Some(a) = as_t!(self, FFloat) {
+            if let Some(b) = as_t!(rhs, FFloat) {
+                Ok(Box::new(FFloat(a.0 + b.0)))
+            } else if let Some(b) = as_t!(rhs, FInt) {
+                Ok(Box::new(FFloat(a.0 + b.0 as f64)))
+            } else {
+                Err(format!("cannot add float and {}", rhs.type_str()))
+            }
+        } else if let Some(a) = as_t!(self, FStr) {
+            if let Some(b) = as_t!(rhs, FStr) {
+                Ok(Box::new(FStr(a.0.clone() + b.0.as_str())))
+            } else {
+                Err(format!("cannot add str and {}", rhs.type_str()))
+            }
+        } else {
+            Err(format!(
+                "cannot add {} and {}",
+                self.type_str(),
+                rhs.type_str()
+            ))
+        }
+    }
+}
+
+impl ops::Sub for Box<dyn ValueTrait> {
+    type Output = Result<Box<dyn ValueTrait>, String>;
+
+    /// Tries to subtract `rhs` from `self`
+    fn sub(self, rhs: Self) -> Self::Output {
+        if let Some(a) = as_t!(self, FInt) {
+            if let Some(b) = as_t!(rhs, FInt) {
+                Ok(Box::new(FInt(a.0 - b.0)))
+            } else if let Some(b) = as_t!(rhs, FFloat) {
+                Ok(Box::new(FFloat(a.0 as f64 - b.0)))
+            } else {
+                Err(format!("cannot subtract {} from int", rhs.type_str()))
+            }
+        } else if let Some(a) = as_t!(self, FFloat) {
+            if let Some(b) = as_t!(rhs, FFloat) {
+                Ok(Box::new(FFloat(a.0 - b.0)))
+            } else if let Some(b) = as_t!(rhs, FInt) {
+                Ok(Box::new(FFloat(a.0 - b.0 as f64)))
+            } else {
+                Err(format!("cannot subtract {} from float", rhs.type_str()))
+            }
+        } else {
+            Err(format!(
+                "cannot subtract {} from {}",
+                rhs.type_str(),
+                self.type_str(),
+            ))
+        }
+    }
+}
+
+impl ops::Mul for Box<dyn ValueTrait> {
+    type Output = Result<Box<dyn ValueTrait>, String>;
+
+    /// Tries to multiply `self` by `rhs`
+    fn mul(self, rhs: Self) -> Self::Output {
+        if let Some(a) = as_t!(self, FInt) {
+            if let Some(b) = as_t!(rhs, FInt) {
+                Ok(Box::new(FInt(a.0 * b.0)))
+            } else if let Some(b) = as_t!(rhs, FFloat) {
+                Ok(Box::new(FFloat(a.0 as f64 * b.0)))
+            } else {
+                Err(format!("cannot multiply int by {}", rhs.type_str()))
+            }
+        } else if let Some(a) = as_t!(self, FFloat) {
+            if let Some(b) = as_t!(rhs, FFloat) {
+                Ok(Box::new(FFloat(a.0 * b.0)))
+            } else if let Some(b) = as_t!(rhs, FInt) {
+                Ok(Box::new(FFloat(a.0 * b.0 as f64)))
+            } else {
+                Err(format!("cannot multiply float by {}", rhs.type_str()))
+            }
+        } else if let Some(a) = as_t!(self, FStr) {
+            if let Some(b) = as_t!(rhs, FInt) {
+                let mut val = String::new();
+                for _ in 0..b.0 {
+                    val.push_str(a.0.clone().as_str());
+                }
+                Ok(Box::new(FStr(val)))
+            } else {
+                Err(format!("cannot multiply str by {}", rhs.type_str()))
+            }
+        } else {
+            Err(format!(
+                "cannot multiply {} by {}",
+                self.type_str(),
+                rhs.type_str(),
+            ))
+        }
+    }
+}
+
+impl ops::Div for Box<dyn ValueTrait> {
+    type Output = Result<Box<dyn ValueTrait>, String>;
+
+    /// Tries to divide `self` by `rhs`
+    fn div(self, rhs: Self) -> Self::Output {
+        if let Some(a) = as_t!(self, FInt) {
+            if let Some(b) = as_t!(rhs, FInt) {
+                if b.0 == 0 {
+                    Err("cannot divide by 0".to_string())
+                } else {
+                    Ok(Box::new(FInt(a.0 / b.0)))
+                }
+            } else if let Some(b) = as_t!(rhs, FFloat) {
+                if b.0 == 0.0 {
+                    Err("cannot divide by 0".to_string())
+                } else {
+                    Ok(Box::new(FFloat(a.0 as f64 / b.0)))
+                }
+            } else {
+                Err(format!("cannot divide int by {}", rhs.type_str()))
+            }
+        } else if let Some(a) = as_t!(self, FFloat) {
+            if let Some(b) = as_t!(rhs, FFloat) {
+                Ok(Box::new(FFloat(a.0 - b.0)))
+            } else if let Some(b) = as_t!(rhs, FInt) {
+                Ok(Box::new(FFloat(a.0 - b.0 as f64)))
+            } else {
+                Err(format!("cannot divide float by {}", rhs.type_str()))
+            }
+        } else {
+            Err(format!(
+                "cannot divide {} by {}",
+                self.type_str(),
+                rhs.type_str(),
+            ))
+        }
+    }
+}
+
+impl ops::Rem for Box<dyn ValueTrait> {
+    type Output = Result<Box<dyn ValueTrait>, String>;
+
+    fn rem(self, rhs: Self) -> Self::Output {
+        if let Some(a) = as_t!(self, FInt) {
+            if let Some(b) = as_t!(rhs, FInt) {
+                Ok(Box::new(FInt(a.0 % b.0)))
+            } else if let Some(b) = as_t!(rhs, FFloat) {
+                Ok(Box::new(FFloat(a.0 as f64 % b.0)))
+            } else {
+                Err(format!("cannot % int by {}", rhs.type_str()))
+            }
+        } else if let Some(a) = as_t!(self, FFloat) {
+            if let Some(b) = as_t!(rhs, FFloat) {
+                Ok(Box::new(FFloat(a.0 - b.0)))
+            } else if let Some(b) = as_t!(rhs, FInt) {
+                Ok(Box::new(FFloat(a.0 - b.0 as f64)))
+            } else {
+                Err(format!("cannot % float by {}", rhs.type_str()))
+            }
+        } else {
+            Err(format!(
+                "cannot % {} by {}",
+                self.type_str(),
+                rhs.type_str(),
+            ))
+        }
+    }
+}
 
 #[derive(Clone)]
 pub struct FEmpty;
@@ -58,6 +214,10 @@ impl ValueTrait for FEmpty {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn type_str(&self) -> String {
+        "_".to_string()
     }
 }
 impl fmt::Display for FEmpty {
@@ -76,6 +236,10 @@ impl ValueTrait for FStr {
     fn as_any(&self) -> &dyn Any {
         self
     }
+
+    fn type_str(&self) -> String {
+        "str".to_string()
+    }
 }
 impl fmt::Display for FStr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -92,6 +256,10 @@ impl ValueTrait for FAtom {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn type_str(&self) -> String {
+        "atom".to_string()
     }
 }
 impl fmt::Display for FAtom {
@@ -110,6 +278,10 @@ impl ValueTrait for FVar {
     fn as_any(&self) -> &dyn Any {
         self
     }
+
+    fn type_str(&self) -> String {
+        "var".to_string()
+    }
 }
 impl fmt::Display for FVar {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -126,6 +298,10 @@ impl ValueTrait for FInt {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn type_str(&self) -> String {
+        "int".to_string()
     }
 }
 impl fmt::Display for FInt {
@@ -144,6 +320,10 @@ impl ValueTrait for FFloat {
     fn as_any(&self) -> &dyn Any {
         self
     }
+
+    fn type_str(&self) -> String {
+        "float".to_string()
+    }
 }
 impl fmt::Display for FFloat {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -161,6 +341,10 @@ impl ValueTrait for FBool {
     fn as_any(&self) -> &dyn Any {
         self
     }
+
+    fn type_str(&self) -> String {
+        "bool".to_string()
+    }
 }
 impl fmt::Display for FBool {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -177,6 +361,10 @@ impl ValueTrait for FList {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn type_str(&self) -> String {
+        "list".to_string()
     }
 }
 impl fmt::Display for FList {
@@ -201,6 +389,10 @@ impl ValueTrait for FObj {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn type_str(&self) -> String {
+        "obj".to_string()
     }
 }
 impl fmt::Display for FObj {
