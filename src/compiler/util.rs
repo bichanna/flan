@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use super::opcode::OpCode;
-use crate::error::Position;
+use crate::error::{Position, Positions};
 use crate::vm::value::ValueTrait;
 
 use crate::num_traits::ToPrimitive;
@@ -11,10 +11,9 @@ pub struct MemorySlice {
     /// The compiled bytecode
     pub bytecode: Vec<u8>,
     /// For simplicity's sake, almost all constants are stored in here
-    constants: Vec<Box<dyn ValueTrait>>,
+    pub constants: Vec<Box<dyn ValueTrait>>,
     /// Line and column numbers for reporting errors later
-    /// This approach reduces memory consumption by avoiding duplication of line and column numbers for frequently used instructions
-    positions: HashMap<usize, Position>,
+    pub positions: Positions,
 }
 
 /// Encodes a u16 value in little-endian byte order

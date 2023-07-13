@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fmt;
 use std::fs::File;
 use std::io::Read;
@@ -9,6 +10,10 @@ static mut PATHS: Vec<Arc<str>> = vec![];
 
 /// A tuple containing a column and line numbers: (column, line)
 pub type Position = (usize, usize);
+
+/// Line and column numbers for reporting errors later
+/// This approach reduces memory consumption by avoiding duplication of line and column numbers for frequently used instructions
+pub type Positions = HashMap<usize, Position>;
 
 /// Error types
 #[derive(Debug)]
