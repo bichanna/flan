@@ -1,6 +1,7 @@
 pub mod opcode;
 pub mod util;
 
+use std::cmp::Ordering;
 use std::sync::Arc;
 use std::vec::IntoIter;
 
@@ -426,11 +427,15 @@ impl Compiler {
 
                 // adding pop instructions needed according to the number of the local variables in
                 // this block
-                if pops_needed > 1 {
-                    self.mem_slice.write_opcode(OpCode::PopExceptLastN, pos);
-                    self.mem_slice.write_byte(pops_needed as u8, pos);
-                } else if pops_needed == 1 {
-                    self.mem_slice.write_opcode(OpCode::PopExceptLast, pos);
+                match pops_needed.cmp(&1) {
+                    Ordering::Greater => {
+                        self.mem_slice.write_opcode(OpCode::PopExceptLastN, pos);
+                        self.mem_slice.write_byte(pops_needed as u8, pos);
+                    }
+                    Ordering::Equal => {
+                        self.mem_slice.write_opcode(OpCode::PopExceptLast, pos);
+                    }
+                    Ordering::Less => {} // do nothing
                 }
 
                 // removing all local variables in this block
