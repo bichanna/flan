@@ -9,7 +9,7 @@ pub enum OpCode {
     Sub,
     Mult,
     Div,
-    Mod,
+    Rem,
     Pop,
     PopN,
     InitList,

@@ -96,7 +96,7 @@ impl Compiler {
                     TokenType::Minus => self.mem_slice.write_opcode(OpCode::Sub, pos),
                     TokenType::Mult => self.mem_slice.write_opcode(OpCode::Mult, pos),
                     TokenType::Div => self.mem_slice.write_opcode(OpCode::Div, pos),
-                    TokenType::Mod => self.mem_slice.write_opcode(OpCode::Mod, pos),
+                    TokenType::Mod => self.mem_slice.write_opcode(OpCode::Rem, pos),
                     TokenType::DoubleEq => self.mem_slice.write_opcode(OpCode::Equal, pos),
                     TokenType::BangEq => self.mem_slice.write_opcode(OpCode::NotEqual, pos),
                     TokenType::GT => self.mem_slice.write_opcode(OpCode::GT, pos),
@@ -621,3 +621,6 @@ impl Compiler {
         self.scope_depth -= 1;
     }
 }
+
+#[cfg(test)]
+mod tests {}
