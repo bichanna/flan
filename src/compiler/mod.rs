@@ -494,7 +494,43 @@ impl Compiler {
                 self.compile_obj(keys, vals, pos, compile_expr);
             }
 
-            _ => todo!(),
+            Expr::Get { inst, attr, pos } => {
+                self.compile_expr(*inst);
+                self.compile_expr(*attr);
+                self.mem_slice.write_opcode(OpCode::Get, pos);
+            }
+
+            Expr::Set {
+                inst,
+                attr,
+                val,
+                pos,
+            } => {
+                self.compile_expr(*inst);
+                self.compile_expr(*attr);
+                self.compile_expr(*val);
+                self.mem_slice.write_opcode(OpCode::Set, pos);
+            }
+
+            Expr::Func {
+                name,
+                params,
+                rest,
+                body,
+                pos,
+            } => todo!(),
+
+            Expr::Import { exprs, pos } => todo!(),
+
+            Expr::Panic { expr, pos } => todo!(),
+
+            Expr::Recover {
+                recoveree,
+                body,
+                pos,
+            } => todo!(),
+
+            Expr::Call { callee, args, pos } => todo!(),
         }
     }
 
