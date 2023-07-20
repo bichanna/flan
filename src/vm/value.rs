@@ -6,6 +6,8 @@ use std::sync::Arc;
 
 use dyn_clone::{clone_trait_object, DynClone};
 
+pub type Value = Box<dyn ValueTrait>;
+
 /// Every value in Flan implements this trait
 pub trait ValueTrait: fmt::Display + DynClone {
     fn truthy(&self) -> bool;
@@ -27,8 +29,8 @@ macro_rules! force_as_t {
     };
 }
 
-impl ops::Add for Box<dyn ValueTrait> {
-    type Output = Result<Box<dyn ValueTrait>, String>;
+impl ops::Add for Value {
+    type Output = Result<Value, String>;
 
     /// Tries to add two values together
     fn add(self, rhs: Self) -> Self::Output {
@@ -64,8 +66,8 @@ impl ops::Add for Box<dyn ValueTrait> {
     }
 }
 
-impl ops::Sub for Box<dyn ValueTrait> {
-    type Output = Result<Box<dyn ValueTrait>, String>;
+impl ops::Sub for Value {
+    type Output = Result<Value, String>;
 
     /// Tries to subtract `rhs` from `self`
     fn sub(self, rhs: Self) -> Self::Output {
@@ -95,8 +97,8 @@ impl ops::Sub for Box<dyn ValueTrait> {
     }
 }
 
-impl ops::Mul for Box<dyn ValueTrait> {
-    type Output = Result<Box<dyn ValueTrait>, String>;
+impl ops::Mul for Value {
+    type Output = Result<Value, String>;
 
     /// Tries to multiply `self` by `rhs`
     fn mul(self, rhs: Self) -> Self::Output {
@@ -136,8 +138,8 @@ impl ops::Mul for Box<dyn ValueTrait> {
     }
 }
 
-impl ops::Div for Box<dyn ValueTrait> {
-    type Output = Result<Box<dyn ValueTrait>, String>;
+impl ops::Div for Value {
+    type Output = Result<Value, String>;
 
     /// Tries to divide `self` by `rhs`
     fn div(self, rhs: Self) -> Self::Output {
@@ -175,8 +177,8 @@ impl ops::Div for Box<dyn ValueTrait> {
     }
 }
 
-impl ops::Rem for Box<dyn ValueTrait> {
-    type Output = Result<Box<dyn ValueTrait>, String>;
+impl ops::Rem for Value {
+    type Output = Result<Value, String>;
 
     fn rem(self, rhs: Self) -> Self::Output {
         if let Some(a) = as_t!(self, FInt) {
@@ -207,6 +209,32 @@ impl ops::Rem for Box<dyn ValueTrait> {
                 self.type_str(),
                 rhs.type_str(),
             ))
+        }
+    }
+}
+
+impl ops::Neg for Value {
+    type Output = Result<Value, String>;
+
+    fn neg(self) -> Self::Output {
+        if let Some(a) = as_t!(self, FInt) {
+            Ok(Box::new(FInt(-a.0)))
+        } else if let Some(a) = as_t!(self, FFloat) {
+            Ok(Box::new(FFloat(-a.0)))
+        } else {
+            Err(format!("cannot negate {}", self.type_str()))
+        }
+    }
+}
+
+impl ops::Not for Value {
+    type Output = Result<Value, String>;
+
+    fn not(self) -> Self::Output {
+        if let Some(a) = as_t!(self, FBool) {
+            Ok(Box::new(FBool(!a.0)))
+        } else {
+            Err(format!("cannot negate {} as boolean", self.type_str()))
         }
     }
 }

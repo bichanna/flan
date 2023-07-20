@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use super::opcode::OpCode;
 use crate::error::{Position, Positions};
-use crate::vm::value::ValueTrait;
+use crate::vm::value::Value;
 
 use crate::num_traits::ToPrimitive;
 
@@ -11,7 +11,7 @@ pub struct MemorySlice {
     /// The compiled bytecode
     pub bytecode: Vec<u8>,
     /// For simplicity's sake, almost all constants are stored in here
-    pub constants: Vec<Box<dyn ValueTrait>>,
+    pub constants: Vec<Value>,
     /// Line and column numbers for reporting errors later
     pub positions: Positions,
 }
@@ -39,7 +39,7 @@ impl MemorySlice {
     }
 
     /// Adds a constant to the constant pool and adds the index to the bytecode list
-    pub fn add_const(&mut self, val: Box<dyn ValueTrait>, pos: Position) {
+    pub fn add_const(&mut self, val: Value, pos: Position) {
         self.constants.push(val);
         // check whether to LoadLongConst or or just LoadConst
         if self.constants.len() > u8::MAX as usize {
