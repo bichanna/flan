@@ -36,23 +36,23 @@ impl ops::Add for Value {
     fn add(self, rhs: Self) -> Self::Output {
         if let Some(a) = as_t!(self, FInt) {
             if let Some(b) = as_t!(rhs, FInt) {
-                Ok(Box::new(FInt(a.0 + b.0)))
+                Ok(FInt::new(a.0 + b.0))
             } else if let Some(b) = as_t!(rhs, FFloat) {
-                Ok(Box::new(FFloat(a.0 as f64 + b.0)))
+                Ok(FFloat::new(a.0 as f64 + b.0))
             } else {
                 Err(format!("cannot add int and {}", rhs.type_str()))
             }
         } else if let Some(a) = as_t!(self, FFloat) {
             if let Some(b) = as_t!(rhs, FFloat) {
-                Ok(Box::new(FFloat(a.0 + b.0)))
+                Ok(FFloat::new(a.0 + b.0))
             } else if let Some(b) = as_t!(rhs, FInt) {
-                Ok(Box::new(FFloat(a.0 + b.0 as f64)))
+                Ok(FFloat::new(a.0 + b.0 as f64))
             } else {
                 Err(format!("cannot add float and {}", rhs.type_str()))
             }
         } else if let Some(a) = as_t!(self, FStr) {
             if let Some(b) = as_t!(rhs, FStr) {
-                Ok(Box::new(FStr(a.0.clone() + b.0.as_str())))
+                Ok(FStr::new(a.0.clone() + b.0.as_str()))
             } else {
                 Err(format!("cannot add str and {}", rhs.type_str()))
             }
@@ -73,7 +73,7 @@ impl ops::Sub for Value {
     fn sub(self, rhs: Self) -> Self::Output {
         if let Some(a) = as_t!(self, FInt) {
             if let Some(b) = as_t!(rhs, FInt) {
-                Ok(Box::new(FInt(a.0 - b.0)))
+                Ok(FInt::new(a.0 - b.0))
             } else if let Some(b) = as_t!(rhs, FFloat) {
                 Ok(Box::new(FFloat(a.0 as f64 - b.0)))
             } else {
@@ -81,9 +81,9 @@ impl ops::Sub for Value {
             }
         } else if let Some(a) = as_t!(self, FFloat) {
             if let Some(b) = as_t!(rhs, FFloat) {
-                Ok(Box::new(FFloat(a.0 - b.0)))
+                Ok(FFloat::new(a.0 - b.0))
             } else if let Some(b) = as_t!(rhs, FInt) {
-                Ok(Box::new(FFloat(a.0 - b.0 as f64)))
+                Ok(FFloat::new(a.0 - b.0 as f64))
             } else {
                 Err(format!("cannot subtract {} from float", rhs.type_str()))
             }
@@ -104,17 +104,17 @@ impl ops::Mul for Value {
     fn mul(self, rhs: Self) -> Self::Output {
         if let Some(a) = as_t!(self, FInt) {
             if let Some(b) = as_t!(rhs, FInt) {
-                Ok(Box::new(FInt(a.0 * b.0)))
+                Ok(FInt::new(a.0 * b.0))
             } else if let Some(b) = as_t!(rhs, FFloat) {
-                Ok(Box::new(FFloat(a.0 as f64 * b.0)))
+                Ok(FFloat::new(a.0 as f64 * b.0))
             } else {
                 Err(format!("cannot multiply int by {}", rhs.type_str()))
             }
         } else if let Some(a) = as_t!(self, FFloat) {
             if let Some(b) = as_t!(rhs, FFloat) {
-                Ok(Box::new(FFloat(a.0 * b.0)))
+                Ok(FFloat::new(a.0 * b.0))
             } else if let Some(b) = as_t!(rhs, FInt) {
-                Ok(Box::new(FFloat(a.0 * b.0 as f64)))
+                Ok(FFloat::new(a.0 * b.0 as f64))
             } else {
                 Err(format!("cannot multiply float by {}", rhs.type_str()))
             }
@@ -124,7 +124,7 @@ impl ops::Mul for Value {
                 for _ in 0..b.0 {
                     val.push_str(a.0.clone().as_str());
                 }
-                Ok(Box::new(FStr(val)))
+                Ok(FStr::new(val))
             } else {
                 Err(format!("cannot multiply str by {}", rhs.type_str()))
             }
@@ -148,22 +148,22 @@ impl ops::Div for Value {
                 if b.0 == 0 {
                     Err("cannot divide by 0".to_string())
                 } else {
-                    Ok(Box::new(FInt(a.0 / b.0)))
+                    Ok(FInt::new(a.0 / b.0))
                 }
             } else if let Some(b) = as_t!(rhs, FFloat) {
                 if b.0 == 0.0 {
                     Err("cannot divide by 0".to_string())
                 } else {
-                    Ok(Box::new(FFloat(a.0 as f64 / b.0)))
+                    Ok(FFloat::new(a.0 as f64 / b.0))
                 }
             } else {
                 Err(format!("cannot divide int by {}", rhs.type_str()))
             }
         } else if let Some(a) = as_t!(self, FFloat) {
             if let Some(b) = as_t!(rhs, FFloat) {
-                Ok(Box::new(FFloat(a.0 - b.0)))
+                Ok(FFloat::new(a.0 - b.0))
             } else if let Some(b) = as_t!(rhs, FInt) {
-                Ok(Box::new(FFloat(a.0 - b.0 as f64)))
+                Ok(FFloat::new(a.0 - b.0 as f64))
             } else {
                 Err(format!("cannot divide float by {}", rhs.type_str()))
             }
@@ -183,9 +183,9 @@ impl ops::Rem for Value {
     fn rem(self, rhs: Self) -> Self::Output {
         if let Some(a) = as_t!(self, FInt) {
             if let Some(b) = as_t!(rhs, FInt) {
-                Ok(Box::new(FInt(a.0 % b.0)))
+                Ok(FInt::new(a.0 % b.0))
             } else if let Some(b) = as_t!(rhs, FFloat) {
-                Ok(Box::new(FFloat(a.0 as f64 % b.0)))
+                Ok(FFloat::new(a.0 as f64 % b.0))
             } else {
                 Err(format!(
                     "cannot modulus operation with int and {}",
@@ -194,9 +194,9 @@ impl ops::Rem for Value {
             }
         } else if let Some(a) = as_t!(self, FFloat) {
             if let Some(b) = as_t!(rhs, FFloat) {
-                Ok(Box::new(FFloat(a.0 - b.0)))
+                Ok(FFloat::new(a.0 - b.0))
             } else if let Some(b) = as_t!(rhs, FInt) {
-                Ok(Box::new(FFloat(a.0 - b.0 as f64)))
+                Ok(FFloat::new(a.0 - b.0 as f64))
             } else {
                 Err(format!(
                     "cannot modulus operation with float by {}",
@@ -218,9 +218,9 @@ impl ops::Neg for Value {
 
     fn neg(self) -> Self::Output {
         if let Some(a) = as_t!(self, FInt) {
-            Ok(Box::new(FInt(-a.0)))
+            Ok(FInt::new(-a.0))
         } else if let Some(a) = as_t!(self, FFloat) {
-            Ok(Box::new(FFloat(-a.0)))
+            Ok(FFloat::new(-a.0))
         } else {
             Err(format!("cannot negate {}", self.type_str()))
         }
@@ -232,7 +232,7 @@ impl ops::Not for Value {
 
     fn not(self) -> Self::Output {
         if let Some(a) = as_t!(self, FBool) {
-            Ok(Box::new(FBool(!a.0)))
+            Ok(FBool::new(!a.0))
         } else {
             Err(format!("cannot negate {} as boolean", self.type_str()))
         }
@@ -259,6 +259,11 @@ impl fmt::Display for FEmpty {
         f.write_str("_")
     }
 }
+impl FEmpty {
+    pub fn new() -> Value {
+        Box::new(FEmpty)
+    }
+}
 
 #[derive(Clone)]
 pub struct FStr(pub String);
@@ -278,6 +283,11 @@ impl ValueTrait for FStr {
 impl fmt::Display for FStr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&self.0)
+    }
+}
+impl FStr {
+    pub fn new(val: String) -> Value {
+        Box::new(FStr(val))
     }
 }
 
@@ -301,6 +311,11 @@ impl fmt::Display for FAtom {
         f.write_str(&format!(":{}", self.0))
     }
 }
+impl FAtom {
+    pub fn new(val: Arc<str>) -> Value {
+        Box::new(FAtom(val))
+    }
+}
 
 #[derive(Clone)]
 pub struct FVar(pub Arc<str>);
@@ -320,6 +335,11 @@ impl ValueTrait for FVar {
 impl fmt::Display for FVar {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&format!("v:{}", self.0))
+    }
+}
+impl FVar {
+    pub fn new(val: Arc<str>) -> Value {
+        Box::new(FVar(val))
     }
 }
 
@@ -343,6 +363,11 @@ impl fmt::Display for FInt {
         f.write_str(&format!("{}", self.0))
     }
 }
+impl FInt {
+    pub fn new(val: i64) -> Value {
+        Box::new(FInt(val))
+    }
+}
 
 #[derive(Clone)]
 pub struct FFloat(pub f64);
@@ -362,6 +387,11 @@ impl ValueTrait for FFloat {
 impl fmt::Display for FFloat {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&format!("{}", self.0))
+    }
+}
+impl FFloat {
+    pub fn new(val: f64) -> Value {
+        Box::new(FFloat(val))
     }
 }
 
@@ -385,9 +415,14 @@ impl fmt::Display for FBool {
         f.write_str(&format!("{}", self.0))
     }
 }
+impl FBool {
+    pub fn new(val: bool) -> Value {
+        Box::new(FBool(val))
+    }
+}
 
 #[derive(Clone)]
-pub struct FList(pub Vec<Box<dyn ValueTrait>>);
+pub struct FList(pub Vec<Value>);
 impl ValueTrait for FList {
     fn truthy(&self) -> bool {
         !self.0.is_empty()
@@ -413,9 +448,14 @@ impl fmt::Display for FList {
         f.write_str(&format!("[{}]", list))
     }
 }
+impl FList {
+    pub fn new(list: Vec<Value>) -> Value {
+        Box::new(FList(list))
+    }
+}
 
 #[derive(Clone)]
-pub struct FObj(pub HashMap<Arc<str>, Box<dyn ValueTrait>>);
+pub struct FObj(pub HashMap<Arc<str>, Value>);
 impl ValueTrait for FObj {
     fn truthy(&self) -> bool {
         !self.0.is_empty()
@@ -443,5 +483,10 @@ impl fmt::Display for FObj {
         string.push_str(&obj);
         string.push('}');
         f.write_str(&obj)
+    }
+}
+impl FObj {
+    pub fn new(obj: HashMap<Arc<str>, Value>) -> Value {
+        Box::new(FObj(obj))
     }
 }

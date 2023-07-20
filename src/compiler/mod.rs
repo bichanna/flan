@@ -141,11 +141,11 @@ impl Compiler {
                         self.mem_slice.write_opcode(OpCode::GetLocal, pos);
                         self.mem_slice.write_byte(result as u8, pos);
                     } else {
-                        self.mem_slice.add_const(Box::new(FVar(name)), pos);
+                        self.mem_slice.add_const(FVar::new(name), pos);
                         self.mem_slice.write_opcode(OpCode::GetGlobal, pos);
                     }
                 } else {
-                    self.mem_slice.add_const(Box::new(FVar(name)), pos);
+                    self.mem_slice.add_const(FVar::new(name), pos);
                     self.mem_slice.write_opcode(OpCode::GetGlobal, pos);
                 }
             }
@@ -161,7 +161,7 @@ impl Compiler {
                     fn compile(c: &mut Compiler, expr: &Expr) {
                         match expr {
                             Expr::Var { name, pos } => {
-                                c.mem_slice.add_const(Box::new(FVar(name.clone())), *pos);
+                                c.mem_slice.add_const(FVar::new(name.clone()), *pos);
                             }
                             Expr::Empty(pos) => {
                                 c.mem_slice.write_opcode(OpCode::LoadEmpty, *pos);
@@ -172,7 +172,7 @@ impl Compiler {
 
                     match *left {
                         Expr::Var { name, pos } => {
-                            self.mem_slice.add_const(Box::new(FVar(name)), pos);
+                            self.mem_slice.add_const(FVar::new(name), pos);
                         }
                         Expr::List { elems, pos } => self.compile_list(elems, pos, compile),
                         Expr::Obj { keys, vals, pos } => self.compile_obj(keys, vals, pos, compile),
@@ -197,7 +197,7 @@ impl Compiler {
                         fn compile(c: &mut Compiler, expr: &Expr) {
                             match expr {
                                 Expr::Var { name, pos } => {
-                                    c.mem_slice.add_const(Box::new(FVar(name.clone())), *pos);
+                                    c.mem_slice.add_const(FVar::new(name.clone()), *pos);
                                     c.add_local(name.clone());
                                 }
                                 Expr::Empty(pos) => {
@@ -209,7 +209,7 @@ impl Compiler {
 
                         match *left {
                             Expr::Var { name, pos } => {
-                                self.mem_slice.add_const(Box::new(FVar(name.clone())), pos);
+                                self.mem_slice.add_const(FVar::new(name.clone()), pos);
                                 self.add_local(name);
                             }
                             Expr::List { elems, pos } => {
@@ -271,8 +271,7 @@ impl Compiler {
 
                                 // compiling the keys
                                 keys.iter().for_each(|k| {
-                                    self.mem_slice
-                                        .add_const(Box::new(FVar(token_to_str(k))), k.pos);
+                                    self.mem_slice.add_const(FVar::new(token_to_str(k)), k.pos);
                                 });
                                 // writing the opcode
                                 self.mem_slice.write_opcode(OpCode::SetLocalObj, pos);
@@ -379,7 +378,7 @@ impl Compiler {
                     if let Some(els) = els {
                         self.compile_expr(*els);
                     } else {
-                        self.mem_slice.add_const(self.error_atom(), pos);
+                        self.mem_slice.add_const(FAtom::new(Arc::from("nil")), pos);
                     }
                 );
             }
@@ -455,19 +454,19 @@ impl Compiler {
                 self.end_scope();
             }
 
-            Expr::Str { val, pos } => self.mem_slice.add_const(Box::new(FStr(val)), pos),
+            Expr::Str { val, pos } => self.mem_slice.add_const(FStr::new(val), pos),
 
-            Expr::Atom { val, pos } => self.mem_slice.add_const(Box::new(FAtom(val)), pos),
+            Expr::Atom { val, pos } => self.mem_slice.add_const(FAtom::new(val), pos),
 
             Expr::Int { val, pos } => match val {
                 0 => self.mem_slice.write_opcode(OpCode::LoadInt0, pos),
                 1 => self.mem_slice.write_opcode(OpCode::LoadInt1, pos),
                 2 => self.mem_slice.write_opcode(OpCode::LoadInt2, pos),
                 3 => self.mem_slice.write_opcode(OpCode::LoadInt3, pos),
-                _ => self.mem_slice.add_const(Box::new(FInt(val)), pos),
+                _ => self.mem_slice.add_const(FInt::new(val), pos),
             },
 
-            Expr::Float { val, pos } => self.mem_slice.add_const(Box::new(FFloat(val)), pos),
+            Expr::Float { val, pos } => self.mem_slice.add_const(FFloat::new(val), pos),
 
             Expr::Bool { val, pos } => self.mem_slice.write_opcode(
                 if val {
@@ -532,10 +531,6 @@ impl Compiler {
 
             Expr::Call { callee, args, pos } => todo!(),
         }
-    }
-
-    fn error_atom(&self) -> Box<FAtom> {
-        Box::new(FAtom(Arc::from("err")))
     }
 
     /// Compiles into a list
