@@ -304,7 +304,7 @@ impl<'a> Lexer<'a> {
             self.current_position(),
             self.path_idx,
         )
-        .report(1);
+        .report(65);
     }
 }
 pub fn test_tokenize(src: &str) -> Vec<Token> {

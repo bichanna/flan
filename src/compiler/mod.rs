@@ -646,7 +646,7 @@ impl Compiler {
 
     /// Reports an error to the user with the given message
     fn report_err(&self, msg: String, pos: Position) {
-        Stack::new(ErrType::Syntax, msg, pos, self.path_idx).report(1);
+        Stack::new(ErrType::Syntax, msg, pos, self.path_idx).report(65);
     }
 
     fn begin_scope(&mut self) {

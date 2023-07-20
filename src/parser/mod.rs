@@ -886,7 +886,7 @@ impl Parser {
 
     /// Reports an error with the given message and the position
     fn report_err_with_pos(&self, msg: &str, pos: Position) {
-        Stack::new(ErrType::Syntax, msg.to_string(), pos, self.path_idx).report(1);
+        Stack::new(ErrType::Syntax, msg.to_string(), pos, self.path_idx).report(65);
     }
 
     /// Reports an error with the given message and the current token
