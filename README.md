@@ -28,7 +28,7 @@ fn fizzBuzz(n) = where [n % 3, n % 5] match
     case [0, 0] -> "fizzbuzz"
     case [0, _] -> "fizz"
     case [_, 0] -> "buzz"
-    _ -> str(n)
+    case _ -> str(n)
 
 range(101) |> each() <~ fizzBuzz(it) |> println()
 ```
