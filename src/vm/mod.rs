@@ -185,7 +185,81 @@ impl VM {
                     }
                 }
 
-                OpCode::Equal => {}
+                OpCode::Equal => {
+                    let right = self.pop();
+                    let left = self.pop();
+                    self.push(FBool::new(left.equal(&right)));
+                }
+
+                OpCode::NotEqual => {
+                    let right = self.pop();
+                    let left = self.pop();
+                    self.push(FBool::new(!left.equal(&right)));
+                }
+
+                OpCode::GT => {
+                    let right = self.pop();
+                    let left = self.pop();
+                    self.push(FBool::new(left.greater_than(&right)));
+                }
+
+                OpCode::LT => {
+                    let right = self.pop();
+                    let left = self.pop();
+                    self.push(FBool::new(left.less_than(&right)));
+                }
+
+                OpCode::GTEq => {
+                    let right = self.pop();
+                    let left = self.pop();
+                    self.push(FBool::new(left.greater_than_or_eq(&right)));
+                }
+
+                OpCode::LTEq => {
+                    let right = self.pop();
+                    let left = self.pop();
+                    self.push(FBool::new(left.less_than_or_eq(&right)));
+                }
+
+                OpCode::And => {
+                    let right = self.pop();
+                    let left = self.pop();
+                    self.push(FBool::new(left.truthy() && right.truthy()));
+                }
+
+                OpCode::Or => {
+                    let right = self.pop();
+                    let left = self.pop();
+                    self.push(FBool::new(left.truthy() || right.truthy()));
+                }
+
+                OpCode::LoadInt0 => {
+                    self.push(FInt::new(0));
+                }
+
+                OpCode::LoadInt1 => {
+                    self.push(FInt::new(1));
+                }
+
+                OpCode::LoadInt2 => {
+                    self.push(FInt::new(2));
+                }
+
+                OpCode::LoadInt3 => {
+                    self.push(FInt::new(3));
+                }
+
+                OpCode::LoadTrue => {
+                    self.push(FBool::new(true));
+                }
+
+                OpCode::LoadFalse => {
+                    self.push(FBool::new(false));
+                }
+
+                OpCode::LoadEmpty => {
+                    self.push(FEmpty::new());
+                }
 
                 _ => {}
             }
