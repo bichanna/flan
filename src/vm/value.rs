@@ -13,16 +13,19 @@ pub trait ValueTrait: fmt::Display + DynClone {
     fn truthy(&self) -> bool;
     fn as_any(&self) -> &dyn Any;
     fn type_str(&self) -> String;
+    fn equal(&self, other: &Value) -> bool;
 }
 
 clone_trait_object!(ValueTrait);
 
+#[macro_export]
 macro_rules! as_t {
     ($val: expr, $type: ty) => {
         $val.as_any().downcast_ref::<$type>()
     };
 }
 
+#[macro_export]
 macro_rules! force_as_t {
     ($val: expr, $type: ty) => {
         as_t($val, $type).unwrap()
@@ -253,6 +256,10 @@ impl ValueTrait for FEmpty {
     fn type_str(&self) -> String {
         "_".to_string()
     }
+
+    fn equal(&self, _: &Value) -> bool {
+        true
+    }
 }
 impl fmt::Display for FEmpty {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -278,6 +285,16 @@ impl ValueTrait for FStr {
 
     fn type_str(&self) -> String {
         "str".to_string()
+    }
+
+    fn equal(&self, other: &Value) -> bool {
+        if let Some(_) = as_t!(other, FEmpty) {
+            true
+        } else if let Some(other) = as_t!(other, FStr) {
+            other.0 == self.0
+        } else {
+            false
+        }
     }
 }
 impl fmt::Display for FStr {
@@ -305,6 +322,16 @@ impl ValueTrait for FAtom {
     fn type_str(&self) -> String {
         "atom".to_string()
     }
+
+    fn equal(&self, other: &Value) -> bool {
+        if let Some(_) = as_t!(other, FEmpty) {
+            true
+        } else if let Some(other) = as_t!(other, FAtom) {
+            other.0 == self.0
+        } else {
+            false
+        }
+    }
 }
 impl fmt::Display for FAtom {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -330,6 +357,16 @@ impl ValueTrait for FVar {
 
     fn type_str(&self) -> String {
         "var".to_string()
+    }
+
+    fn equal(&self, other: &Value) -> bool {
+        if let Some(_) = as_t!(other, FEmpty) {
+            true
+        } else if let Some(other) = as_t!(other, FVar) {
+            other.0 == self.0
+        } else {
+            false
+        }
     }
 }
 impl fmt::Display for FVar {
@@ -357,6 +394,18 @@ impl ValueTrait for FInt {
     fn type_str(&self) -> String {
         "int".to_string()
     }
+
+    fn equal(&self, other: &Value) -> bool {
+        if let Some(_) = as_t!(other, FEmpty) {
+            true
+        } else if let Some(other) = as_t!(other, FInt) {
+            other.0 == self.0
+        } else if let Some(other) = as_t!(other, FFloat) {
+            self.0 as f64 == other.0
+        } else {
+            false
+        }
+    }
 }
 impl fmt::Display for FInt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -382,6 +431,18 @@ impl ValueTrait for FFloat {
 
     fn type_str(&self) -> String {
         "float".to_string()
+    }
+
+    fn equal(&self, other: &Value) -> bool {
+        if let Some(_) = as_t!(other, FEmpty) {
+            true
+        } else if let Some(other) = as_t!(other, FInt) {
+            other.0 as f64 == self.0
+        } else if let Some(other) = as_t!(other, FFloat) {
+            self.0 == other.0
+        } else {
+            false
+        }
     }
 }
 impl fmt::Display for FFloat {
@@ -409,6 +470,16 @@ impl ValueTrait for FBool {
     fn type_str(&self) -> String {
         "bool".to_string()
     }
+
+    fn equal(&self, other: &Value) -> bool {
+        if let Some(_) = as_t!(other, FEmpty) {
+            true
+        } else if let Some(other) = as_t!(other, FBool) {
+            other.0 == self.0
+        } else {
+            false
+        }
+    }
 }
 impl fmt::Display for FBool {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -434,6 +505,23 @@ impl ValueTrait for FList {
 
     fn type_str(&self) -> String {
         "list".to_string()
+    }
+
+    fn equal(&self, other: &Value) -> bool {
+        if let Some(_) = as_t!(other, FEmpty) {
+            true
+        } else if let Some(other) = as_t!(other, FList) {
+            let mut is_equal = true;
+            for (a, b) in self.0.iter().zip(other.0.iter()) {
+                if !a.equal(b) {
+                    is_equal = false;
+                    break;
+                }
+            }
+            is_equal
+        } else {
+            false
+        }
     }
 }
 impl fmt::Display for FList {
@@ -467,6 +555,23 @@ impl ValueTrait for FObj {
 
     fn type_str(&self) -> String {
         "obj".to_string()
+    }
+
+    fn equal(&self, other: &Value) -> bool {
+        if let Some(_) = as_t!(other, FEmpty) {
+            true
+        } else if let Some(other) = as_t!(other, FObj) {
+            let mut is_equal = true;
+            for ((a_key, a_val), (b_key, b_val)) in self.0.iter().zip(other.0.iter()) {
+                if a_key != b_key && !a_val.equal(b_val) {
+                    is_equal = false;
+                    break;
+                }
+            }
+            is_equal
+        } else {
+            false
+        }
     }
 }
 impl fmt::Display for FObj {
