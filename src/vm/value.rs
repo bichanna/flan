@@ -14,6 +14,10 @@ pub trait ValueTrait: fmt::Display + DynClone {
     fn as_any(&self) -> &dyn Any;
     fn type_str(&self) -> String;
     fn equal(&self, other: &Value) -> bool;
+    fn less_than(&self, other: &Value) -> bool;
+    fn greater_than(&self, other: &Value) -> bool;
+    fn less_than_or_eq(&self, other: &Value) -> bool;
+    fn greater_than_or_eq(&self, other: &Value) -> bool;
 }
 
 clone_trait_object!(ValueTrait);
@@ -260,6 +264,22 @@ impl ValueTrait for FEmpty {
     fn equal(&self, _: &Value) -> bool {
         true
     }
+
+    fn less_than(&self, _: &Value) -> bool {
+        true
+    }
+
+    fn greater_than(&self, _: &Value) -> bool {
+        true
+    }
+
+    fn less_than_or_eq(&self, _: &Value) -> bool {
+        true
+    }
+
+    fn greater_than_or_eq(&self, _: &Value) -> bool {
+        true
+    }
 }
 impl fmt::Display for FEmpty {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -288,10 +308,50 @@ impl ValueTrait for FStr {
     }
 
     fn equal(&self, other: &Value) -> bool {
-        if let Some(_) = as_t!(other, FEmpty) {
+        if as_t!(other, FEmpty).is_some() {
             true
         } else if let Some(other) = as_t!(other, FStr) {
             other.0 == self.0
+        } else {
+            false
+        }
+    }
+
+    fn less_than(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FStr) {
+            self.0 < other.0
+        } else {
+            false
+        }
+    }
+
+    fn greater_than(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FStr) {
+            self.0 > other.0
+        } else {
+            false
+        }
+    }
+
+    fn less_than_or_eq(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FStr) {
+            self.0 <= other.0
+        } else {
+            false
+        }
+    }
+
+    fn greater_than_or_eq(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FStr) {
+            self.0 >= other.0
         } else {
             false
         }
@@ -324,10 +384,50 @@ impl ValueTrait for FAtom {
     }
 
     fn equal(&self, other: &Value) -> bool {
-        if let Some(_) = as_t!(other, FEmpty) {
+        if as_t!(other, FEmpty).is_some() {
             true
         } else if let Some(other) = as_t!(other, FAtom) {
             other.0 == self.0
+        } else {
+            false
+        }
+    }
+
+    fn less_than(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FAtom) {
+            other.0 < self.0
+        } else {
+            false
+        }
+    }
+
+    fn greater_than(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FAtom) {
+            other.0 > self.0
+        } else {
+            false
+        }
+    }
+
+    fn less_than_or_eq(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FAtom) {
+            other.0 >= self.0
+        } else {
+            false
+        }
+    }
+
+    fn greater_than_or_eq(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FAtom) {
+            other.0 <= self.0
         } else {
             false
         }
@@ -360,10 +460,50 @@ impl ValueTrait for FVar {
     }
 
     fn equal(&self, other: &Value) -> bool {
-        if let Some(_) = as_t!(other, FEmpty) {
+        if as_t!(other, FEmpty).is_some() {
             true
         } else if let Some(other) = as_t!(other, FVar) {
             other.0 == self.0
+        } else {
+            false
+        }
+    }
+
+    fn less_than(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FVar) {
+            other.0 < self.0
+        } else {
+            false
+        }
+    }
+
+    fn greater_than(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FVar) {
+            other.0 > self.0
+        } else {
+            false
+        }
+    }
+
+    fn less_than_or_eq(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FVar) {
+            other.0 >= self.0
+        } else {
+            false
+        }
+    }
+
+    fn greater_than_or_eq(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FVar) {
+            other.0 <= self.0
         } else {
             false
         }
@@ -396,12 +536,60 @@ impl ValueTrait for FInt {
     }
 
     fn equal(&self, other: &Value) -> bool {
-        if let Some(_) = as_t!(other, FEmpty) {
+        if as_t!(other, FEmpty).is_some() {
             true
         } else if let Some(other) = as_t!(other, FInt) {
             other.0 == self.0
         } else if let Some(other) = as_t!(other, FFloat) {
             self.0 as f64 == other.0
+        } else {
+            false
+        }
+    }
+
+    fn less_than(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FInt) {
+            other.0 < self.0
+        } else if let Some(other) = as_t!(other, FFloat) {
+            (self.0 as f64) < other.0
+        } else {
+            false
+        }
+    }
+
+    fn greater_than(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FInt) {
+            other.0 > self.0
+        } else if let Some(other) = as_t!(other, FFloat) {
+            (self.0 as f64) > other.0
+        } else {
+            false
+        }
+    }
+
+    fn less_than_or_eq(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FInt) {
+            other.0 <= self.0
+        } else if let Some(other) = as_t!(other, FFloat) {
+            (self.0 as f64) <= other.0
+        } else {
+            false
+        }
+    }
+
+    fn greater_than_or_eq(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FInt) {
+            other.0 >= self.0
+        } else if let Some(other) = as_t!(other, FFloat) {
+            (self.0 as f64) >= other.0
         } else {
             false
         }
@@ -434,12 +622,60 @@ impl ValueTrait for FFloat {
     }
 
     fn equal(&self, other: &Value) -> bool {
-        if let Some(_) = as_t!(other, FEmpty) {
+        if as_t!(other, FEmpty).is_some() {
             true
         } else if let Some(other) = as_t!(other, FInt) {
             other.0 as f64 == self.0
         } else if let Some(other) = as_t!(other, FFloat) {
             self.0 == other.0
+        } else {
+            false
+        }
+    }
+
+    fn less_than(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FInt) {
+            (other.0 as f64) < self.0
+        } else if let Some(other) = as_t!(other, FFloat) {
+            self.0 < other.0
+        } else {
+            false
+        }
+    }
+
+    fn greater_than(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FInt) {
+            (other.0 as f64) > self.0
+        } else if let Some(other) = as_t!(other, FFloat) {
+            self.0 > other.0
+        } else {
+            false
+        }
+    }
+
+    fn less_than_or_eq(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FInt) {
+            (other.0 as f64) <= self.0
+        } else if let Some(other) = as_t!(other, FFloat) {
+            self.0 <= other.0
+        } else {
+            false
+        }
+    }
+
+    fn greater_than_or_eq(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FInt) {
+            (other.0 as f64) >= self.0
+        } else if let Some(other) = as_t!(other, FFloat) {
+            self.0 >= other.0
         } else {
             false
         }
@@ -472,10 +708,50 @@ impl ValueTrait for FBool {
     }
 
     fn equal(&self, other: &Value) -> bool {
-        if let Some(_) = as_t!(other, FEmpty) {
+        if as_t!(other, FEmpty).is_some() {
             true
         } else if let Some(other) = as_t!(other, FBool) {
             other.0 == self.0
+        } else {
+            false
+        }
+    }
+
+    fn less_than(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FBool) {
+            !other.0 & self.0
+        } else {
+            false
+        }
+    }
+
+    fn greater_than(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FBool) {
+            other.0 & !self.0
+        } else {
+            false
+        }
+    }
+
+    fn less_than_or_eq(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FBool) {
+            other.0 <= self.0
+        } else {
+            false
+        }
+    }
+
+    fn greater_than_or_eq(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FBool) {
+            other.0 >= self.0
         } else {
             false
         }
@@ -508,7 +784,7 @@ impl ValueTrait for FList {
     }
 
     fn equal(&self, other: &Value) -> bool {
-        if let Some(_) = as_t!(other, FEmpty) {
+        if as_t!(other, FEmpty).is_some() {
             true
         } else if let Some(other) = as_t!(other, FList) {
             let mut is_equal = true;
@@ -519,6 +795,46 @@ impl ValueTrait for FList {
                 }
             }
             is_equal
+        } else {
+            false
+        }
+    }
+
+    fn less_than(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FList) {
+            self.0.len() < other.0.len()
+        } else {
+            false
+        }
+    }
+
+    fn greater_than(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FList) {
+            self.0.len() > other.0.len()
+        } else {
+            false
+        }
+    }
+
+    fn less_than_or_eq(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FList) {
+            self.0.len() <= other.0.len()
+        } else {
+            false
+        }
+    }
+
+    fn greater_than_or_eq(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FList) {
+            self.0.len() >= other.0.len()
         } else {
             false
         }
@@ -558,7 +874,7 @@ impl ValueTrait for FObj {
     }
 
     fn equal(&self, other: &Value) -> bool {
-        if let Some(_) = as_t!(other, FEmpty) {
+        if as_t!(other, FEmpty).is_some() {
             true
         } else if let Some(other) = as_t!(other, FObj) {
             let mut is_equal = true;
@@ -569,6 +885,46 @@ impl ValueTrait for FObj {
                 }
             }
             is_equal
+        } else {
+            false
+        }
+    }
+
+    fn less_than(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FObj) {
+            self.0.len() < other.0.len()
+        } else {
+            false
+        }
+    }
+
+    fn greater_than(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FObj) {
+            self.0.len() > other.0.len()
+        } else {
+            false
+        }
+    }
+
+    fn less_than_or_eq(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FObj) {
+            self.0.len() <= other.0.len()
+        } else {
+            false
+        }
+    }
+
+    fn greater_than_or_eq(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FObj) {
+            self.0.len() >= other.0.len()
         } else {
             false
         }
