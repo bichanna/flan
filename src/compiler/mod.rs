@@ -10,6 +10,7 @@ use self::util::{to_little_endian, MemorySlice};
 use crate::error::{ErrType, Position, Stack};
 use crate::lexer::token::{Token, TokenType};
 use crate::parser::expr::{Expr, MatchBranch};
+use crate::parser::test_parse;
 use crate::util::PrevPeekable;
 use crate::vm::value::*;
 
@@ -44,7 +45,7 @@ struct Local {
     depth: usize,
 }
 
-struct Compiler {
+pub struct Compiler {
     /// The iterator over the parsed expressions
     exprs: PrevPeekable<IntoIter<Expr>>,
     /// The path of the source being compiled
@@ -76,7 +77,7 @@ impl Compiler {
     }
 
     fn _compile(&mut self) {
-        while self.exprs.prev().is_some() {
+        while self.exprs.next().is_some() {
             self.next_expr();
             self.compile_expr(self.current.clone());
             self.mem_slice.write_opcode(OpCode::Pop, (0, 0));
@@ -653,5 +654,30 @@ impl Compiler {
     }
 }
 
+pub fn test_compile(src: &str) -> MemorySlice {
+    let exprs = test_parse(src);
+    let mut exprs = PrevPeekable::new(exprs.into_iter());
+    let current = exprs.next().unwrap();
+    let mut compiler = Compiler {
+        exprs,
+        path_idx: 0,
+        locals: Vec::new(),
+        scope_depth: 0,
+        mem_slice: MemorySlice::new(10),
+        current,
+    };
+    compiler._compile();
+    compiler.mem_slice
+}
+
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use super::*;
+
+    #[test]
+    fn literals() {
+        let src = "1 2.34 :nil true false [1, :err] {name -> \"Nobu\"}";
+        let mem_slice = test_compile(src);
+        println!("{:?}", mem_slice.bytecode);
+    }
+}

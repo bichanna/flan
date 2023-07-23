@@ -10,7 +10,7 @@ use std::str::Chars;
 use std::sync::Arc;
 
 /// Tokenizes a source code
-struct Lexer<'a> {
+pub struct Lexer<'a> {
     /// The path index of the source being tokenized
     path_idx: usize,
     /// Tokens

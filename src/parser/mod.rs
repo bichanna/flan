@@ -3,12 +3,13 @@ use std::vec::IntoIter;
 
 use self::expr::{CallArg, CallArgType, Expr, MatchBranch};
 use crate::error::{ErrType, Position, Stack};
+use crate::lexer::test_tokenize;
 use crate::lexer::token::{Token, TokenType};
 use crate::util::PrevPeekable;
 
 pub mod expr;
 
-struct Parser {
+pub struct Parser {
     /// The tokens being parsed
     tokens: PrevPeekable<IntoIter<Token>>,
     /// The current token being parsed
@@ -900,133 +901,132 @@ impl Parser {
     }
 }
 
+pub fn test_parse(src: &str) -> Vec<Expr> {
+    let tokens = test_tokenize(src);
+    let mut tokens = PrevPeekable::new(tokens.into_iter());
+    let current_token = tokens.next();
+
+    // no tokens
+    if current_token.is_none() {
+        std::process::exit(0);
+    }
+
+    let mut parser = Parser {
+        current: current_token.unwrap(),
+        tokens,
+        path_idx: 0,
+        exprs: vec![],
+    };
+    parser._parse();
+    parser.exprs
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lexer::test_tokenize;
-
-    fn parse(src: &str) -> Vec<Expr> {
-        let tokens = test_tokenize(src);
-        let mut tokens = PrevPeekable::new(tokens.into_iter());
-        let current_token = tokens.next();
-
-        // no tokens
-        if current_token.is_none() {
-            std::process::exit(0);
-        }
-
-        let mut parser = Parser {
-            current: current_token.unwrap(),
-            tokens,
-            path_idx: 0,
-            exprs: vec![],
-        };
-        parser._parse();
-        parser.exprs
-    }
 
     #[test]
     fn math_expr() {
         let expr = "1 - 4 * (2 + 3)";
-        let exprs = parse(expr);
+        let exprs = test_parse(expr);
         // println!("{:#?}", exprs);
     }
 
     #[test]
     fn simple_primitives() {
         let expr = "true false 123 1.23 0xABC \"Hello, world\" :someAtom";
-        let exprs = parse(expr);
+        let exprs = test_parse(expr);
         // println!("{:#?}", exprs);
     }
 
     #[test]
     fn lists_and_objs() {
         let expr = "[1, 2, :null] {name->\"Nobu\", country->:jp}";
-        let exprs = parse(expr);
+        let exprs = test_parse(expr);
         // println!("{:#?}", exprs);
     }
 
     #[test]
     fn block_and_objs() {
         let expr = "{} {123} {age->17}";
-        let exprs = parse(expr);
+        let exprs = test_parse(expr);
         // println!("{:#?}", exprs);
     }
 
     #[test]
     fn set_and_identifier_objs() {
         let expr = "s{A, B, C} i{あ, い, エ}";
-        let exprs = parse(expr);
+        let exprs = test_parse(expr);
         // println!("{:#?}", exprs);
     }
 
     #[test]
     fn functions() {
         let expr = "fn foo(a, b, c+) = _ fn() = _";
-        let exprs = parse(expr);
+        let exprs = test_parse(expr);
         // println!("{:#?}", exprs);
     }
 
     #[test]
     fn match_expr() {
         let expr = "where name match case \"Nobu\" -> \"Cool!\" case _ -> \"Nice\"";
-        let exprs = parse(expr);
+        let exprs = test_parse(expr);
         // println!("{:#?}", exprs);
     }
 
     #[test]
     fn if_expr() {
         let expr = "if isCool then 1 else 0";
-        let exprs = parse(expr);
+        let exprs = test_parse(expr);
         // println!("{:#?}", exprs);
     }
 
     #[test]
     fn import_expr() {
         let expr = "import(\"std\", \"fmt\")";
-        let exprs = parse(expr);
+        let exprs = test_parse(expr);
         // println!("{:#?}", exprs);
     }
 
     #[test]
     fn function_call() {
         let expr = "someFunc(:abc, ...someList) anotherFunc() anotherrrrr([1, 2, 3])";
-        let exprs = parse(expr);
+        let exprs = test_parse(expr);
         // println!("{:#?}", exprs);
     }
 
     #[test]
     fn pipe_expr() {
         let expr = "someFunc() |> chained(\"hello\") <| 123";
-        let exprs = parse(expr);
+        let exprs = test_parse(expr);
         // println!("{:#?}", exprs);
     }
 
     #[test]
     fn implicit_param_callback_expr() {
         let expr = "[1, 2, 3] |> map() <~ println(it)";
-        let exprs = parse(expr);
+        let exprs = test_parse(expr);
         // println!("{:#?}", exprs);
     }
 
     #[test]
     fn callback_expr() {
         let expr = "[1, 2, 3] |> map() ~ (each) println(each)";
-        let exprs = parse(expr);
+        let exprs = test_parse(expr);
         // println!("{:#?}", exprs);
     }
 
     #[test]
     fn recover_expr() {
         let expr = "recover 1 / 0 -> println(\"recovered!\")";
-        let exprs = parse(expr);
+        let exprs = test_parse(expr);
         // println!("{:#?}", exprs);
     }
 
     #[test]
     fn panic_expr() {
         let expr = "panic \"Waaa something bad happened\"";
-        let exprs = parse(expr);
+        let exprs = test_parse(expr);
         // println!("{:#?}", exprs);
     }
 
@@ -1034,7 +1034,7 @@ mod tests {
     fn edge_case() {
         // TODO: hmm, how should i fix this?
         let expr = "var := 3 * (3 - 4) (1 + 3) |> someFunc()";
-        let exprs = parse(expr);
+        let exprs = test_parse(expr);
         // println!("{:#?}", exprs);
     }
 }
