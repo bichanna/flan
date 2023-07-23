@@ -54,7 +54,7 @@ impl<'a> Debug<'a> {
         } else {
             let pos = self.positions[&offset];
             let pos = format!("({}, {})", pos.0, pos.1);
-            print!("{:>8}", pos);
+            print!("{:>8} ", pos);
         }
 
         match FromPrimitive::from_u8(self.bytecode[offset]).unwrap() {

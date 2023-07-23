@@ -104,10 +104,10 @@ impl Compiler {
     }
 
     fn _compile(&mut self) {
-        while self.exprs.next().is_some() {
-            self.next_expr();
+        while self.exprs.current.is_some() {
             self.compile_expr(self.current.clone());
             self.mem_slice.write_opcode(OpCode::Pop, (0, 0));
+            self.next_expr();
         }
         self.mem_slice.write_opcode(OpCode::Return, (0, 0));
     }
@@ -640,6 +640,12 @@ impl Compiler {
                 self.mem_slice.add_const(Box::new(FVar(v)), pos)
             }
         });
+
+        // adding the object initialization opcode
+        self.mem_slice.write_opcode(OpCode::InitObj, pos);
+
+        // writing the length
+        self.mem_slice.write_byte(keys.len() as u8, pos);
     }
 
     /// Adds a reference to a local variable
@@ -741,11 +747,12 @@ pub fn test_compile(src: &str) -> MemorySlice {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::debug::Debug;
 
     #[test]
     fn literals() {
         let src = "1 2.34 :nil true false [1, :err] {name -> \"Nobu\"}";
         let mem_slice = test_compile(src);
-        println!("{:?}", mem_slice.bytecode);
+        // Debug::run("TEST 1", &mem_slice);
     }
 }
