@@ -1,11 +1,11 @@
 test:
-    cargo test -- --nocapture
+    cargo test --features debug -- --nocapture 
 
 check:
     cargo clippy --verbose
 
 build:
-    cargo build --verbose
+    cargo build --verbose --features debug
 
 release:
     cargo build --release
