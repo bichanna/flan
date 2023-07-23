@@ -18,15 +18,31 @@ pub struct MemorySlice {
 
 /// Encodes a u16 value in little-endian byte order
 pub fn to_little_endian(val: u16) -> [u8; 2] {
-    let b1 = (val & 0xFF) as u8;
-    let b2 = ((val >> 8) & 0xFF) as u8;
-    [b1, b2]
+    [(val & 0xFF) as u8, ((val >> 8) & 0xFF) as u8]
 }
 
 /// Decodes a little-endian byte representation to a u16
 pub fn from_little_endian(bytes: [u8; 2]) -> u16 {
     let (b1, b2) = (bytes[0], bytes[1]);
     ((b2 as u16 & 0xFF) << 8) | (b1 as u16 & 0xFF)
+}
+
+/// Encodes a u32 value in little-endian byte order
+pub fn to_little_endian_u32(val: u32) -> [u8; 4] {
+    [
+        (val & 0xFF) as u8,
+        ((val >> 8) & 0xFF) as u8,
+        ((val >> 16) & 0xFF) as u8,
+        ((val >> 24) & 0xFF) as u8,
+    ]
+}
+
+/// Decodes a little-endian byte representation to a u32
+pub fn from_little_endian_u32(bytes: [u8; 4]) -> u32 {
+    (bytes[0] as u32)
+        | ((bytes[1] as u32) << 8)
+        | ((bytes[2] as u32) << 16)
+        | ((bytes[3] as u32) << 24)
 }
 
 impl MemorySlice {
@@ -86,12 +102,16 @@ mod test {
     fn encode() {
         let slice = to_little_endian(1000);
         assert_eq!(slice, [0xE8, 0x03]);
+        let slice = to_little_endian_u32(100000);
+        assert_eq!(slice, [0xA0, 0x86, 0x1, 0x0]);
     }
 
     #[test]
     fn decode() {
         let val = from_little_endian([0xE8, 0x03]);
         assert_eq!(val, 1000);
+        let val = from_little_endian_u32([0xA0, 0x86, 0x1, 0x0]);
+        assert_eq!(val, 100000);
     }
 
     #[test]
