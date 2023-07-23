@@ -6,10 +6,10 @@ use std::sync::Arc;
 use std::vec::IntoIter;
 
 use self::opcode::OpCode;
-use self::util::{to_little_endian, MemorySlice};
+use self::util::{to_little_endian, to_little_endian_u32, MemorySlice};
 use crate::error::{ErrType, Position, Stack};
 use crate::lexer::token::{Token, TokenType};
-use crate::parser::expr::{Expr, MatchBranch};
+use crate::parser::expr::{Expr, MatchBranch, WhenBranch};
 use crate::parser::test_parse;
 use crate::util::PrevPeekable;
 use crate::vm::value::*;
@@ -36,6 +36,33 @@ macro_rules! backpatch {
         let bytes = to_little_endian(len as u16);
         $c.mem_slice.write_byte_with_index(idx, bytes[0]);
         $c.mem_slice.write_byte_with_index(idx + 1, bytes[1]);
+    };
+}
+
+/// Applies a classic compiler trick called back-patching with four bytes
+macro_rules! backpatch_u32 {
+    ($c: expr, $op: expr, $err_msg: expr, $pos: expr, $block: expr) => {
+        // writing the opcode
+        $c.mem_slice.write_opcode($op, $pos);
+
+        // getting ready for back-patching
+        $c.mem_slice.write_bytes(&[0xFF, 0xFF, 0xFF, 0xFF], $pos);
+        let prev = $c.mem_slice.bytecode.len() - 1;
+
+        // doing whatever the caller wants to do here
+        $block;
+
+        // applying the patch
+        let len = $c.mem_slice.bytecode.len() - prev - 1;
+        let idx = prev - 3;
+        if len > u32::MAX as usize {
+            $c.report_err($err_msg, $pos);
+        }
+        let bytes = to_little_endian_u32(len as u32);
+        $c.mem_slice.write_byte_with_index(idx, bytes[0]);
+        $c.mem_slice.write_byte_with_index(idx + 1, bytes[1]);
+        $c.mem_slice.write_byte_with_index(idx + 2, bytes[2]);
+        $c.mem_slice.write_byte_with_index(idx + 3, bytes[3]);
     };
 }
 
@@ -334,9 +361,9 @@ impl Compiler {
                     // opcode.
                     if !branches.is_empty() {
                         // compiling the next match branch recursively
-                        backpatch!(
+                        backpatch_u32!(
                             c,
-                            OpCode::Jump,
+                            OpCode::LongJump,
                             "the whole match expression is too big".to_string(),
                             pos,
                             {
@@ -348,6 +375,45 @@ impl Compiler {
 
                 // compiling all match branches
                 compile_branch(self, Some(cond), &mut branches, pos);
+            }
+
+            Expr::When { mut branches, pos } => {
+                fn compile_branch(c: &mut Compiler, branches: &mut Vec<WhenBranch>, pos: Position) {
+                    let branch = branches.remove(0);
+
+                    // compiling the condition expression of the branch
+                    c.compile_expr(*branch.cond);
+
+                    backpatch!(
+                        c,
+                        OpCode::JumpIfFalse,
+                        "when expression is too big".to_string(),
+                        pos,
+                        {
+                            // compiling the body of the branch
+                            c.compile_expr(*branch.body);
+                        }
+                    );
+
+                    // compiling the next when branch recursively
+                    backpatch_u32!(
+                        c,
+                        OpCode::LongJump,
+                        "when expression is too big".to_string(),
+                        pos,
+                        {
+                            // compiling other branches if there's any
+                            if !branches.is_empty() {
+                                compile_branch(c, branches, pos);
+                            } else {
+                                c.mem_slice.write_opcode(OpCode::LoadNil, pos);
+                            }
+                        }
+                    );
+                }
+
+                // compiling all when branches
+                compile_branch(self, &mut branches, pos);
             }
 
             Expr::If {
@@ -379,7 +445,7 @@ impl Compiler {
                     if let Some(els) = els {
                         self.compile_expr(*els);
                     } else {
-                        self.mem_slice.add_const(FAtom::new(Arc::from("nil")), pos);
+                        self.mem_slice.write_opcode(OpCode::LoadNil, pos);
                     }
                 );
             }

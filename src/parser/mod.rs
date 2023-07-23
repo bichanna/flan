@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::vec::IntoIter;
 
-use self::expr::{CallArg, CallArgType, Expr, MatchBranch};
+use self::expr::{CallArg, CallArgType, Expr, MatchBranch, WhenBranch};
 use crate::error::{ErrType, Position, Stack};
 use crate::lexer::test_tokenize;
 use crate::lexer::token::{Token, TokenType};
@@ -746,6 +746,38 @@ impl Parser {
                     pos: token.pos,
                 }
             }
+            // when expression
+            TokenType::When => {
+                self.advance();
+                let token = self.previous();
+                let mut branches: Vec<WhenBranch> = vec![];
+
+                // an empty when expression is not allowed
+                self.expect(TokenType::Case, "expected 'case' keyword");
+                let cond = self.expression();
+                self.expect(TokenType::MinusGT, "expected '->'");
+                let body = self.expression();
+                branches.push(WhenBranch {
+                    cond: Box::new(cond),
+                    body: Box::new(body),
+                });
+
+                while self.matches(TokenType::Case) && !self.is_end() {
+                    self.expect(TokenType::Case, "expected 'case' keyword");
+                    let cond = self.expression();
+                    self.expect(TokenType::MinusGT, "expected '->'");
+                    let body = self.expression();
+                    branches.push(WhenBranch {
+                        cond: Box::new(cond),
+                        body: Box::new(body),
+                    });
+                }
+
+                Expr::When {
+                    branches,
+                    pos: token.pos,
+                }
+            }
             // import expression
             TokenType::Import => {
                 self.advance();
@@ -975,6 +1007,13 @@ mod tests {
     #[test]
     fn match_expr() {
         let expr = "where name match case \"Nobu\" -> \"Cool!\" case _ -> \"Nice\"";
+        let exprs = test_parse(expr);
+        // println!("{:#?}", exprs);
+    }
+
+    #[test]
+    fn when_expr() {
+        let expr = "when case name == \"Nobu\" -> \"Cool!\" case _ -> \"Hi\"";
         let exprs = test_parse(expr);
         // println!("{:#?}", exprs);
     }

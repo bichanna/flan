@@ -22,6 +22,12 @@ pub struct MatchBranch {
 }
 
 #[derive(Debug, Clone)]
+pub struct WhenBranch {
+    pub cond: Box<Expr>,
+    pub body: Box<Expr>,
+}
+
+#[derive(Debug, Clone)]
 pub enum Expr {
     Binary {
         left: Box<Expr>,
@@ -80,6 +86,10 @@ pub enum Expr {
         cond: Box<Expr>,
         then: Box<Expr>,
         els: Option<Box<Expr>>,
+        pos: Position,
+    },
+    When {
+        branches: Vec<WhenBranch>,
         pos: Position,
     },
     Import {

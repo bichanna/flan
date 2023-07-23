@@ -24,6 +24,7 @@ impl TokenType {
             "nil" => Some(TokenType::Nil),
             "else" => Some(TokenType::Else),
             "where" => Some(TokenType::Where),
+            "when" => Some(TokenType::When),
             "case" => Some(TokenType::Case),
             "then" => Some(TokenType::Then),
             "import" => Some(TokenType::Import),
@@ -83,6 +84,7 @@ pub enum TokenType {
     Func,    // fn
     If,      // if
     Where,   // where
+    When,    // when
     Match,   // match
     Then,    // then
     Case,    // case

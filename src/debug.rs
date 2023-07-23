@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::compiler::opcode::OpCode;
-use crate::compiler::util::{from_little_endian, MemorySlice};
+use crate::compiler::util::{from_little_endian, from_little_endian_u32, MemorySlice};
 use crate::error::Position;
 use crate::vm::value::ValueTrait;
 
@@ -74,6 +74,7 @@ impl<'a> Debug<'a> {
             OpCode::InitObj => self.single_arg_instruction("InitObj"),
             OpCode::PopExceptLast => self.simple_instruction("PopExceptLast"),
             OpCode::PopExceptLastN => self.single_arg_instruction("PopExceptLastN"),
+            OpCode::LongJump => self.quadruple_arg_instruction("LongJump"),
             OpCode::Jump => self.double_arg_instruction("Jump"),
             OpCode::JumpIfFalse => self.double_arg_instruction("JumpIfFalse"),
             OpCode::Equal => self.simple_instruction("Equal"),
@@ -114,7 +115,7 @@ impl<'a> Debug<'a> {
 
     fn const_instruction(&mut self, name: &'static str) {
         let idx = self.bytecode[self.offset + 1];
-        println!("{:-16} {:>4} {}", name, idx, self.consts[idx as usize]);
+        println!("{:-16} {:>6} {}", name, idx, self.consts[idx as usize]);
         self.offset += 2;
     }
 
@@ -123,13 +124,13 @@ impl<'a> Debug<'a> {
             self.bytecode[self.offset + 1],
             self.bytecode[self.offset + 2],
         ]);
-        println!("{:-16} {:>4} {}", name, idx, self.consts[idx as usize]);
+        println!("{:-16} {:>6} {}", name, idx, self.consts[idx as usize]);
         self.offset += 3;
     }
 
     fn single_arg_instruction(&mut self, name: &'static str) {
         let next_b = self.bytecode[self.offset + 1];
-        println!("{:-16} {:>4}", name, next_b);
+        println!("{:-16} {:>6}", name, next_b);
         self.offset += 2;
     }
 
@@ -138,8 +139,19 @@ impl<'a> Debug<'a> {
             self.bytecode[self.offset + 1],
             self.bytecode[self.offset + 2],
         ]);
-        println!("{:-16} {:>4}", name, jump);
+        println!("{:-16} {:>6}", name, jump);
         self.offset += 3;
+    }
+
+    fn quadruple_arg_instruction(&mut self, name: &'static str) {
+        let jump = from_little_endian_u32([
+            self.bytecode[self.offset + 1],
+            self.bytecode[self.offset + 2],
+            self.bytecode[self.offset + 3],
+            self.bytecode[self.offset + 4],
+        ]);
+        println!("{:-16} {:>6}", name, jump);
+        self.offset += 5;
     }
 
     fn match_instruction(&mut self) {
@@ -148,7 +160,7 @@ impl<'a> Debug<'a> {
             self.bytecode[self.offset + 2],
         ]);
         println!(
-            "{:-16} {:>4} {}",
+            "{:-16} {:>6} {}",
             "Match",
             len,
             self.bytecode[self.offset + 3] == 1
@@ -175,7 +187,7 @@ impl<'a> Debug<'a> {
             "}".to_string(),
         ]
         .join(", ");
-        println!("{:-16} {:>4} {}", "SetLocalList", len, idxs);
+        println!("{:-16} {:>6} {}", "SetLocalList", len, idxs);
         self.offset += len * 2 + 1;
     }
 
@@ -190,7 +202,7 @@ impl<'a> Debug<'a> {
             "}".to_string(),
         ]
         .join(", ");
-        println!("{:-16} {:>4} {}", "SetLocalObj", len, idxs);
+        println!("{:-16} {:>6} {}", "SetLocalObj", len, idxs);
         self.offset += len + 2;
     }
 }

@@ -17,6 +17,7 @@ pub enum OpCode {
     PopExceptLast,
     PopExceptLastN,
     Jump,
+    LongJump,
     JumpIfFalse,
     Equal,
     NotEqual,
