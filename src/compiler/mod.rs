@@ -16,13 +16,13 @@ use crate::vm::value::*;
 
 /// Applies a classic compiler trick called back-patching with two bytes
 macro_rules! backpatch {
-    ($c: expr, $op: expr, $err_msg: expr, $pos: expr, $block: expr) => {
+    ($c: expr, $op: expr, $err_msg: expr, $pos: expr, $block: block) => {
         // writing the opcode
         $c.mem_slice.write_opcode($op, $pos);
 
         // getting ready for back-patching
         $c.mem_slice.write_bytes(&[0xFF, 0xFF], $pos);
-        let prev = $c.mem_slice.bytecode.len() - 1;
+        let prev = $c.mem_slice.bytecode.len();
 
         // doing whatever the caller wants to do here
         $block;
@@ -41,20 +41,20 @@ macro_rules! backpatch {
 
 /// Applies a classic compiler trick called back-patching with four bytes
 macro_rules! backpatch_u32 {
-    ($c: expr, $op: expr, $err_msg: expr, $pos: expr, $block: expr) => {
+    ($c: expr, $op: expr, $err_msg: expr, $pos: expr, $block: block) => {
         // writing the opcode
         $c.mem_slice.write_opcode($op, $pos);
 
         // getting ready for back-patching
         $c.mem_slice.write_bytes(&[0xFF, 0xFF, 0xFF, 0xFF], $pos);
-        let prev = $c.mem_slice.bytecode.len() - 1;
+        let prev = $c.mem_slice.bytecode.len();
 
         // doing whatever the caller wants to do here
         $block;
 
         // applying the patch
         let len = $c.mem_slice.bytecode.len() - prev - 1;
-        let idx = prev - 3;
+        let idx = prev - 4;
         if len > u32::MAX as usize {
             $c.report_err($err_msg, $pos);
         }
@@ -442,10 +442,12 @@ impl Compiler {
                     "if expression is too big".to_string(),
                     pos,
                     // compiling `else` body if there's one
-                    if let Some(els) = els {
-                        self.compile_expr(*els);
-                    } else {
-                        self.mem_slice.write_opcode(OpCode::LoadNil, pos);
+                    {
+                        if let Some(els) = els {
+                            self.compile_expr(*els);
+                        } else {
+                            self.mem_slice.write_opcode(OpCode::LoadNil, pos);
+                        }
                     }
                 );
             }
@@ -658,6 +660,9 @@ impl Compiler {
 
     /// Resolves a local variable and returns the index of the variable
     fn resolve_local(&self, name: Arc<str>, global: bool, pos: Position) -> Option<usize> {
+        if self.locals.len() == 0 {
+            return None;
+        }
         for idx in (0..=(self.locals.len() - 1)).rev() {
             if self.locals[idx].name.as_ref() == name.as_ref() {
                 return Some(idx);
