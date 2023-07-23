@@ -83,7 +83,13 @@ impl<'a> Lexer<'a> {
                         self.advance();
                         let value =
                             self.build_str(|l| l.current.is_alphanumeric() || l.current == '_');
-                        self.append(TokenType::Atom(Arc::from(value)));
+
+                        if let Some(val) = TokenType::get_type(&value) {
+                            self.append(val);
+                        } else {
+                            self.append(TokenType::Atom(Arc::from(value)));
+                        }
+
                         revert = true;
                     }
                 },

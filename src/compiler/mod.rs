@@ -480,6 +480,8 @@ impl Compiler {
 
             Expr::Empty(pos) => self.mem_slice.write_opcode(OpCode::LoadEmpty, pos),
 
+            Expr::Nil(pos) => self.mem_slice.write_opcode(OpCode::LoadNil, pos),
+
             Expr::List { elems, pos } => {
                 fn compile_expr(c: &mut Compiler, expr: &Expr) {
                     c.compile_expr(expr.clone());

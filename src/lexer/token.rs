@@ -21,6 +21,7 @@ impl TokenType {
             "not" => Some(TokenType::Not),
             "true" => Some(TokenType::True),
             "false" => Some(TokenType::False),
+            "nil" => Some(TokenType::Nil),
             "else" => Some(TokenType::Else),
             "where" => Some(TokenType::Where),
             "case" => Some(TokenType::Case),
@@ -91,6 +92,7 @@ pub enum TokenType {
     True,    // true
     Not,     // not
     False,   // false
+    Nil,     // nil
     Import,  // import
     Recover, // recover
     Panic,   // panic

@@ -33,6 +33,7 @@ pub enum OpCode {
     LoadTrue,
     LoadFalse,
     LoadEmpty,
+    LoadNil,
     DefGlobal,
     SetGlobal,
     GetGlobal,

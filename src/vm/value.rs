@@ -8,7 +8,7 @@ use dyn_clone::{clone_trait_object, DynClone};
 
 pub type Value = Box<dyn ValueTrait>;
 
-/// Every value in Flan implements this trait
+/// Models a generic value that can be stored in a local variable or on the stack
 pub trait ValueTrait: fmt::Display + DynClone {
     fn truthy(&self) -> bool;
     fn as_any(&self) -> &dyn Any;
@@ -949,5 +949,51 @@ impl fmt::Display for FObj {
 impl FObj {
     pub fn new(obj: HashMap<Arc<str>, Value>) -> Value {
         Box::new(FObj(obj))
+    }
+}
+
+#[derive(Clone)]
+pub struct FNil;
+impl ValueTrait for FNil {
+    fn truthy(&self) -> bool {
+        false
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn type_str(&self) -> String {
+        "nil".to_string()
+    }
+
+    fn equal(&self, other: &Value) -> bool {
+        as_t!(other, FEmpty).is_some() || as_t!(other, FNil).is_some()
+    }
+
+    fn less_than(&self, _: &Value) -> bool {
+        false
+    }
+
+    fn greater_than(&self, _: &Value) -> bool {
+        false
+    }
+
+    fn less_than_or_eq(&self, _: &Value) -> bool {
+        false
+    }
+
+    fn greater_than_or_eq(&self, _: &Value) -> bool {
+        false
+    }
+}
+impl fmt::Display for FNil {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("nil")
+    }
+}
+impl FNil {
+    pub fn new() -> Value {
+        Box::new(FNil)
     }
 }

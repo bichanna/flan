@@ -120,6 +120,7 @@ pub enum Expr {
         vals: Vec<Expr>,
         pos: Position,
     },
+    Nil(Position),
     Panic {
         expr: Box<Expr>,
         pos: Position,

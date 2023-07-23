@@ -415,6 +415,11 @@ impl Parser {
                 self.advance();
                 Expr::Empty(self.previous().pos)
             }
+            // nil
+            TokenType::Nil => {
+                self.advance();
+                Expr::Nil(self.previous().pos)
+            }
             // integer
             TokenType::Int(v) => {
                 self.advance();
@@ -934,7 +939,7 @@ mod tests {
 
     #[test]
     fn simple_primitives() {
-        let expr = "true false 123 1.23 0xABC \"Hello, world\" :someAtom";
+        let expr = "true false 123 1.23 0xABC \"Hello, world\" :someAtom nil";
         let exprs = test_parse(expr);
         // println!("{:#?}", exprs);
     }
