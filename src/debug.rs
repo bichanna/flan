@@ -35,6 +35,15 @@ impl<'a> Debug<'a> {
         }
     }
 
+    pub fn new(mem_slice: &'a MemorySlice) -> Self {
+        Debug {
+            bytecode: &mem_slice.bytecode,
+            positions: &mem_slice.positions,
+            consts: &mem_slice.constants,
+            offset: 0,
+        }
+    }
+
     pub fn disassemble_instruction(&mut self) {
         print!("{:04}", self.offset);
 
