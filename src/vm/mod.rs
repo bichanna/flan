@@ -7,6 +7,7 @@ use num_traits::FromPrimitive;
 use crate::as_t;
 use crate::compiler::opcode::OpCode;
 use crate::compiler::util::{from_little_endian, MemorySlice};
+use crate::debug::Debug;
 use crate::error::Positions;
 
 use self::value::*;
@@ -54,19 +55,16 @@ struct VM {
     stack: Vec<Value>,
     /// All global variables are stored in here
     globals: HashMap<String, Value>,
-    /// Path index
-    path_idx: usize,
 }
 
 impl VM {
-    pub fn execute(path_idx: usize, mem_slice: MemorySlice) {
+    pub fn execute(mem_slice: MemorySlice) {
         let mut vm = VM {
             constants: mem_slice.constants,
             positions: mem_slice.positions,
             ip: mem_slice.bytecode.as_ptr(),
             stack: Vec::with_capacity(u8::MAX as usize),
             globals: HashMap::with_capacity(12),
-            path_idx,
         };
         vm._execute();
     }
