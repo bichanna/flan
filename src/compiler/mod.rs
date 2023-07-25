@@ -660,7 +660,7 @@ impl Compiler {
 
     /// Resolves a local variable and returns the index of the variable
     fn resolve_local(&self, name: Arc<str>, global: bool, pos: Position) -> Option<usize> {
-        if self.locals.len() == 0 {
+        if self.locals.is_empty() {
             return None;
         }
         for idx in (0..=(self.locals.len() - 1)).rev() {
