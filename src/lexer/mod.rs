@@ -95,7 +95,7 @@ impl<'a> Lexer<'a> {
                 },
                 '|' => match self.peek() {
                     '>' => self.append_and_advance(TokenType::BarGT),
-                    _ => self.report_error(&format!("expected '|>' but got '{}'", self.current)),
+                    _ => self.append(TokenType::Bar),
                 },
                 '+' => match self.peek() {
                     '=' => self.append_and_advance(TokenType::PlusEq),
@@ -373,12 +373,12 @@ mod tests {
 
     #[test]
     fn keywords() {
-        let expr = "fn if where match then and or else true not false import case";
+        let expr = "fn if with match then and or else true not false import";
         let tokens = test_tokenize(expr);
-        assert_eq!(tokens.len(), 13 + 1);
+        assert_eq!(tokens.len(), 12 + 1);
         assert_eq!(tokens[0].kind, TokenType::Func);
         assert_eq!(tokens[1].kind, TokenType::If);
-        assert_eq!(tokens[2].kind, TokenType::Where);
+        assert_eq!(tokens[2].kind, TokenType::With);
         assert_eq!(tokens[3].kind, TokenType::Match);
         assert_eq!(tokens[4].kind, TokenType::Then);
         assert_eq!(tokens[5].kind, TokenType::And);
@@ -388,6 +388,5 @@ mod tests {
         assert_eq!(tokens[9].kind, TokenType::Not);
         assert_eq!(tokens[10].kind, TokenType::False);
         assert_eq!(tokens[11].kind, TokenType::Import);
-        assert_eq!(tokens[12].kind, TokenType::Case);
     }
 }

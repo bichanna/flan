@@ -23,9 +23,8 @@ impl TokenType {
             "false" => Some(TokenType::False),
             "nil" => Some(TokenType::Nil),
             "else" => Some(TokenType::Else),
-            "where" => Some(TokenType::Where),
+            "with" => Some(TokenType::With),
             "when" => Some(TokenType::When),
-            "case" => Some(TokenType::Case),
             "then" => Some(TokenType::Then),
             "import" => Some(TokenType::Import),
             "recover" => Some(TokenType::Recover),
@@ -64,6 +63,7 @@ pub enum TokenType {
     Mod,      // %
     ModEq,    // %=
     Comma,    // ,
+    Bar,      // |
     BarGT,    // |>
     BarLT,    // <|
     Tilde,    // ~
@@ -83,11 +83,10 @@ pub enum TokenType {
 
     Func,    // fn
     If,      // if
-    Where,   // where
+    With,    // with
     When,    // when
     Match,   // match
     Then,    // then
-    Case,    // case
     And,     // and
     Or,      // or
     Else,    // else

@@ -24,11 +24,11 @@ names |> each() ~ (name) println("Hello, {{}}!", name)
 ```javascript
 i{each, range} := import("std")
 
-fn fizzBuzz(n) = where [n % 3, n % 5] match
-    case [0, 0] -> "fizzbuzz"
-    case [0, _] -> "fizz"
-    case [_, 0] -> "buzz"
-    case _ -> str(n)
+fn fizzBuzz(n) = match [n % 3, n % 5] with
+    | [0, 0] -> "fizzbuzz"
+    | [0, _] -> "fizz"
+    | [_, 0] -> "buzz"
+    | _ -> str(n)
 
 range(101) |> each() <~ fizzBuzz(it) |> println()
 ```

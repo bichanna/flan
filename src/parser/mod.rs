@@ -711,16 +711,16 @@ impl Parser {
                 }
             }
             // match expression
-            TokenType::Where => {
+            TokenType::Match => {
                 self.advance();
                 let token = self.previous();
                 let cond = self.expression();
                 let mut branches: Vec<MatchBranch> = vec![];
 
-                self.expect(TokenType::Match, "expected 'match' keyword");
+                self.expect(TokenType::With, "expected 'with' keyword");
 
                 // an empty match expression is not allowed
-                self.expect(TokenType::Case, "expected 'case' keyword");
+                self.expect(TokenType::Bar, "expected '|'");
                 let case = self.expression();
                 self.expect(TokenType::MinusGT, "expected '->'");
                 let body = self.expression();
@@ -729,8 +729,8 @@ impl Parser {
                     body: Box::new(body),
                 });
 
-                while self.matches(TokenType::Case) && !self.is_end() {
-                    self.expect(TokenType::Case, "expected 'case' keyword");
+                while self.matches(TokenType::Bar) && !self.is_end() {
+                    self.expect(TokenType::Bar, "expected '|'");
                     let case = self.expression();
                     self.expect(TokenType::MinusGT, "expected '->'");
                     let body = self.expression();
@@ -753,7 +753,7 @@ impl Parser {
                 let mut branches: Vec<WhenBranch> = vec![];
 
                 // an empty when expression is not allowed
-                self.expect(TokenType::Case, "expected 'case' keyword");
+                self.expect(TokenType::Bar, "expected '|'");
                 let cond = self.expression();
                 self.expect(TokenType::MinusGT, "expected '->'");
                 let body = self.expression();
@@ -762,8 +762,8 @@ impl Parser {
                     body: Box::new(body),
                 });
 
-                while self.matches(TokenType::Case) && !self.is_end() {
-                    self.expect(TokenType::Case, "expected 'case' keyword");
+                while self.matches(TokenType::Bar) && !self.is_end() {
+                    self.expect(TokenType::Bar, "expected '|'");
                     let cond = self.expression();
                     self.expect(TokenType::MinusGT, "expected '->'");
                     let body = self.expression();
@@ -1006,14 +1006,14 @@ mod tests {
 
     #[test]
     fn match_expr() {
-        let expr = "where name match case \"Nobu\" -> \"Cool!\" case _ -> \"Nice\"";
+        let expr = "match name with | \"Nobu\" -> \"Cool!\" | _ -> \"Nice\"";
         let exprs = test_parse(expr);
         // println!("{:#?}", exprs);
     }
 
     #[test]
     fn when_expr() {
-        let expr = "when case name == \"Nobu\" -> \"Cool!\" case _ -> \"Hi\"";
+        let expr = "when | name == \"Nobu\" -> \"Cool!\" | _ -> \"Hi\"";
         let exprs = test_parse(expr);
         // println!("{:#?}", exprs);
     }
