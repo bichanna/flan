@@ -12,6 +12,7 @@ use crate::lexer::token::{Token, TokenType};
 use crate::parser::expr::{Expr, MatchBranch, WhenBranch};
 use crate::parser::test_parse;
 use crate::util::PrevPeekable;
+use crate::vm::gc::heap::Heap;
 use crate::vm::value::*;
 
 /// Applies a classic compiler trick called back-patching with two bytes
@@ -73,6 +74,8 @@ struct Local {
 }
 
 pub struct Compiler {
+    /// Heap used to allocated objects on
+    heap: Heap,
     /// The iterator over the parsed expressions
     exprs: PrevPeekable<IntoIter<Expr>>,
     /// The path of the source being compiled
@@ -88,10 +91,11 @@ pub struct Compiler {
 }
 
 impl Compiler {
-    pub fn compile(exprs: Vec<Expr>, tok_num: usize) -> MemorySlice {
+    pub fn compile(exprs: Vec<Expr>, heap: Heap, tok_num: usize) -> MemorySlice {
         let mut exprs = PrevPeekable::new(exprs.into_iter());
         let current = exprs.next().unwrap();
         let mut compiler = Compiler {
+            heap,
             exprs,
             path_idx: Stack::last_path_index(),
             locals: Vec::new(),
@@ -523,7 +527,9 @@ impl Compiler {
                 self.end_scope();
             }
 
-            Expr::Str { val, pos } => self.mem_slice.add_const(FStr::new(val), pos),
+            Expr::Str { val, pos } => self
+                .mem_slice
+                .add_const(FStr::new(&mut self.heap, val), pos),
 
             Expr::Atom { val, pos } => self.mem_slice.add_const(FAtom::new(val), pos),
 
@@ -737,7 +743,9 @@ pub fn test_compile(src: &str) -> MemorySlice {
     let exprs = test_parse(src);
     let mut exprs = PrevPeekable::new(exprs.into_iter());
     let current = exprs.next().unwrap();
+    let heap = Heap::new();
     let mut compiler = Compiler {
+        heap,
         exprs,
         path_idx: 0,
         locals: Vec::new(),
@@ -746,6 +754,7 @@ pub fn test_compile(src: &str) -> MemorySlice {
         current,
     };
     compiler._compile();
+    compiler.heap.deallocate_all();
     compiler.mem_slice
 }
 

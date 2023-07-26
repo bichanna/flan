@@ -11,8 +11,10 @@ use crate::debug::Debug;
 use crate::error::Positions;
 use crate::{as_t, force_as_t};
 
+use self::gc::heap::Heap;
 use self::value::*;
 
+pub mod gc;
 pub mod value;
 
 macro_rules! read_byte {
@@ -57,6 +59,8 @@ macro_rules! binary_op {
 }
 
 struct VM<'a> {
+    /// Heap
+    heap: Heap,
     /// Constants
     constants: Vec<Value>,
     /// Positions for error reporting
@@ -72,8 +76,9 @@ struct VM<'a> {
 }
 
 impl<'a> VM<'a> {
-    pub fn execute(mem_slice: MemorySlice) {
+    pub fn execute(mem_slice: MemorySlice, heap: Heap) {
         let mut vm = VM {
+            heap,
             constants: mem_slice.constants.clone(),
             positions: mem_slice.positions.clone(),
             ip: mem_slice.bytecode.as_ptr(),
@@ -161,7 +166,8 @@ impl<'a> VM<'a> {
                     // adding elements to the list
                     (0..len).for_each(|_| list.push(self.pop()));
                     list.reverse();
-                    self.push(FList::new(list));
+                    let flist = FList::new(&mut self.heap, list);
+                    self.push(flist);
                 }
 
                 OpCode::InitObj => {
@@ -178,7 +184,8 @@ impl<'a> VM<'a> {
                             // TODO: report error
                         }
                     });
-                    self.push(FObj::new(obj));
+                    let fobj = FObj::new(&mut self.heap, obj);
+                    self.push(fobj);
                 }
 
                 OpCode::PopExceptLast => {
@@ -341,7 +348,7 @@ impl<'a> VM<'a> {
                         // TODO: report an error
                     }
 
-                    let right_list = &force_as_t!(right, FList).0;
+                    let right_list = &force_as_t!(right, FList).inner();
 
                     if right_list.len() != slots.len() {
                         // TODO: report an error
@@ -372,7 +379,7 @@ impl<'a> VM<'a> {
                         // TODO: report an error
                     }
 
-                    let right_obj = &force_as_t!(right, FObj).0;
+                    let right_obj = &force_as_t!(right, FObj).inner();
                     if right_obj.len() < slots.len() {
                         // TODO: report an error
                     }
@@ -410,29 +417,32 @@ impl<'a> VM<'a> {
             func(self, var.0.clone(), right.clone());
         } else if let Some(left) = as_t!(left, FList) {
             if let Some(right) = as_t!(right, FList) {
-                if right.0.len() != left.0.len() {
+                if right.inner().len() != left.inner().len() {
                     // TODO: report an error
                 } else {
-                    left.0.iter().zip(right.0.iter()).for_each(|(l, r)| {
-                        if let Some(v) = as_t!(l, FVar) {
-                            func(self, v.0.clone(), r.clone());
-                        } else if as_t!(l, FEmpty).is_some() {
-                            {} // do nothing
-                        } else {
-                            // TODO: report an error
-                        }
-                    });
+                    left.inner()
+                        .iter()
+                        .zip(right.inner().iter())
+                        .for_each(|(l, r)| {
+                            if let Some(v) = as_t!(l, FVar) {
+                                func(self, v.0.clone(), r.clone());
+                            } else if as_t!(l, FEmpty).is_some() {
+                                {} // do nothing
+                            } else {
+                                // TODO: report an error
+                            }
+                        });
                 }
             } else {
                 // TODO: report an error
             }
         } else if let Some(left) = as_t!(left, FObj) {
             if let Some(right) = as_t!(right, FObj) {
-                if right.0.len() != left.0.len() {
+                if right.inner().len() != left.inner().len() {
                     // TODO: report an error
                 } else {
-                    left.0.iter().for_each(|(key, assignee)| {
-                        if let Some(val) = right.0.get(key) {
+                    left.inner().iter().for_each(|(key, assignee)| {
+                        if let Some(val) = right.inner().get(key) {
                             if let Some(var) = as_t!(assignee, FVar) {
                                 func(self, var.0.clone(), val.clone());
                             } else if as_t!(assignee, FEmpty).is_some() {
