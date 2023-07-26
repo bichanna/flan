@@ -32,7 +32,7 @@ macro_rules! as_t {
 #[macro_export]
 macro_rules! force_as_t {
     ($val: expr, $type: ty) => {
-        as_t($val, $type).unwrap()
+        $val.as_any().downcast_ref::<$type>().unwrap()
     };
 }
 
