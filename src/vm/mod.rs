@@ -396,7 +396,69 @@ impl<'a> VM<'a> {
                     self.push(right);
                 }
 
-                _ => {}
+                OpCode::Match => {}
+
+                OpCode::Call => {}
+
+                OpCode::Get => {
+                    let attr = self.pop();
+                    let inst = self.pop();
+
+                    if let Some(flist) = as_t!(inst, FList) {
+                        let list = flist.inner();
+                        if let Some(idx) = as_t!(attr, FInt) {
+                            let idx = idx.0 as usize;
+                            if let Some(val) = list.get(idx) {
+                                self.push(val.clone());
+                            } else {
+                                // TODO: report an error
+                            }
+                        } else {
+                            // TODO: report an error
+                        }
+                    } else if let Some(fobj) = as_t!(inst, FObj) {
+                        let obj = fobj.inner();
+                        if let Some(key) = as_t!(attr, FVar) {
+                            if let Some(val) = obj.get(&key.0) {
+                                self.push(val.clone());
+                            } else {
+                                // TODO: report an error
+                            }
+                        } else {
+                            // TODO: report an error
+                        }
+                    } else {
+                        // TODO: report an error
+                    }
+                }
+
+                OpCode::Set => {
+                    let val = self.pop();
+                    let attr = self.pop();
+                    let inst = self.pop();
+
+                    if let Some(flist) = as_t!(inst, FList) {
+                        let list = unsafe { flist.inner_mut().as_mut().unwrap() };
+                        if let Some(idx) = as_t!(attr, FInt) {
+                            let idx = idx.0 as usize;
+                            if idx >= list.len() {
+                                // TODO: report an error
+                            }
+                            list[idx] = val;
+                        } else {
+                            // TODO: report an error
+                        }
+                    } else if let Some(fobj) = as_t!(inst, FObj) {
+                        let obj = unsafe { fobj.inner_mut().as_mut().unwrap() };
+                        if let Some(key) = as_t!(attr, FVar) {
+                            obj.insert(key.0.clone(), val);
+                        } else {
+                            // TODO: report an error
+                        }
+                    } else {
+                        // TODO: report an error
+                    }
+                }
             }
 
             inst = FromPrimitive::from_u8(read_byte!(self)).unwrap();
