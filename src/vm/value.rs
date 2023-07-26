@@ -850,8 +850,8 @@ impl FList {
         Box::new(FList(heap.allocate(list)))
     }
 
-    pub fn inner_mut(&mut self) -> &mut Vec<Value> {
-        unsafe { (self.0.ptr as *mut Vec<Value>).as_mut().unwrap() }
+    pub fn inner_mut(&self) -> *mut Vec<Value> {
+        self.0.ptr as *mut Vec<Value>
     }
 
     pub fn inner(&self) -> &Vec<Value> {
@@ -951,12 +951,8 @@ impl FObj {
         Box::new(FObj(heap.allocate(obj)))
     }
 
-    pub fn inner_mut(&mut self) -> &mut HashMap<Rc<str>, Value> {
-        unsafe {
-            (self.0.ptr as *mut HashMap<Rc<str>, Value>)
-                .as_mut()
-                .unwrap()
-        }
+    pub fn inner_mut(&self) -> *mut HashMap<Rc<str>, Value> {
+        self.0.ptr as *mut HashMap<Rc<str>, Value>
     }
 
     pub fn inner(&self) -> &HashMap<Rc<str>, Value> {
