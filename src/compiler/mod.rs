@@ -28,7 +28,7 @@ macro_rules! backpatch {
         $block;
 
         // applying the patch
-        let len = $c.mem_slice.bytecode.len() - prev - 1;
+        let len = $c.mem_slice.bytecode.len() - prev;
         let idx = prev - 2;
         if len > u16::MAX as usize {
             $c.report_err($err_msg, $pos);
@@ -53,7 +53,7 @@ macro_rules! backpatch_u32 {
         $block;
 
         // applying the patch
-        let len = $c.mem_slice.bytecode.len() - prev - 1;
+        let len = $c.mem_slice.bytecode.len() - prev;
         let idx = prev - 4;
         if len > u32::MAX as usize {
             $c.report_err($err_msg, $pos);

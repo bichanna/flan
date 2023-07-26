@@ -1,4 +1,4 @@
-#[derive(Clone, Copy, PartialEq, ToPrimitive, FromPrimitive)]
+#[derive(Clone, Copy, PartialEq, ToPrimitive, FromPrimitive, Debug)]
 pub enum OpCode {
     Return,
     LoadConst,

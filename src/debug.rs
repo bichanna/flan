@@ -74,9 +74,9 @@ impl<'a> Debug<'a> {
             OpCode::InitObj => self.single_arg_instruction("InitObj"),
             OpCode::PopExceptLast => self.simple_instruction("PopExceptLast"),
             OpCode::PopExceptLastN => self.single_arg_instruction("PopExceptLastN"),
-            OpCode::LongJump => self.quadruple_arg_instruction("LongJump"),
-            OpCode::Jump => self.double_arg_instruction("Jump"),
-            OpCode::JumpIfFalse => self.double_arg_instruction("JumpIfFalse"),
+            OpCode::LongJump => self.long_jump_instruction(),
+            OpCode::Jump => self.jump_instruction("Jump"),
+            OpCode::JumpIfFalse => self.jump_instruction("JumpIfFalse"),
             OpCode::Equal => self.simple_instruction("Equal"),
             OpCode::NotEqual => self.simple_instruction("NotEqual"),
             OpCode::GT => self.simple_instruction("GT"),
@@ -132,6 +132,30 @@ impl<'a> Debug<'a> {
         let next_b = self.bytecode[self.offset + 1];
         println!("{:-16} {:>6}", name, next_b);
         self.offset += 2;
+    }
+
+    fn jump_instruction(&mut self, name: &'static str) {
+        let jump = from_little_endian([
+            self.bytecode[self.offset + 1],
+            self.bytecode[self.offset + 2],
+        ]);
+        let idx = self.offset + 3 + jump as usize;
+        let opcode: OpCode = FromPrimitive::from_u8(self.bytecode[idx]).unwrap();
+        println!("{:-16} {:>6} => {:?}", name, idx, opcode);
+        self.offset += 3;
+    }
+
+    fn long_jump_instruction(&mut self) {
+        let jump = from_little_endian_u32([
+            self.bytecode[self.offset + 1],
+            self.bytecode[self.offset + 2],
+            self.bytecode[self.offset + 3],
+            self.bytecode[self.offset + 4],
+        ]);
+        let idx = self.offset + 5 + jump as usize;
+        let opcode: OpCode = FromPrimitive::from_u8(self.bytecode[idx]).unwrap();
+        println!("{:-16} {:>6} => {:?}", "LongJump", idx, opcode);
+        self.offset += 5;
     }
 
     fn double_arg_instruction(&mut self, name: &'static str) {
