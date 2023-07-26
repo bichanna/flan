@@ -1,7 +1,7 @@
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::mem::replace;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use num_traits::FromPrimitive;
 
@@ -66,7 +66,7 @@ struct VM<'a> {
     /// Dynamically sized stack
     stack: Vec<Value>,
     /// All global variables are stored in here
-    globals: HashMap<String, Value>,
+    globals: HashMap<Rc<str>, Value>,
     /// Debugger for the VM
     debugger: Debug<'a>,
 }
@@ -166,7 +166,7 @@ impl<'a> VM<'a> {
 
                 OpCode::InitObj => {
                     let len = read_2bytes!(self) as usize;
-                    let mut obj: HashMap<Arc<str>, Value> = HashMap::with_capacity(len);
+                    let mut obj: HashMap<Rc<str>, Value> = HashMap::with_capacity(len);
                     (0..len).for_each(|_| {
                         // getting the value
                         let val = self.pop();
@@ -302,7 +302,7 @@ impl<'a> VM<'a> {
                 OpCode::GetGlobal => {
                     let v = self.pop();
                     let v = force_as_t!(v, FVar);
-                    if let Some(val) = self.globals.get(&v.0.to_string()) {
+                    if let Some(val) = self.globals.get(v.0.as_ref()) {
                         self.push(val.clone());
                     } else {
                         // TODO: report an error
@@ -310,7 +310,7 @@ impl<'a> VM<'a> {
                 }
 
                 OpCode::DefLocal => {
-                    fn def_local(vm: &mut VM, _: String, val: Value) {
+                    fn def_local(vm: &mut VM, _: Rc<str>, val: Value) {
                         vm.push(val);
                     }
                     self.define_or_set(&def_local);
@@ -365,7 +365,7 @@ impl<'a> VM<'a> {
                     let left_keys = (0..len)
                         .map(|_| force_as_t!(self.pop(), FVar).0.clone())
                         .rev()
-                        .collect::<Vec<Arc<str>>>();
+                        .collect::<Vec<Rc<str>>>();
                     let right = self.pop();
 
                     if as_t!(right, FObj).is_none() {
@@ -403,11 +403,11 @@ impl<'a> VM<'a> {
     }
 
     /// Defines or sets global or local variables
-    fn define_or_set(&mut self, func: &dyn Fn(&mut Self, String, Value)) {
+    fn define_or_set(&mut self, func: &dyn Fn(&mut Self, Rc<str>, Value)) {
         let right = self.pop();
         let left = self.pop();
         if let Some(var) = as_t!(left, FVar) {
-            func(self, var.0.to_string(), right.clone());
+            func(self, var.0.clone(), right.clone());
         } else if let Some(left) = as_t!(left, FList) {
             if let Some(right) = as_t!(right, FList) {
                 if right.0.len() != left.0.len() {
@@ -415,7 +415,7 @@ impl<'a> VM<'a> {
                 } else {
                     left.0.iter().zip(right.0.iter()).for_each(|(l, r)| {
                         if let Some(v) = as_t!(l, FVar) {
-                            func(self, v.0.to_string(), r.clone());
+                            func(self, v.0.clone(), r.clone());
                         } else if as_t!(l, FEmpty).is_some() {
                             {} // do nothing
                         } else {
@@ -434,7 +434,7 @@ impl<'a> VM<'a> {
                     left.0.iter().for_each(|(key, assignee)| {
                         if let Some(val) = right.0.get(key) {
                             if let Some(var) = as_t!(assignee, FVar) {
-                                func(self, var.0.to_string(), val.clone());
+                                func(self, var.0.clone(), val.clone());
                             } else if as_t!(assignee, FEmpty).is_some() {
                                 {} // do nothing
                             } else {
@@ -454,7 +454,7 @@ impl<'a> VM<'a> {
     }
 
     /// Binds the given value to a global variable name
-    fn define_global(vm: &mut VM, name: String, val: Value) {
+    fn define_global(vm: &mut VM, name: Rc<str>, val: Value) {
         if let Entry::Vacant(e) = vm.globals.entry(name) {
             e.insert(val);
         } else {
@@ -463,7 +463,7 @@ impl<'a> VM<'a> {
     }
 
     /// Rebinds a new value to a global variable
-    fn set_global(vm: &mut VM, name: String, val: Value) {
+    fn set_global(vm: &mut VM, name: Rc<str>, val: Value) {
         if let Entry::Occupied(mut o) = vm.globals.entry(name) {
             o.insert(val);
         } else {

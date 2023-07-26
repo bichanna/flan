@@ -6,8 +6,8 @@ use super::util::PrevPeekable;
 
 use std::fs::File;
 use std::io::Read;
+use std::rc::Rc;
 use std::str::Chars;
-use std::sync::Arc;
 
 /// Tokenizes a source code
 pub struct Lexer<'a> {
@@ -87,7 +87,7 @@ impl<'a> Lexer<'a> {
                         if let Some(val) = TokenType::get_type(&value) {
                             self.append(val);
                         } else {
-                            self.append(TokenType::Atom(Arc::from(value)));
+                            self.append(TokenType::Atom(Rc::from(value)));
                         }
 
                         revert = true;
@@ -174,7 +174,7 @@ impl<'a> Lexer<'a> {
                         } else if value == "_" {
                             self.append(TokenType::Empty);
                         } else {
-                            self.append(TokenType::Id(Arc::from(value.as_str())));
+                            self.append(TokenType::Id(Rc::from(value.as_str())));
                         }
                         revert = true;
                     }
@@ -367,8 +367,8 @@ mod tests {
         assert_eq!(tokens[3].kind, TokenType::Float(1.23));
         assert_eq!(tokens[4].kind, TokenType::Int(2748));
         assert_eq!(tokens[5].kind, TokenType::Str("Hello, world".to_string()));
-        assert_eq!(tokens[6].kind, TokenType::Atom(Arc::from("someAtom")));
-        assert_eq!(tokens[7].kind, TokenType::Id(Arc::from("variable")));
+        assert_eq!(tokens[6].kind, TokenType::Atom(Rc::from("someAtom")));
+        assert_eq!(tokens[7].kind, TokenType::Id(Rc::from("variable")));
     }
 
     #[test]

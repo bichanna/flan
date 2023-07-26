@@ -1,6 +1,6 @@
 use crate::error::Position;
 
-use std::sync::Arc;
+use std::rc::Rc;
 
 /// Token for the lexer
 #[derive(Debug, Clone)]
@@ -39,8 +39,8 @@ pub enum TokenType {
     Int(i64),
     Float(f64),
     Str(String),
-    Atom(Arc<str>),
-    Id(Arc<str>),
+    Atom(Rc<str>),
+    Id(Rc<str>),
     Empty,    // _
     LParen,   // (
     RParen,   // )

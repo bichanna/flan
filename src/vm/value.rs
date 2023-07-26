@@ -2,7 +2,7 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::fmt;
 use std::ops;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use dyn_clone::{clone_trait_object, DynClone};
 
@@ -369,7 +369,7 @@ impl FStr {
 }
 
 #[derive(Clone)]
-pub struct FAtom(pub Arc<str>);
+pub struct FAtom(pub Rc<str>);
 impl ValueTrait for FAtom {
     fn truthy(&self) -> bool {
         true
@@ -439,13 +439,13 @@ impl fmt::Display for FAtom {
     }
 }
 impl FAtom {
-    pub fn new(val: Arc<str>) -> Value {
+    pub fn new(val: Rc<str>) -> Value {
         Box::new(FAtom(val))
     }
 }
 
 #[derive(Clone)]
-pub struct FVar(pub Arc<str>);
+pub struct FVar(pub Rc<str>);
 impl ValueTrait for FVar {
     fn truthy(&self) -> bool {
         false
@@ -515,7 +515,7 @@ impl fmt::Display for FVar {
     }
 }
 impl FVar {
-    pub fn new(val: Arc<str>) -> Value {
+    pub fn new(val: Rc<str>) -> Value {
         Box::new(FVar(val))
     }
 }
@@ -859,7 +859,7 @@ impl FList {
 }
 
 #[derive(Clone)]
-pub struct FObj(pub HashMap<Arc<str>, Value>);
+pub struct FObj(pub HashMap<Rc<str>, Value>);
 impl ValueTrait for FObj {
     fn truthy(&self) -> bool {
         !self.0.is_empty()
@@ -947,7 +947,7 @@ impl fmt::Display for FObj {
     }
 }
 impl FObj {
-    pub fn new(obj: HashMap<Arc<str>, Value>) -> Value {
+    pub fn new(obj: HashMap<Rc<str>, Value>) -> Value {
         Box::new(FObj(obj))
     }
 }

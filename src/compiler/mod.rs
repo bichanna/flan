@@ -2,7 +2,7 @@ pub mod opcode;
 pub mod util;
 
 use std::cmp::Ordering;
-use std::sync::Arc;
+use std::rc::Rc;
 use std::vec::IntoIter;
 
 use self::opcode::OpCode;
@@ -68,7 +68,7 @@ macro_rules! backpatch_u32 {
 
 #[derive(Clone)]
 struct Local {
-    name: Arc<str>,
+    name: Rc<str>,
     depth: usize,
 }
 
@@ -290,7 +290,7 @@ impl Compiler {
                                     self.report_err("object literal too big".to_string(), pos);
                                 }
 
-                                fn token_to_str(t: &Token) -> Arc<str> {
+                                fn token_to_str(t: &Token) -> Rc<str> {
                                     match t.clone().kind {
                                         TokenType::Id(name) => name,
                                         _ => todo!(), // just panic
@@ -651,7 +651,7 @@ impl Compiler {
     }
 
     /// Adds a reference to a local variable
-    fn add_local(&mut self, name: Arc<str>) {
+    fn add_local(&mut self, name: Rc<str>) {
         self.locals.push(Local {
             name,
             depth: self.scope_depth,
@@ -659,7 +659,7 @@ impl Compiler {
     }
 
     /// Resolves a local variable and returns the index of the variable
-    fn resolve_local(&self, name: Arc<str>, global: bool, pos: Position) -> Option<usize> {
+    fn resolve_local(&self, name: Rc<str>, global: bool, pos: Position) -> Option<usize> {
         if self.locals.is_empty() {
             return None;
         }
