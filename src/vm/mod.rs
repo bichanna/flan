@@ -14,6 +14,7 @@ use crate::{as_t, force_as_t};
 use self::gc::heap::Heap;
 use self::value::*;
 
+pub mod function;
 pub mod gc;
 pub mod value;
 

@@ -4,6 +4,7 @@ use std::fmt;
 use std::ops;
 use std::rc::Rc;
 
+use super::function::Function;
 use crate::vm::gc::heap::{Heap, Object};
 
 use dyn_clone::{clone_trait_object, DynClone};
@@ -1007,5 +1008,74 @@ impl fmt::Display for FNil {
 impl FNil {
     pub fn new() -> Value {
         Box::new(FNil)
+    }
+}
+
+#[derive(Clone)]
+pub struct FFunc(Object);
+impl ValueTrait for FFunc {
+    fn truthy(&self) -> bool {
+        false
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn type_str(&self) -> String {
+        let func = self.inner();
+        let mut ret = format!("fn:{}({}", func.name, func.arity);
+        if func.rest {
+            ret += ", +)";
+        } else {
+            ret += ")";
+        }
+        ret
+    }
+
+    fn equal(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FFunc) {
+            other.inner().name == self.inner().name
+                && other.inner().arity == self.inner().arity
+                && other.inner().rest == self.inner().rest
+        } else {
+            false
+        }
+    }
+
+    fn less_than(&self, _: &Value) -> bool {
+        false
+    }
+
+    fn greater_than(&self, _: &Value) -> bool {
+        false
+    }
+
+    fn less_than_or_eq(&self, _: &Value) -> bool {
+        false
+    }
+
+    fn greater_than_or_eq(&self, _: &Value) -> bool {
+        false
+    }
+}
+impl fmt::Display for FFunc {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.type_str())
+    }
+}
+impl FFunc {
+    pub fn new(heap: &mut Heap, func: Function) -> Value {
+        Box::new(FFunc(heap.allocate(func)))
+    }
+
+    pub fn inner_mut(&mut self) -> &mut Function {
+        unsafe { (self.0.ptr as *mut Function).as_mut().unwrap() }
+    }
+
+    pub fn inner(&self) -> &Function {
+        unsafe { (self.0.ptr as *const Function).as_ref().unwrap() }
     }
 }
