@@ -1024,8 +1024,8 @@ impl ValueTrait for FFunc {
 
     fn type_str(&self) -> String {
         let func = self.inner();
-        let mut ret = format!("fn:{}({}", func.name, func.arity);
-        if func.rest {
+        let mut ret = format!("fn:{}({}", func.name, func.params.len());
+        if func.rest.is_some() {
             ret += ", +)";
         } else {
             ret += ")";
@@ -1038,7 +1038,7 @@ impl ValueTrait for FFunc {
             true
         } else if let Some(other) = as_t!(other, FFunc) {
             other.inner().name == self.inner().name
-                && other.inner().arity == self.inner().arity
+                && other.inner().params == self.inner().params
                 && other.inner().rest == self.inner().rest
         } else {
             false
@@ -1063,7 +1063,14 @@ impl ValueTrait for FFunc {
 }
 impl fmt::Display for FFunc {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.type_str())
+        let func = self.inner();
+        let mut ret = format!("fn:{}({}", func.name, func.params.join(", "));
+        if let Some(rest) = func.rest.clone() {
+            ret += &format!(", {}+)", rest);
+        } else {
+            ret += ")";
+        }
+        f.write_str(&ret)
     }
 }
 impl FFunc {
