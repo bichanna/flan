@@ -58,6 +58,24 @@ macro_rules! binary_op {
     };
 }
 
+macro_rules! partial_match {
+    ($self: expr, $target: expr, $jump: expr, $cond: expr, $type: ty, $rn: expr) => {
+        if as_t!($target, FEmpty).is_some() {
+            {} // do nothing
+        } else if let Some(target) = as_t!($target, $type) {
+            if target.0 != $cond.0 {
+                $self.jump($jump);
+                *$rn = true;
+            }
+        } else if as_t!($target, FVar).is_some() {
+            // TODO: fix this later
+        } else {
+            $self.jump($jump);
+            *$rn = true;
+        }
+    };
+}
+
 struct VM<'a> {
     /// Heap
     heap: Heap,
@@ -203,18 +221,18 @@ impl<'a> VM<'a> {
 
                 OpCode::Jump => {
                     let jump = read_2bytes!(self);
-                    unsafe { self.ip.add(jump as usize) };
+                    self.jump(jump as usize);
                 }
 
                 OpCode::LongJump => {
                     let jump = read_4bytes!(self);
-                    unsafe { self.ip.add(jump as usize) };
+                    self.jump(jump as usize);
                 }
 
                 OpCode::JumpIfFalse => {
                     let jump = read_2bytes!(self);
                     if !self.pop().truthy() {
-                        unsafe { self.ip.add(jump as usize) };
+                        self.jump(jump as usize);
                     }
                 }
 
@@ -396,7 +414,98 @@ impl<'a> VM<'a> {
                     self.push(right);
                 }
 
-                OpCode::Match => {}
+                OpCode::Match => {
+                    let target = self.pop();
+                    let cond = self.pop();
+                    let has_next = read_byte!(self) == 1;
+                    let jump = read_2bytes!(self) as usize;
+                    let mut is_body_running = false;
+
+                    fn match_expr(
+                        vm: &mut VM,
+                        cond: Value,
+                        target: Value,
+                        jump: usize,
+                        is_body_running: &mut bool,
+                    ) {
+                        if as_t!(cond, FEmpty).is_some() {
+                            {} // do nothing
+                        } else if let Some(int) = as_t!(cond, FInt) {
+                            partial_match!(vm, target, jump, int, FInt, is_body_running);
+                        } else if let Some(float) = as_t!(cond, FFloat) {
+                            partial_match!(vm, target, jump, float, FFloat, is_body_running);
+                        } else if let Some(b) = as_t!(cond, FBool) {
+                            partial_match!(vm, target, jump, b, FBool, is_body_running);
+                        } else if let Some(atom) = as_t!(cond, FAtom) {
+                            partial_match!(vm, target, jump, atom, FAtom, is_body_running);
+                        } else if as_t!(cond, FNil).is_some() {
+                            if as_t!(target, FNil).is_some() || as_t!(target, FEmpty).is_some() {
+                                {} // do nothing
+                            } else if as_t!(target, FVar).is_some() {
+                                // TODO: fix this later
+                            } else {
+                                vm.jump(jump);
+                                *is_body_running = true;
+                            }
+                        } else if let Some(string) = as_t!(cond, FStr) {
+                            if as_t!(target, FEmpty).is_some() {
+                                {} // do nothing
+                            } else if let Some(t_str) = as_t!(target, FStr) {
+                                if t_str.inner() != string.inner() {
+                                    vm.jump(jump);
+                                    *is_body_running = true;
+                                }
+                            } else if as_t!(target, FVar).is_some() {
+                                // TODO: fix this later
+                            } else {
+                                vm.jump(jump);
+                                *is_body_running = true;
+                            }
+                        } else if let Some(flist) = as_t!(cond, FList) {
+                            let list = flist.inner();
+                            if as_t!(target, FEmpty).is_some() {
+                                {} // do nothing
+                            } else if as_t!(target, FVar).is_some() {
+                                // TODO: fix this later
+                            } else if let Some(t_flist) = as_t!(target, FList) {
+                                let t_list = t_flist.inner();
+                                if list.len() != t_list.len() {
+                                    // TODO: report an error
+                                }
+                                list.iter().zip(t_list.iter()).for_each(|(l, r)| {
+                                    match_expr(vm, l.clone(), r.clone(), jump, is_body_running);
+                                });
+                            } else {
+                                vm.jump(jump);
+                                *is_body_running = true;
+                            }
+                        } else if let Some(fobj) = as_t!(cond, FObj) {
+                            let obj = fobj.inner();
+                            if as_t!(target, FEmpty).is_some() {
+                                {} // do nothing
+                            } else if as_t!(target, FVar).is_some() {
+                                // TODO: fix this later
+                            } else if let Some(t_fobj) = as_t!(target, FObj) {
+                                let t_obj = t_fobj.inner();
+                                if t_obj.len() != obj.len() {
+                                    // TODO: report an error
+                                }
+                                obj.iter().for_each(|(l_key, l_val)| {
+                                    if t_obj.contains_key(l_key) {
+                                        let t_val = t_obj.get(l_key).unwrap().clone();
+                                        match_expr(vm, l_val.clone(), t_val, jump, is_body_running);
+                                    }
+                                });
+                            }
+                        }
+                    }
+
+                    match_expr(self, cond.clone(), target, jump, &mut is_body_running);
+
+                    if !is_body_running && has_next {
+                        self.push(cond);
+                    }
+                }
 
                 OpCode::Call => {}
 
@@ -463,6 +572,10 @@ impl<'a> VM<'a> {
 
             inst = FromPrimitive::from_u8(read_byte!(self)).unwrap();
         }
+    }
+
+    fn jump(&mut self, jmp: usize) {
+        unsafe { self.ip.add(jmp) };
     }
 
     /// A short cut for random access stack assignment
@@ -551,7 +664,7 @@ impl<'a> VM<'a> {
             read_byte!(self) as usize
         };
 
-        replace(&mut self.constants[idx], FEmpty::new())
+        replace(&mut self.constants[idx], FNil::new())
     }
 
     /// Pops a `Value` off from `stack`
