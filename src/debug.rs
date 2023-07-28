@@ -158,26 +158,6 @@ impl<'a> Debug<'a> {
         self.offset += 5;
     }
 
-    fn double_arg_instruction(&mut self, name: &'static str) {
-        let jump = from_little_endian([
-            self.bytecode[self.offset + 1],
-            self.bytecode[self.offset + 2],
-        ]);
-        println!("{:-16} {:>6}", name, jump);
-        self.offset += 3;
-    }
-
-    fn quadruple_arg_instruction(&mut self, name: &'static str) {
-        let jump = from_little_endian_u32([
-            self.bytecode[self.offset + 1],
-            self.bytecode[self.offset + 2],
-            self.bytecode[self.offset + 3],
-            self.bytecode[self.offset + 4],
-        ]);
-        println!("{:-16} {:>6}", name, jump);
-        self.offset += 5;
-    }
-
     fn match_instruction(&mut self) {
         let len = from_little_endian([
             self.bytecode[self.offset + 1],
