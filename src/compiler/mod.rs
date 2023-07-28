@@ -7,7 +7,7 @@ use std::vec::IntoIter;
 
 use self::opcode::OpCode;
 use self::util::{to_little_endian, to_little_endian_u32, MemorySlice};
-use crate::error::{ErrType, Position, Stack};
+use crate::error::{flan_panic_exit, ErrType, Position, Stack};
 use crate::lexer::token::{Token, TokenType};
 use crate::parser::expr::{Expr, MatchBranch, WhenBranch};
 use crate::parser::test_parse;
@@ -109,7 +109,7 @@ impl Compiler {
 
     fn _compile(&mut self) {
         while self.exprs.current.is_some() {
-            self.compile_expr(self.current.clone());
+            self.compile_expr_to_self(self.current.clone());
             self.mem_slice.write_opcode(OpCode::Pop, (0, 0));
             self.next_expr();
         }
@@ -117,12 +117,12 @@ impl Compiler {
     }
 
     /// Compiles an expression
-    fn compile_expr(&mut self, expr: Expr) {
+    fn compile_expr_to_self(&mut self, expr: Expr) {
         match expr {
             Expr::Binary { left, right, op } => {
                 let pos = op.pos;
-                self.compile_expr(*left);
-                self.compile_expr(*right);
+                self.compile_expr_to_self(*left);
+                self.compile_expr_to_self(*right);
                 match op.kind {
                     TokenType::Plus => self.mem_slice.write_opcode(OpCode::Add, pos),
                     TokenType::Minus => self.mem_slice.write_opcode(OpCode::Sub, pos),
@@ -140,11 +140,11 @@ impl Compiler {
             }
 
             Expr::Group(expr) => {
-                self.compile_expr(*expr);
+                self.compile_expr_to_self(*expr);
             }
 
             Expr::Unary { right, op } => {
-                self.compile_expr(*right);
+                self.compile_expr_to_self(*right);
                 self.mem_slice.write_opcode(
                     if let TokenType::Bang = op.kind {
                         OpCode::NegateBool
@@ -157,8 +157,9 @@ impl Compiler {
 
             Expr::Logic { left, right, op } => {
                 let pos = op.pos;
-                self.compile_expr(*left);
-                self.compile_expr(*right);
+                self.compile_expr_to_self(*left);
+                self.compile_expr_to_self(*right);
+
                 match op.kind {
                     TokenType::And => self.mem_slice.write_opcode(OpCode::And, pos),
                     TokenType::Or => self.mem_slice.write_opcode(OpCode::Or, pos),
@@ -198,7 +199,7 @@ impl Compiler {
                             Expr::Empty(pos) => {
                                 c.mem_slice.write_opcode(OpCode::LoadEmpty, *pos);
                             }
-                            _ => {} // does not happen
+                            _ => unreachable!(),
                         }
                     }
 
@@ -208,10 +209,10 @@ impl Compiler {
                         }
                         Expr::List { elems, pos } => self.compile_list(elems, pos, compile),
                         Expr::Obj { keys, vals, pos } => self.compile_obj(keys, vals, pos, compile),
-                        _ => {} // does not happen
+                        _ => unreachable!(),
                     }
 
-                    self.compile_expr(*right);
+                    self.compile_expr_to_self(*right);
                     self.mem_slice.write_opcode(
                         if init {
                             OpCode::DefGlobal
@@ -235,7 +236,7 @@ impl Compiler {
                                 Expr::Empty(pos) => {
                                     c.mem_slice.write_opcode(OpCode::LoadEmpty, *pos);
                                 }
-                                _ => {} // does not happen
+                                _ => unreachable!(),
                             }
                         }
 
@@ -250,14 +251,14 @@ impl Compiler {
                             Expr::Obj { keys, vals, pos } => {
                                 self.compile_obj(keys, vals, pos, compile);
                             }
-                            _ => {} // does not happen
+                            _ => unreachable!(),
                         }
 
-                        self.compile_expr(*right);
+                        self.compile_expr_to_self(*right);
                         self.mem_slice.write_opcode(OpCode::DefLocal, pos);
                     } else {
                         // reassignment
-                        self.compile_expr(*right);
+                        self.compile_expr_to_self(*right);
 
                         fn compile_for_list(c: &mut Compiler, expr: &Expr) {
                             match expr {
@@ -272,7 +273,7 @@ impl Compiler {
                                     c.mem_slice.write_byte(0, *pos);
                                     c.mem_slice.write_byte(0, *pos);
                                 }
-                                _ => {} // does not happen
+                                _ => unreachable!(),
                             }
                         }
 
@@ -317,7 +318,7 @@ impl Compiler {
                                         *pos,
                                     ),
                                     Expr::Empty(pos) => self.mem_slice.write_byte(0, *pos),
-                                    _ => {} // does not happen
+                                    _ => unreachable!(),
                                 });
                             }
                             _ => {}
@@ -341,13 +342,13 @@ impl Compiler {
 
                     // compiling the condition expression if there's one
                     if let Some(cond) = cond {
-                        c.compile_expr(*cond);
+                        c.compile_expr_to_self(*cond);
                     }
 
                     // compiling the case expression
-                    c.compile_expr(*branch.case);
+                    c.compile_expr_to_self(*branch.case);
 
-                    backpatch!(
+                    backpatch_u32!(
                         c,
                         OpCode::Match,
                         "the match branch is too big".to_string(),
@@ -357,7 +358,7 @@ impl Compiler {
                             c.mem_slice
                                 .write_byte(if branches.is_empty() { 0 } else { 1 }, pos);
                             // compiling the body of the branch
-                            c.compile_expr(*branch.body);
+                            c.compile_expr_to_self(*branch.body);
                         }
                     );
 
@@ -386,7 +387,7 @@ impl Compiler {
                     let branch = branches.remove(0);
 
                     // compiling the condition expression of the branch
-                    c.compile_expr(*branch.cond);
+                    c.compile_expr_to_self(*branch.cond);
 
                     backpatch!(
                         c,
@@ -395,7 +396,7 @@ impl Compiler {
                         pos,
                         {
                             // compiling the body of the branch
-                            c.compile_expr(*branch.body);
+                            c.compile_expr_to_self(*branch.body);
                         }
                     );
 
@@ -427,7 +428,7 @@ impl Compiler {
                 pos,
             } => {
                 // compiling the condition expression
-                self.compile_expr(*cond);
+                self.compile_expr_to_self(*cond);
 
                 backpatch!(
                     self,
@@ -436,7 +437,7 @@ impl Compiler {
                     pos,
                     {
                         // compiling the `then` body
-                        self.compile_expr(*then);
+                        self.compile_expr_to_self(*then);
                     }
                 );
 
@@ -448,7 +449,7 @@ impl Compiler {
                     // compiling `else` body if there's one
                     {
                         if let Some(els) = els {
-                            self.compile_expr(*els);
+                            self.compile_expr_to_self(*els);
                         } else {
                             self.mem_slice.write_opcode(OpCode::LoadNil, pos);
                         }
@@ -466,7 +467,7 @@ impl Compiler {
 
                 // compiling all expressions in the block except for the last expression
                 exprs.iter().for_each(|expr| {
-                    self.compile_expr(expr.clone());
+                    self.compile_expr_to_self(expr.clone());
                     self.mem_slice.write_opcode(OpCode::Pop, pos);
                 });
 
@@ -502,7 +503,7 @@ impl Compiler {
                 }
 
                 // compiling the last expression, which is the value of the block
-                self.compile_expr(last_expr);
+                self.compile_expr_to_self(last_expr);
 
                 // adding pop instructions needed according to the number of the local variables in
                 // this block
@@ -558,21 +559,21 @@ impl Compiler {
 
             Expr::List { elems, pos } => {
                 fn compile_expr(c: &mut Compiler, expr: &Expr) {
-                    c.compile_expr(expr.clone());
+                    c.compile_expr_to_self(expr.clone());
                 }
                 self.compile_list(elems, pos, compile_expr);
             }
 
             Expr::Obj { keys, vals, pos } => {
                 fn compile_expr(c: &mut Compiler, expr: &Expr) {
-                    c.compile_expr(expr.clone());
+                    c.compile_expr_to_self(expr.clone());
                 }
                 self.compile_obj(keys, vals, pos, compile_expr);
             }
 
             Expr::Get { inst, attr, pos } => {
-                self.compile_expr(*inst);
-                self.compile_expr(*attr);
+                self.compile_expr_to_self(*inst);
+                self.compile_expr_to_self(*attr);
                 self.mem_slice.write_opcode(OpCode::Get, pos);
             }
 
@@ -582,9 +583,9 @@ impl Compiler {
                 val,
                 pos,
             } => {
-                self.compile_expr(*inst);
-                self.compile_expr(*attr);
-                self.compile_expr(*val);
+                self.compile_expr_to_self(*inst);
+                self.compile_expr_to_self(*attr);
+                self.compile_expr_to_self(*val);
                 self.mem_slice.write_opcode(OpCode::Set, pos);
             }
 
@@ -707,7 +708,7 @@ impl Compiler {
                     pos: _,
                 } => vals.iter().for_each(|i| check(s, local.clone(), i.clone())),
                 Expr::Empty(_) => {} // do nothing
-                _ => {}              // does not happen
+                _ => unreachable!(),
             }
         }
 
@@ -739,7 +740,7 @@ impl Compiler {
     }
 }
 
-pub fn test_compile(src: &str) -> MemorySlice {
+pub fn test_compile(src: &str) -> (MemorySlice, Heap) {
     let exprs = test_parse(src);
     let mut exprs = PrevPeekable::new(exprs.into_iter());
     let current = exprs.next().unwrap();
@@ -754,8 +755,7 @@ pub fn test_compile(src: &str) -> MemorySlice {
         current,
     };
     compiler._compile();
-    compiler.heap.deallocate_all();
-    compiler.mem_slice
+    (compiler.mem_slice, compiler.heap)
 }
 
 #[cfg(test)]
@@ -766,7 +766,8 @@ mod tests {
     #[test]
     fn literals() {
         let src = "1 2.34 :nil true false [1, :err] {name -> \"Nobu\"}";
-        let mem_slice = test_compile(src);
+        let (mem_slice, mut heap) = test_compile(src);
+        heap.deallocate_all();
         // Debug::run("TEST 1", &mem_slice);
     }
 }

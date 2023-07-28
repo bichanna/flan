@@ -16,7 +16,7 @@ pub struct Debug<'a> {
     /// Constants
     consts: &'a Vec<Box<dyn ValueTrait>>,
     /// Index
-    offset: usize,
+    pub offset: usize,
 }
 
 impl<'a> Debug<'a> {
@@ -139,10 +139,10 @@ impl<'a> Debug<'a> {
             self.bytecode[self.offset + 1],
             self.bytecode[self.offset + 2],
         ]);
-        let idx = self.offset + 3 + jump as usize;
+        self.offset += 3;
+        let idx = self.offset + jump as usize;
         let opcode: OpCode = FromPrimitive::from_u8(self.bytecode[idx]).unwrap();
         println!("{:-16} {:>6} => {:?}", name, idx, opcode);
-        self.offset += 3;
     }
 
     fn long_jump_instruction(&mut self) {
@@ -152,24 +152,26 @@ impl<'a> Debug<'a> {
             self.bytecode[self.offset + 3],
             self.bytecode[self.offset + 4],
         ]);
-        let idx = self.offset + 5 + jump as usize;
+        self.offset += 5;
+        let idx = self.offset + jump as usize;
         let opcode: OpCode = FromPrimitive::from_u8(self.bytecode[idx]).unwrap();
         println!("{:-16} {:>6} => {:?}", "LongJump", idx, opcode);
-        self.offset += 5;
     }
 
     fn match_instruction(&mut self) {
-        let len = from_little_endian([
+        let len = from_little_endian_u32([
             self.bytecode[self.offset + 1],
             self.bytecode[self.offset + 2],
+            self.bytecode[self.offset + 3],
+            self.bytecode[self.offset + 4],
         ]);
         println!(
             "{:-16} {:>6} {}",
             "Match",
             len,
-            self.bytecode[self.offset + 3] == 1
+            self.bytecode[self.offset + 5] == 1
         );
-        self.offset += 4;
+        self.offset += 6;
     }
 
     fn set_local_list_instruction(&mut self) {

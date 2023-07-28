@@ -6,6 +6,7 @@ use std::rc::Rc;
 use num_traits::FromPrimitive;
 
 use crate::compiler::opcode::OpCode;
+use crate::compiler::test_compile;
 use crate::compiler::util::{from_little_endian, from_little_endian_u32, MemorySlice};
 use crate::debug::Debug;
 use crate::error::Positions;
@@ -77,9 +78,9 @@ macro_rules! partial_match {
     };
 }
 
-struct VM<'a> {
+pub struct VM<'a> {
     /// Heap
-    heap: Heap,
+    heap: &'a mut Heap,
     /// Constants
     constants: Vec<Value>,
     /// Positions for error reporting
@@ -91,11 +92,12 @@ struct VM<'a> {
     /// All global variables are stored in here
     globals: HashMap<Rc<str>, Value>,
     /// Debugger for the VM
+    #[cfg(feature = "debug")]
     debugger: Debug<'a>,
 }
 
 impl<'a> VM<'a> {
-    pub fn execute(mem_slice: MemorySlice, heap: Heap) {
+    pub fn execute(mem_slice: MemorySlice, heap: &'a mut Heap) {
         let mut vm = VM {
             heap,
             constants: mem_slice.constants.clone(),
@@ -103,6 +105,7 @@ impl<'a> VM<'a> {
             ip: mem_slice.bytecode.as_ptr(),
             stack: Vec::with_capacity(u8::MAX as usize),
             globals: HashMap::with_capacity(12),
+            #[cfg(feature = "debug")]
             debugger: Debug::new(&mem_slice),
         };
         vm._execute();
@@ -113,8 +116,8 @@ impl<'a> VM<'a> {
         loop {
             #[cfg(feature = "debug")]
             {
-                println!("    stack: ");
-                self.stack.iter().for_each(|v| println!("[{v}]"));
+                print!("    stack: ");
+                self.stack.iter().for_each(|v| print!("[{v}]"));
                 println!("");
                 self.debugger.disassemble_instruction()
             }
@@ -180,17 +183,17 @@ impl<'a> VM<'a> {
                 }
 
                 OpCode::InitList => {
-                    let len = read_2bytes!(self) as usize;
+                    let len = read_byte!(self) as usize;
                     let mut list: Vec<Value> = Vec::with_capacity(len);
                     // adding elements to the list
                     (0..len).for_each(|_| list.push(self.pop()));
                     list.reverse();
-                    let flist = FList::new(&mut self.heap, list);
+                    let flist = FList::new(self.heap, list);
                     self.push(flist);
                 }
 
                 OpCode::InitObj => {
-                    let len = read_2bytes!(self) as usize;
+                    let len = read_byte!(self) as usize;
                     let mut obj: HashMap<Rc<str>, Value> = HashMap::with_capacity(len);
                     (0..len).for_each(|_| {
                         // getting the value
@@ -203,7 +206,7 @@ impl<'a> VM<'a> {
                             // TODO: report error
                         }
                     });
-                    let fobj = FObj::new(&mut self.heap, obj);
+                    let fobj = FObj::new(self.heap, obj);
                     self.push(fobj);
                 }
 
@@ -234,6 +237,7 @@ impl<'a> VM<'a> {
                     let jump = read_2bytes!(self);
                     if !self.pop().truthy() {
                         self.jump(jump as usize);
+                        continue;
                     }
                 }
 
@@ -419,7 +423,7 @@ impl<'a> VM<'a> {
                     let target = self.pop();
                     let cond = self.pop();
                     let has_next = read_byte!(self) == 1;
-                    let jump = read_2bytes!(self) as usize;
+                    let jump = read_4bytes!(self) as usize;
                     let mut is_body_running = false;
 
                     fn match_expr(
@@ -576,7 +580,11 @@ impl<'a> VM<'a> {
     }
 
     fn jump(&mut self, jmp: usize) {
-        unsafe { self.ip.add(jmp) };
+        #[cfg(feature = "debug")]
+        {
+            self.debugger.offset += jmp;
+        }
+        self.ip = unsafe { self.ip.add(jmp) };
     }
 
     /// A short cut for random access stack assignment
@@ -689,4 +697,14 @@ impl<'a> VM<'a> {
             self.stack.reserve(self.stack.len() / 3);
         }
     }
+}
+
+pub fn test_execute(src: &str) {
+    let (mem_slice, mut heap) = test_compile(src);
+
+    Debug::run("TEST!", &mem_slice);
+
+    VM::execute(mem_slice, &mut heap);
+
+    heap.deallocate_all();
 }
