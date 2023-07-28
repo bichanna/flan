@@ -9,3 +9,6 @@ build:
 
 release:
     cargo build --release
+
+debug:
+    cargo run --features "debug"
