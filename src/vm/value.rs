@@ -934,17 +934,16 @@ impl ValueTrait for FObj {
 }
 impl fmt::Display for FObj {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut obj = self
+        let obj = self
             .inner()
             .iter()
-            .map(|(k, v)| format!("{}->{}", k, v))
+            .map(|(k, v)| format!("{}->{}", k.as_ref(), v))
             .collect::<Vec<String>>()
             .join(", ");
-        obj.push('}');
         let mut string = "{".to_string();
         string.push_str(&obj);
         string.push('}');
-        f.write_str(&obj)
+        f.write_str(&string)
     }
 }
 impl FObj {
@@ -1024,7 +1023,15 @@ impl ValueTrait for FFunc {
 
     fn type_str(&self) -> String {
         let func = self.inner();
-        let mut ret = format!("fn:{}({}", func.name, func.params.len());
+        let mut ret = format!(
+            "fn:{}({}",
+            if let Some(name) = &func.name {
+                name.as_ref()
+            } else {
+                "<anonymous>"
+            },
+            func.params.len()
+        );
         if func.rest.is_some() {
             ret += ", +)";
         } else {
@@ -1064,7 +1071,15 @@ impl ValueTrait for FFunc {
 impl fmt::Display for FFunc {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let func = self.inner();
-        let mut ret = format!("fn:{}({}", func.name, func.params.join(", "));
+        let mut ret = format!(
+            "fn:{}({}",
+            if let Some(name) = &func.name.clone() {
+                name.as_ref()
+            } else {
+                "<anonymous>"
+            },
+            func.params.join(", ")
+        );
         if let Some(rest) = func.rest.clone() {
             ret += &format!(", {}+)", rest);
         } else {

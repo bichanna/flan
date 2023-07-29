@@ -196,10 +196,11 @@ impl<'a> VM<'a> {
                     let len = read_byte!(self) as usize;
                     let mut obj: HashMap<Rc<str>, Value> = HashMap::with_capacity(len);
                     (0..len).for_each(|_| {
-                        // getting the value
-                        let val = self.pop();
                         // getting the key
                         let key = self.pop();
+                        // getting the value
+                        let val = self.pop();
+
                         if let Some(key) = as_t!(key, FVar) {
                             obj.insert(key.0.clone(), val);
                         } else {

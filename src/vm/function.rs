@@ -1,31 +1,24 @@
 use std::rc::Rc;
 
-use crate::compiler::util::MemorySlice;
-
-pub enum FuncType {
-    Function,
-    Script,
-}
-
 pub struct Function {
     pub params: Vec<Rc<str>>,
     pub rest: Option<Rc<str>>,
-    pub mem_slice: MemorySlice,
-    pub name: Rc<str>,
+    pub bytecode: Vec<u8>,
+    pub name: Option<Rc<str>>,
 }
 
 impl Function {
     pub fn new(
         params: Vec<Rc<str>>,
         rest: Option<Rc<str>>,
-        mem_slice: MemorySlice,
-        name: &str,
+        bytecode: Vec<u8>,
+        name: Option<Rc<str>>,
     ) -> Self {
         Self {
             params,
             rest,
-            mem_slice,
-            name: Rc::from(name),
+            bytecode,
+            name,
         }
     }
 }
