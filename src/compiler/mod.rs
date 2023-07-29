@@ -7,7 +7,7 @@ use std::vec::IntoIter;
 
 use self::opcode::OpCode;
 use self::util::{to_little_endian, to_little_endian_u32, MemorySlice};
-use crate::error::{flan_panic_exit, ErrType, Position, Stack};
+use crate::error::{ErrType, Position, Stack};
 use crate::lexer::token::{Token, TokenType};
 use crate::parser::expr::{Expr, MatchBranch, WhenBranch};
 use crate::parser::test_parse;
