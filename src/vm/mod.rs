@@ -422,9 +422,12 @@ impl<'a> VM<'a> {
                 OpCode::Match => {
                     let target = self.pop();
                     let cond = self.pop();
+                    let jump = read_4bytes!(self);
                     let has_next = read_byte!(self) == 1;
-                    let jump = read_4bytes!(self) as usize;
                     let mut is_body_running = false;
+
+                    // recalculating the jump
+                    let jump = if has_next { jump - 1 + 5 } else { jump - 1 } as usize;
 
                     fn match_expr(
                         vm: &mut VM,
@@ -507,7 +510,7 @@ impl<'a> VM<'a> {
 
                     match_expr(self, cond.clone(), target, jump, &mut is_body_running);
 
-                    if !is_body_running && has_next {
+                    if is_body_running && has_next {
                         self.push(cond);
                     }
                 }

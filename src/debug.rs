@@ -165,13 +165,15 @@ impl<'a> Debug<'a> {
             self.bytecode[self.offset + 3],
             self.bytecode[self.offset + 4],
         ]);
-        println!(
-            "{:-16} {:>6} {}",
-            "Match",
-            len,
-            self.bytecode[self.offset + 5] == 1
-        );
+        let has_next = self.bytecode[self.offset + 5] == 1;
         self.offset += 6;
+        let idx = if has_next {
+            self.offset + len as usize - 1 + 5
+        } else {
+            self.offset + len as usize - 1
+        };
+        let opcode: OpCode = FromPrimitive::from_u8(self.bytecode[idx]).unwrap();
+        println!("{:-16} {:>6} => {:?} {}", "Match", idx, opcode, has_next);
     }
 
     fn set_local_list_instruction(&mut self) {
