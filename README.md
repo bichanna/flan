@@ -13,6 +13,7 @@
 
 Flan is an acronym for "**F**unctional **LAN**guage," and I happen to have a fondness for flan - a delicious custard dessert topped with caramel sauce.
 
+## Examples
 Nothing works currently, but here are some examples:
 ```javascript
 i{each, println} := import("std", "fmt")
@@ -32,3 +33,11 @@ fn fizzBuzz(n) = match [n % 3, n % 5] with
 
 range(101) |> each() <~ fizzBuzz(it) |> println()
 ```
+
+## Contents
+This repository contains the core components of the language, including:
+ - Compiler: converts text-based source code into a bytecode representation.
+ - Runtime: executes the compiled bytecode.
+
+## Contribution
+Bug reports and contributions are always welcome!
