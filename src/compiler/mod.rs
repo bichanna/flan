@@ -671,7 +671,7 @@ impl Compiler {
             return None;
         }
         for idx in (0..=(self.locals.len() - 1)).rev() {
-            if self.locals[idx].name.as_ref() == name.as_ref() {
+            if self.locals[idx].name == name {
                 return Some(idx);
             }
         }

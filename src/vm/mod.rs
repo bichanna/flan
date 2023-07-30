@@ -348,8 +348,8 @@ impl<'a> VM<'a> {
                 }
 
                 OpCode::GetLocal => {
-                    let len = self.stack.len();
-                    let val = self.stack[len - read_byte!(self) as usize - 1].clone();
+                    let idx = read_byte!(self) as usize;
+                    let val = self.stack[idx].clone();
                     self.push(val);
                 }
 
