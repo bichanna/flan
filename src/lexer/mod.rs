@@ -368,8 +368,8 @@ mod tests {
         assert_eq!(tokens[3].kind, TokenType::Float(1.23));
         assert_eq!(tokens[4].kind, TokenType::Int(2748));
         assert_eq!(tokens[5].kind, TokenType::Str("Hello, world".to_string()));
-        assert_eq!(tokens[6].kind, TokenType::Atom(Rc::from("someAtom")));
-        assert_eq!(tokens[7].kind, TokenType::Id(Rc::from("variable")));
+        assert_eq!(tokens[6].kind, TokenType::Atom(Arc::from("someAtom")));
+        assert_eq!(tokens[7].kind, TokenType::Id(Arc::from("variable")));
     }
 
     #[test]
