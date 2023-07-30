@@ -2,11 +2,12 @@ use std::collections::HashMap;
 use std::fmt;
 use std::fs::File;
 use std::io::Read;
+use std::path::PathBuf;
 use std::process::exit;
 use std::sync::Arc;
 
 /// A set of source file names (paths)
-static mut PATHS: Vec<Arc<str>> = vec![];
+static mut PATHS: Vec<PathBuf> = vec![];
 
 /// A tuple containing a column and line numbers: (column, line)
 pub type Position = (usize, usize);
@@ -60,8 +61,8 @@ impl Stack {
         Self::new_from_node(err, msg, Node { pos, path_idx })
     }
 
-    pub fn add_path(filename: &str) {
-        unsafe { PATHS.push(Arc::from(filename)) }
+    pub fn add_path(path: PathBuf) {
+        unsafe { PATHS.push(path) }
     }
 
     pub fn last_path_index() -> usize {
@@ -93,15 +94,16 @@ impl fmt::Display for Stack {
 
 impl fmt::Display for Node {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let path = unsafe { PATHS[self.path_idx].as_ref() };
-        let file = File::open(path);
+        let path = unsafe { PATHS[self.path_idx].clone() };
+        let file = File::open(path.clone());
+
         if file.is_err() {
-            flan_panic_exit(&format!("could not open {}", path), 1);
+            flan_panic_exit(&format!("could not open {:?}", path.display()), 1);
         }
 
         let mut contents = String::new();
         if file.unwrap().read_to_string(&mut contents).is_err() {
-            flan_panic_exit(&format!("could not read {}", path), 1);
+            flan_panic_exit(&format!("could not read {:?}", path.display()), 1);
         }
 
         let lines = contents
@@ -115,7 +117,7 @@ impl fmt::Display for Node {
 
         let mut err_msg = format!(
             "{}:{}:{}\n{}\n",
-            path,
+            path.display(),
             self.pos.0,
             self.pos.1,
             line.unwrap()

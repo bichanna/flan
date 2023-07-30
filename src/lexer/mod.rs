@@ -6,6 +6,7 @@ use super::util::PrevPeekable;
 
 use std::fs::File;
 use std::io::Read;
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::str::Chars;
 
@@ -27,18 +28,18 @@ pub struct Lexer<'a> {
 
 impl<'a> Lexer<'a> {
     /// The public interface for the lexer
-    pub fn tokenize(path: &str) -> Vec<Token> {
-        Stack::add_path(path);
+    pub fn tokenize(path: PathBuf) -> Vec<Token> {
+        Stack::add_path(path.clone());
 
-        let file = File::open(path);
+        let file = File::open(path.clone());
         if file.is_err() {
-            flan_panic_exit(&format!("could not open {}", path), 1);
+            flan_panic_exit(&format!("could not open {:?}", path.display()), 1);
         }
 
         // getting the contents of the file
         let mut contents = String::new();
         if file.unwrap().read_to_string(&mut contents).is_err() {
-            flan_panic_exit(&format!("could not read {}", path), 1);
+            flan_panic_exit(&format!("could not read {:?}", path.display()), 1);
         }
 
         // converting the contents of the file into Chars
