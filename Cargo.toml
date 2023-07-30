@@ -6,7 +6,6 @@ rust-version = "1.56.1"
 
 description = "Functional LANguage"
 license-file = "LICENSE.txt"
-keywords = ["language"]
 categories = ["compilers", "virtual machines"]
 keywords = ["language", "programming language", "vm"]
 authors = ["Nobuharu Shimazu <nobu.bichanna@gmail.com>"]
