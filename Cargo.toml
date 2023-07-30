@@ -15,6 +15,7 @@ repository = "https://github.com/bichanna/flan"
 num-traits = "0.2"
 num-derive = "0.4"
 dyn-clone = "1.0"
+clap = { version = "4.3", features = ["color", "usage", "help", "suggestions"] }
 
 [features]
 debug = []
