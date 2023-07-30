@@ -545,6 +545,51 @@ impl<'a> VM<'a> {
                         } else {
                             // TODO: report an error
                         }
+                    } else if let Some(fstr) = as_t!(inst, FStr) {
+                        let string = fstr.inner();
+                        if let Some(idx) = as_t!(attr, FInt) {
+                            let idx = idx.0 as usize;
+                            if idx >= string.len() {
+                                // TODO: report an error
+                            }
+
+                            let new_str =
+                                FStr::new(self.heap, string.chars().nth(idx).unwrap().to_string());
+                            self.push(new_str);
+                        } else if let Some(flist) = as_t!(attr, FList) {
+                            let list = flist.inner();
+                            match list.len() {
+                                0 => {
+                                    let new_str = string.clone();
+                                    let new_fstr = FStr::new(self.heap, new_str);
+                                    self.push(new_fstr);
+                                }
+                                1 => {
+                                    if let Some(l) = as_t!(list[0], FInt) {
+                                        let l = l.0 as usize;
+                                        let slice = &string[l..];
+                                        let new_fstr = FStr::new(self.heap, slice.to_string());
+                                        self.push(new_fstr);
+                                    } else {
+                                        // TODO: report an error
+                                    }
+                                }
+                                2 => {
+                                    if as_t!(list[0], FInt).is_some()
+                                        && as_t!(list[1], FInt).is_some()
+                                    {
+                                        let l0 = force_as_t!(list[0], FInt).0 as usize;
+                                        let l1 = force_as_t!(list[1], FInt).0 as usize;
+                                        let slice = &string[l0..l1];
+                                        let new_fstr = FStr::new(self.heap, slice.to_string());
+                                        self.push(new_fstr);
+                                    } else {
+                                        // TODO: report an error
+                                    }
+                                }
+                                _ => {} // TODO: report an error
+                            }
+                        }
                     } else {
                         // TODO: report an error
                     }
