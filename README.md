@@ -16,10 +16,12 @@ Flan is an acronym for "**F**unctional **LAN**guage," and I happen to have a fon
 ## Examples
 Nothing works currently, but here are some examples:
 ```javascript
-i{each, println} := import("std", "fmt")
+i{iter, each, println} := import("std", "fmt")
 
 names := ["Nobu", "Sol", "Damian", "Thomas", "Diego"]
-names |> each() ~ (name) println("Hello, {{}}!", name)
+
+names |> iter() |> each() ~ (name)
+    println("Hello, {{}}!", name)
 ```
 
 ```javascript
