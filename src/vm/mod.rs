@@ -567,6 +567,11 @@ impl<'a> VM<'a> {
                                 1 => {
                                     if let Some(l) = as_t!(list[0], FInt) {
                                         let l = l.0 as usize;
+
+                                        if l >= string.len() {
+                                            // TODO: report an error
+                                        }
+
                                         let slice = &string[l..];
                                         let new_fstr = FStr::new(self.heap, slice.to_string());
                                         self.push(new_fstr);
@@ -580,6 +585,11 @@ impl<'a> VM<'a> {
                                     {
                                         let l0 = force_as_t!(list[0], FInt).0 as usize;
                                         let l1 = force_as_t!(list[1], FInt).0 as usize;
+
+                                        if l0 >= string.len() || l1 >= string.len() {
+                                            // TODO: report an error
+                                        }
+
                                         let slice = &string[l0..l1];
                                         let new_fstr = FStr::new(self.heap, slice.to_string());
                                         self.push(new_fstr);
