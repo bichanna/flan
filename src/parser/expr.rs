@@ -1,7 +1,7 @@
 use crate::error::Position;
 use crate::lexer::token::Token;
 
-use std::rc::Rc;
+use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub enum CallArgType {
@@ -45,7 +45,7 @@ pub enum Expr {
         op: Token,
     },
     Var {
-        name: Rc<str>,
+        name: Arc<str>,
         pos: Position,
     },
     Assign {
@@ -71,7 +71,7 @@ pub enum Expr {
         pos: Position,
     },
     Func {
-        name: Option<Rc<str>>,
+        name: Option<Arc<str>>,
         params: Vec<Token>,
         rest: Option<Token>,
         body: Box<Expr>,
@@ -105,7 +105,7 @@ pub enum Expr {
         pos: Position,
     },
     Atom {
-        val: Rc<str>,
+        val: Arc<str>,
         pos: Position,
     },
     Int {

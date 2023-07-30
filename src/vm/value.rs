@@ -2,7 +2,7 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::fmt;
 use std::ops;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use super::function::Function;
 use crate::vm::gc::heap::{Heap, Object};
@@ -364,7 +364,7 @@ impl FStr {
 }
 
 #[derive(Clone)]
-pub struct FAtom(pub Rc<str>);
+pub struct FAtom(pub Arc<str>);
 impl ValueTrait for FAtom {
     fn truthy(&self) -> bool {
         true
@@ -434,13 +434,13 @@ impl fmt::Display for FAtom {
     }
 }
 impl FAtom {
-    pub fn new(val: Rc<str>) -> Value {
+    pub fn new(val: Arc<str>) -> Value {
         Box::new(FAtom(val))
     }
 }
 
 #[derive(Clone)]
-pub struct FVar(pub Rc<str>);
+pub struct FVar(pub Arc<str>);
 impl ValueTrait for FVar {
     fn truthy(&self) -> bool {
         false
@@ -510,7 +510,7 @@ impl fmt::Display for FVar {
     }
 }
 impl FVar {
-    pub fn new(val: Rc<str>) -> Value {
+    pub fn new(val: Arc<str>) -> Value {
         Box::new(FVar(val))
     }
 }
@@ -947,17 +947,17 @@ impl fmt::Display for FObj {
     }
 }
 impl FObj {
-    pub fn new(heap: &mut Heap, obj: HashMap<Rc<str>, Value>) -> Value {
+    pub fn new(heap: &mut Heap, obj: HashMap<Arc<str>, Value>) -> Value {
         Box::new(FObj(heap.allocate(obj)))
     }
 
-    pub fn inner_mut(&self) -> *mut HashMap<Rc<str>, Value> {
-        self.0.ptr as *mut HashMap<Rc<str>, Value>
+    pub fn inner_mut(&self) -> *mut HashMap<Arc<str>, Value> {
+        self.0.ptr as *mut HashMap<Arc<str>, Value>
     }
 
-    pub fn inner(&self) -> &HashMap<Rc<str>, Value> {
+    pub fn inner(&self) -> &HashMap<Arc<str>, Value> {
         unsafe {
-            (self.0.ptr as *const HashMap<Rc<str>, Value>)
+            (self.0.ptr as *const HashMap<Arc<str>, Value>)
                 .as_ref()
                 .unwrap()
         }

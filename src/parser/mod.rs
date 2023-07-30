@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 use std::vec::IntoIter;
 
 use self::expr::{CallArg, CallArgType, Expr, MatchBranch, WhenBranch};
@@ -351,7 +351,7 @@ impl Parser {
             self.advance();
             let token = self.previous();
             let param = Token {
-                kind: TokenType::Id(Rc::from("it")),
+                kind: TokenType::Id(Arc::from("it")),
                 pos: token.pos,
             };
             let body = self.expression();
@@ -669,7 +669,7 @@ impl Parser {
             TokenType::Func => {
                 self.advance();
                 let token = self.previous();
-                let name: Option<Rc<str>> = match self.current.clone().kind {
+                let name: Option<Arc<str>> = match self.current.clone().kind {
                     TokenType::Id(name) => {
                         self.advance();
                         Some(name)

@@ -7,8 +7,8 @@ use super::util::PrevPeekable;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
-use std::rc::Rc;
 use std::str::Chars;
+use std::sync::Arc;
 
 /// Tokenizes a source code
 pub struct Lexer<'a> {
@@ -88,7 +88,7 @@ impl<'a> Lexer<'a> {
                         if let Some(val) = TokenType::get_type(&value) {
                             self.append(val);
                         } else {
-                            self.append(TokenType::Atom(Rc::from(value)));
+                            self.append(TokenType::Atom(Arc::from(value)));
                         }
 
                         revert = true;
@@ -175,7 +175,7 @@ impl<'a> Lexer<'a> {
                         } else if value == "_" {
                             self.append(TokenType::Empty);
                         } else {
-                            self.append(TokenType::Id(Rc::from(value.as_str())));
+                            self.append(TokenType::Id(Arc::from(value.as_str())));
                         }
                         revert = true;
                     }
