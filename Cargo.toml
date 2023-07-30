@@ -8,8 +8,10 @@ description = "Functional LANguage"
 license-file = "LICENSE.txt"
 keywords = ["language"]
 categories = ["compilers", "virtual machines"]
+keywords = ["language", "programming language", "vm"]
 authors = ["Nobuharu Shimazu <nobu.bichanna@gmail.com>"]
 repository = "https://github.com/bichanna/flan"
+readme = "README.md"
 
 [dependencies]
 num-traits = "0.2"
