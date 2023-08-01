@@ -518,7 +518,7 @@ impl<'a> VM<'a> {
 
                 OpCode::Call => {}
 
-                OpCode::Get => {
+                OpCode::GetProperty => {
                     let attr = self.pop();
                     let inst = self.pop();
 
@@ -605,7 +605,7 @@ impl<'a> VM<'a> {
                     }
                 }
 
-                OpCode::Set => {
+                OpCode::SetProperty => {
                     let val = self.pop();
                     let attr = self.pop();
                     let inst = self.pop();

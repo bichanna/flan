@@ -44,7 +44,7 @@ pub enum OpCode {
     SetLocalList,
     SetLocalObj,
     Match,
+    GetProperty,
+    SetProperty,
     Call,
-    Get,
-    Set,
 }

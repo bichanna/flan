@@ -103,8 +103,8 @@ impl<'a> Debug<'a> {
             OpCode::SetLocalObj => self.set_local_obj_instruction(),
             OpCode::Match => self.match_instruction(),
             OpCode::Call => todo!(),
-            OpCode::Get => self.simple_instruction("Get"),
-            OpCode::Set => self.simple_instruction("Set"),
+            OpCode::GetProperty => self.simple_instruction("GetProperty"),
+            OpCode::SetProperty => self.simple_instruction("SetProperty"),
         }
     }
 

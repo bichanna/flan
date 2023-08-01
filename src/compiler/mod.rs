@@ -574,7 +574,7 @@ impl Compiler {
             Expr::Get { inst, attr, pos } => {
                 self.compile_expr_to_self(*inst);
                 self.compile_expr_to_self(*attr);
-                self.mem_slice.write_opcode(OpCode::Get, pos);
+                self.mem_slice.write_opcode(OpCode::GetProperty, pos);
             }
 
             Expr::Set {
@@ -586,7 +586,7 @@ impl Compiler {
                 self.compile_expr_to_self(*inst);
                 self.compile_expr_to_self(*attr);
                 self.compile_expr_to_self(*val);
-                self.mem_slice.write_opcode(OpCode::Set, pos);
+                self.mem_slice.write_opcode(OpCode::SetProperty, pos);
             }
 
             Expr::Func {
@@ -595,7 +595,7 @@ impl Compiler {
                 rest,
                 body,
                 pos,
-            } => todo!(),
+            } => {}
 
             Expr::Import { exprs, pos } => todo!(),
 
