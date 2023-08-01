@@ -38,6 +38,20 @@ fn fizzBuzz(n) = match [n % 3, n % 5] with
 range(101) |> each() <~ fizzBuzz(it) |> println()
 ```
 
+```javascript
+i{if, each, range} := import("std")
+
+fn bubble_sort(list) =
+    range(0, len(list)) |> each() ~ (i)
+        range(0, len(list) - i - 1) |> each() ~ (j)
+            if list.j > list.(j + 1) then
+                [list.j, list.(j + 1)] = [list.(j + 1), list.j]
+
+list := [-2, 4, 2, 1, 0, 5, -1, 6]
+bubble_sort(list)
+println(list) // [-2, -1, 0, 1, 2, 4, 5, 6]
+```
+
 ## Contents
 This repository contains the core components of the language, including:
  - Compiler: converts text-based source code into a bytecode representation.
