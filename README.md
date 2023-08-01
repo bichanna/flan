@@ -15,6 +15,17 @@ Flan is an acronym for "**F**unctional **LAN**guage." Although Flan has some fun
 
 Also, I happen to love flan - a delicious custard dessert topped with caramel sauce.
 
+## Features
+ - dynamic typing
+ - strongly typed
+ - lexical scoping
+ - concurrency (with fibers)
+ - expression oriented (everything is an expression)
+ - nested functions
+ - closures
+ - garbage collection (mark-and-sweep)
+ - built-in JSON serializer/deserializer
+
 ## Snippets
 Both the runtime (VM and standard library) and the compiler are only partially implemented, but here are some Flan code:
 ```javascript
