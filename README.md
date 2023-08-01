@@ -19,8 +19,8 @@ Also, I happen to love flan - a delicious custard dessert topped with caramel sa
  - dynamic typing
  - strongly typed
  - lexical scoping
- - concurrency (with fibers)
- - expression oriented (everything is an expression)
+ - deterministic concurrency (via fibers)
+ - expression-oriented (everything is an expression)
  - nested functions
  - closures
  - garbage collection (mark-and-sweep)
