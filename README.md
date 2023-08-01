@@ -11,10 +11,12 @@
 **🚧WARNING!! THIS PROJECT IS IN DEVELOPMENT🚧**
 --------------------------------------------------------------------------------------------------------
 
-Flan is an acronym for "**F**unctional **LAN**guage," and I happen to have a fondness for flan - a delicious custard dessert topped with caramel sauce.
+Flan is an acronym for "**F**unctional **LAN**guage." Although Flan has some functional features, it's expression oriented and not purely functional.
 
-## Examples
-Nothing works currently, but here are some examples:
+Also, I happen to love flan - a delicious custard dessert topped with caramel sauce.
+
+## Snippets
+Both the runtime (VM and standard library) and the compiler are only partially implemented, but here are some Flan code:
 ```javascript
 i{iter, each, println} := import("std", "fmt")
 
@@ -39,7 +41,7 @@ range(101) |> each() <~ fizzBuzz(it) |> println()
 ## Contents
 This repository contains the core components of the language, including:
  - Compiler: converts text-based source code into a bytecode representation.
- - Runtime: executes the compiled bytecode.
+ - Runtime: executes the compiled bytecode and also provides built-in functions and standard library.
 
 ## Contribution
 Bug reports and contributions are always welcome!
