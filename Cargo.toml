@@ -4,10 +4,10 @@ version = "0.0.0"
 edition = "2021"
 rust-version = "1.56.1"
 
-description = "Functional LANguage"
+description = "A simple, expression oriented programming language"
 license-file = "LICENSE.txt"
 categories = ["compilers", "virtual machines"]
-keywords = ["language", "programming language", "vm"]
+keywords = ["language", "programming language"]
 authors = ["Nobuharu Shimazu <nobu.bichanna@gmail.com>"]
 repository = "https://github.com/bichanna/flan"
 readme = "README.md"
