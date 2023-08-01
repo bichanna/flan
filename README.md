@@ -39,7 +39,7 @@ range(101) |> each() <~ fizzBuzz(it) |> println()
 ```
 
 ```javascript
-i{if, each, range} := import("std")
+i{each, range} := import("std")
 
 fn bubble_sort(list) =
     range(0, len(list)) |> each() ~ (i)
