@@ -531,6 +531,49 @@ impl<'a> VM<'a> {
                             } else {
                                 // TODO: report an error
                             }
+                        } else if let Some(range) = as_t!(attr, FList) {
+                            let range = range.inner();
+                            match range.len() {
+                                0 => {
+                                    let new_list = list.clone();
+                                    let new_flist = FList::new(self.heap, new_list);
+                                    self.push(new_flist);
+                                }
+                                1 => {
+                                    if let Some(l) = as_t!(range[0], FInt) {
+                                        let l = l.0 as usize;
+
+                                        if l >= list.len() {
+                                            // TODO: report an error
+                                        }
+
+                                        let slice = &list[l..];
+                                        let new_flist = FList::new(self.heap, slice.to_vec());
+                                        self.push(new_flist);
+                                    } else {
+                                        // TODO: report an error
+                                    }
+                                }
+                                2 => {
+                                    if as_t!(list[0], FInt).is_some()
+                                        && as_t!(list[1], FInt).is_some()
+                                    {
+                                        let l0 = force_as_t!(list[0], FInt).0 as usize;
+                                        let l1 = force_as_t!(list[1], FInt).0 as usize;
+
+                                        if l0 >= list.len() || l1 >= list.len() || l0 > l1 {
+                                            // TODO: report an error
+                                        }
+
+                                        let slice = &list[l0..l1];
+                                        let new_flist = FList::new(self.heap, slice.to_vec());
+                                        self.push(new_flist);
+                                    } else {
+                                        // TODO: report an error
+                                    }
+                                }
+                                _ => {} // TODO: report an error
+                            }
                         } else {
                             // TODO: report an error
                         }
