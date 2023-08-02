@@ -12,6 +12,7 @@ use crate::debug::Debug;
 use crate::error::Positions;
 use crate::{as_t, force_as_t};
 
+use self::function::Function;
 use self::gc::heap::Heap;
 use self::value::*;
 
@@ -19,10 +20,16 @@ pub mod function;
 pub mod gc;
 pub mod value;
 
+macro_rules! current_frame {
+    ($self: expr) => {
+        $self.frames.last_mut().unwrap()
+    };
+}
+
 macro_rules! read_byte {
     ($self: expr) => {{
-        $self.ip = unsafe { $self.ip.add(1) };
-        unsafe { *$self.ip }
+        current_frame!($self).ip = unsafe { current_frame!($self).ip.add(1) };
+        unsafe { *current_frame!($self).ip }
     }};
 }
 
@@ -78,6 +85,19 @@ macro_rules! partial_match {
     };
 }
 
+const U8_MAX: usize = u8::MAX as usize;
+const INIT_FRAME_NUM: usize = 64;
+const INIT_STACK_NUM: usize = INIT_FRAME_NUM * U8_MAX;
+
+struct CallFrame {
+    /// Stores the information about the function
+    func: Function,
+    /// Instruction pointer, holds the current instruction being executed
+    ip: *const u8,
+    /// Dynamically sized stack
+    slots: Vec<Value>,
+}
+
 pub struct VM<'a> {
     /// Heap
     heap: &'a mut Heap,
@@ -85,12 +105,13 @@ pub struct VM<'a> {
     constants: Vec<Value>,
     /// Positions for error reporting
     positions: Positions,
-    /// Instruction pointer, holds the current instruction being executed
-    ip: *const u8,
     /// Dynamically sized stack
     stack: Vec<Value>,
     /// All global variables are stored in here
     globals: HashMap<Arc<str>, Value>,
+    /// Call frames
+    frames: Vec<CallFrame>,
+
     /// Debugger for the VM
     #[cfg(feature = "debug")]
     debugger: Debug<'a>,
@@ -98,13 +119,21 @@ pub struct VM<'a> {
 
 impl<'a> VM<'a> {
     pub fn execute(mem_slice: MemorySlice, heap: &'a mut Heap) {
+        let mut frames = Vec::with_capacity(INIT_FRAME_NUM);
+        frames.push(CallFrame {
+            ip: mem_slice.bytecode.as_ptr(),
+            func: Function::new(vec![], None, Some(Arc::from("main"))),
+            slots: Vec::with_capacity(32),
+        });
+
         let mut vm = VM {
             heap,
             constants: mem_slice.constants.clone(),
             positions: mem_slice.positions.clone(),
-            ip: mem_slice.bytecode.as_ptr(),
-            stack: Vec::with_capacity(u8::MAX as usize),
+            stack: Vec::with_capacity(INIT_STACK_NUM),
             globals: HashMap::with_capacity(12),
+            frames,
+
             #[cfg(feature = "debug")]
             debugger: Debug::new(&mem_slice),
         };
@@ -112,7 +141,7 @@ impl<'a> VM<'a> {
     }
 
     fn _execute(&mut self) {
-        let mut inst: OpCode = FromPrimitive::from_u8(unsafe { *self.ip }).unwrap();
+        let mut inst: OpCode = FromPrimitive::from_u8(unsafe { *current_frame!(self).ip }).unwrap();
         loop {
             #[cfg(feature = "debug")]
             {
@@ -349,7 +378,7 @@ impl<'a> VM<'a> {
 
                 OpCode::GetLocal => {
                     let idx = read_byte!(self) as usize;
-                    let val = self.stack[idx].clone();
+                    let val = current_frame!(self).slots[idx].clone();
                     self.push(val);
                 }
 
@@ -686,12 +715,12 @@ impl<'a> VM<'a> {
         {
             self.debugger.offset += jmp;
         }
-        self.ip = unsafe { self.ip.add(jmp) };
+        current_frame!(self).ip = unsafe { current_frame!(self).ip.add(jmp) };
     }
 
     /// A short cut for random access stack assignment
     fn stack_assign(&mut self, idx: usize, val: Value) {
-        let len = self.stack.len();
+        let len = current_frame!(self).slots.len();
         self.stack[len - idx - 1] = val;
     }
 
