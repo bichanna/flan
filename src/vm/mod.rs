@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::mem::replace;
 use std::sync::Arc;
 
+use arrayvec::ArrayVec;
 use num_traits::FromPrimitive;
 
 use crate::compiler::opcode::OpCode;
@@ -10,7 +11,7 @@ use crate::compiler::test_compile;
 use crate::compiler::util::{from_little_endian, from_little_endian_u32, MemorySlice};
 use crate::debug::Debug;
 use crate::error::Positions;
-use crate::{as_t, force_as_t};
+use crate::*;
 
 use self::function::Function;
 use self::gc::heap::Heap;
@@ -18,84 +19,21 @@ use self::value::*;
 
 pub mod function;
 pub mod gc;
+mod util_macro;
 pub mod value;
 
-macro_rules! current_frame {
-    ($self: expr) => {
-        $self.frames.last_mut().unwrap()
-    };
-}
-
-macro_rules! read_byte {
-    ($self: expr) => {{
-        current_frame!($self).ip = unsafe { current_frame!($self).ip.add(1) };
-        unsafe { *current_frame!($self).ip }
-    }};
-}
-
-macro_rules! read_2bytes {
-    ($self: expr) => {
-        from_little_endian([read_byte!($self), read_byte!($self)])
-    };
-}
-
-macro_rules! read_4bytes {
-    ($self: expr) => {
-        from_little_endian_u32([
-            read_byte!($self),
-            read_byte!($self),
-            read_byte!($self),
-            read_byte!($self),
-        ])
-    };
-}
-
-macro_rules! try_push {
-    ($self: expr, $val: expr) => {
-        match $val {
-            Ok(v) => $self.push(v),
-            Err(_msg) => {} // TODO: report an error
-        }
-    };
-}
-
-macro_rules! binary_op {
-    ($self: expr, $op: tt) => {
-        let right = $self.pop();
-        let left = $self.pop();
-        try_push!($self, left $op right);
-    };
-}
-
-macro_rules! partial_match {
-    ($self: expr, $target: expr, $jump: expr, $cond: expr, $type: ty, $rn: expr) => {
-        if as_t!($target, FEmpty).is_some() {
-            {} // do nothing
-        } else if let Some(target) = as_t!($target, $type) {
-            if target.0 != $cond.0 {
-                $self.jump($jump);
-                *$rn = true;
-            }
-        } else if as_t!($target, FVar).is_some() {
-            // TODO: fix this later
-        } else {
-            $self.jump($jump);
-            *$rn = true;
-        }
-    };
-}
-
 const U8_MAX: usize = u8::MAX as usize;
-const INIT_FRAME_NUM: usize = 64;
-const INIT_STACK_NUM: usize = INIT_FRAME_NUM * U8_MAX;
+const FRAME_MAX: usize = 64;
+const STACK_MAX: usize = FRAME_MAX * U8_MAX;
 
 struct CallFrame {
     /// Stores the information about the function
     func: Function,
     /// Instruction pointer, holds the current instruction being executed
     ip: *const u8,
-    /// Dynamically sized stack
-    slots: Vec<Value>,
+
+    slots: *mut Value,
+    slot_count: usize,
 }
 
 pub struct VM<'a> {
@@ -105,12 +43,12 @@ pub struct VM<'a> {
     constants: Vec<Value>,
     /// Positions for error reporting
     positions: Positions,
-    /// Dynamically sized stack
-    stack: Vec<Value>,
+    /// Stack
+    stack: ArrayVec<Value, STACK_MAX>,
     /// All global variables are stored in here
     globals: HashMap<Arc<str>, Value>,
     /// Call frames
-    frames: Vec<CallFrame>,
+    frames: ArrayVec<CallFrame, FRAME_MAX>,
 
     /// Debugger for the VM
     #[cfg(feature = "debug")]
@@ -119,18 +57,21 @@ pub struct VM<'a> {
 
 impl<'a> VM<'a> {
     pub fn execute(mem_slice: MemorySlice, heap: &'a mut Heap) {
-        let mut frames = Vec::with_capacity(INIT_FRAME_NUM);
+        let mut stack: ArrayVec<Value, STACK_MAX> = ArrayVec::new();
+
+        let mut frames: ArrayVec<CallFrame, FRAME_MAX> = ArrayVec::new();
         frames.push(CallFrame {
             ip: mem_slice.bytecode.as_ptr(),
             func: Function::new(vec![], None, Some(Arc::from("main"))),
-            slots: Vec::with_capacity(32),
+            slots: stack.as_mut_ptr(),
+            slot_count: 0,
         });
 
         let mut vm = VM {
             heap,
             constants: mem_slice.constants.clone(),
             positions: mem_slice.positions.clone(),
-            stack: Vec::with_capacity(INIT_STACK_NUM),
+            stack,
             globals: HashMap::with_capacity(12),
             frames,
 
@@ -371,21 +312,21 @@ impl<'a> VM<'a> {
 
                 OpCode::DefLocal => {
                     fn def_local(vm: &mut VM, _: Arc<str>, val: Value) {
-                        vm.push(val);
+                        vm.slots_push(val);
                     }
                     self.define_or_set(&def_local);
                 }
 
                 OpCode::GetLocal => {
                     let idx = read_byte!(self) as usize;
-                    let val = current_frame!(self).slots[idx].clone();
+                    let val = unsafe { slot_at_index!(self, idx).clone() };
                     self.push(val);
                 }
 
                 OpCode::SetLocalVar => {
                     let right = self.pop();
                     let idx = read_byte!(self) as usize;
-                    self.stack_assign(idx, right.clone());
+                    self.slot_assign(idx, right.clone());
                     self.push(right)
                 }
 
@@ -409,7 +350,7 @@ impl<'a> VM<'a> {
 
                     slots.iter().zip(right_list.iter()).for_each(|(slot, val)| {
                         if slot.0 {
-                            self.stack_assign(slot.1, val.clone());
+                            self.slot_assign(slot.1, val.clone());
                         }
                     });
 
@@ -440,7 +381,7 @@ impl<'a> VM<'a> {
                     // actually doing the reassignments
                     slots.iter().zip(left_keys.iter()).for_each(|(slot, key)| {
                         if right_obj.contains_key(key) {
-                            self.stack_assign(*slot, right_obj[key].clone());
+                            self.slot_assign(*slot, right_obj[key].clone());
                         } else {
                             // TODO: report an error
                         }
@@ -719,9 +660,10 @@ impl<'a> VM<'a> {
     }
 
     /// A short cut for random access stack assignment
-    fn stack_assign(&mut self, idx: usize, val: Value) {
-        let len = current_frame!(self).slots.len();
-        self.stack[len - idx - 1] = val;
+    fn slot_assign(&mut self, idx: usize, val: Value) {
+        unsafe {
+            slot_at_index!(self, idx) = val;
+        }
     }
 
     /// Defines or sets global or local variables
@@ -822,11 +764,15 @@ impl<'a> VM<'a> {
     /// Pushes a `Value` onto `stack`
     fn push(&mut self, val: Value) {
         self.stack.push(val);
+    }
 
-        // growing the stack
-        if self.stack.capacity() == self.stack.len() {
-            self.stack.reserve(self.stack.len() / 3);
+    fn slots_push(&mut self, val: Value) {
+        let mut slot = current_frame_slot!(self);
+        unsafe {
+            slot = slot.add(1);
+            *slot = val
         }
+        current_frame!(self).slot_count += 1;
     }
 }
 
