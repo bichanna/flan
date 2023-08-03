@@ -1,26 +1,20 @@
 use std::path::PathBuf;
 
-use clap::{arg, value_parser, Command};
+use clap::Parser;
 
 static FLAN_VERSION: &str = "0.0.0";
 
-pub struct Config {
-    pub input: PathBuf,
+#[derive(Parser)]
+#[command(author = "Nobuharu Shimazu <nobu.bichanna@gmail.com>")]
+#[command(version = FLAN_VERSION)]
+#[command(about = "A simple, expression oriented programming language", long_about = None)]
+pub struct Cli {
+    /// Input file
+    #[arg(value_name = "INPUT")]
+    pub input: Option<PathBuf>,
 }
 
-pub fn parse_args() -> Config {
-    let matches = Command::new("flan")
-        .version(FLAN_VERSION)
-        .author("Nobuharu Shimazu <nobu.bichanna@gmail.com>")
-        .about("A simple, functional, dynamically and strongly typed scripting language")
-        .arg(
-            arg!([INPUT] "File to be executed")
-                .required(true)
-                .value_parser(value_parser!(PathBuf)),
-        )
-        .get_matches();
-
-    let input = matches.get_one::<PathBuf>("INPUT").unwrap().clone();
-
-    Config { input }
+pub fn parse_args() -> Cli {
+    let cli = Cli::parse();
+    cli
 }
