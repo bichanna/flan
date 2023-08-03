@@ -1,16 +1,14 @@
 #[macro_export]
 macro_rules! slot_at_index {
     ($self: expr, $idx: expr) => {
-        *current_frame_slot!($self)
-            .sub(!current_frame!($self).slot_count)
-            .add($idx)
+        $self.stack[current_frame!($self).slot_bottom + $idx]
     };
 }
 
 #[macro_export]
 macro_rules! current_frame_slot {
     ($self: expr) => {
-        current_frame!($self).slots
+        $self.stack[current_frame!($self).slot_bottom + current_frame!($self).slot_count]
     };
 }
 

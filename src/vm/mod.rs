@@ -32,7 +32,7 @@ struct CallFrame {
     /// Instruction pointer, holds the current instruction being executed
     ip: *const u8,
 
-    slots: *mut Value,
+    slot_bottom: usize,
     slot_count: usize,
 }
 
@@ -57,13 +57,13 @@ pub struct VM<'a> {
 
 impl<'a> VM<'a> {
     pub fn execute(mem_slice: MemorySlice, heap: &'a mut Heap) {
-        let mut stack: ArrayVec<Value, STACK_MAX> = ArrayVec::new();
+        let stack: ArrayVec<Value, STACK_MAX> = ArrayVec::new();
 
         let mut frames: ArrayVec<CallFrame, FRAME_MAX> = ArrayVec::new();
         frames.push(CallFrame {
             ip: mem_slice.bytecode.as_ptr(),
             func: Function::new(vec![], None, Some(Arc::from("main"))),
-            slots: stack.as_mut_ptr(),
+            slot_bottom: 0,
             slot_count: 0,
         });
 
@@ -319,7 +319,7 @@ impl<'a> VM<'a> {
 
                 OpCode::GetLocal => {
                     let idx = read_byte!(self) as usize;
-                    let val = unsafe { slot_at_index!(self, idx).clone() };
+                    let val = slot_at_index!(self, idx).clone();
                     self.push(val);
                 }
 
@@ -661,9 +661,7 @@ impl<'a> VM<'a> {
 
     /// A short cut for random access stack assignment
     fn slot_assign(&mut self, idx: usize, val: Value) {
-        unsafe {
-            slot_at_index!(self, idx) = val;
-        }
+        slot_at_index!(self, idx) = val;
     }
 
     /// Defines or sets global or local variables
@@ -767,11 +765,10 @@ impl<'a> VM<'a> {
     }
 
     fn slots_push(&mut self, val: Value) {
-        let mut slot = current_frame_slot!(self);
-        unsafe {
-            slot = slot.add(1);
-            *slot = val
-        }
+        // placeholder
+        self.stack.push(FNil::new());
+
+        current_frame_slot!(self) = val;
         current_frame!(self).slot_count += 1;
     }
 }
