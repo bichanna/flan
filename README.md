@@ -19,6 +19,7 @@ Also, I happen to love flan - a delicious custard dessert topped with caramel sa
  - dynamic typing
  - strongly typed
  - lexical scoping
+ - immutability by default
  - concurrency (via Actor Model)
  - expression-oriented (everything is an expression)
  - nested functions
@@ -52,13 +53,13 @@ range(101) |> each() <~ fizzBuzz(it) |> println()
 ```javascript
 i{each, range} := import("std")
 
-fn bubble_sort(list) =
+fn bubble_sort(mut list) =
     range(0, len(list)) |> each() ~ (i)
         range(0, len(list) - i - 1) |> each() ~ (j)
             if list.j > list.(j + 1) then
                 [list.j, list.(j + 1)] = [list.(j + 1), list.j]
 
-list := [-2, 4, 2, 1, 0, 5, -1, 6]
+mut list := [-2, 4, 2, 1, 0, 5, -1, 6]
 bubble_sort(list)
 println(list) // [-2, -1, 0, 1, 2, 4, 5, 6]
 ```
@@ -66,7 +67,7 @@ println(list) // [-2, -1, 0, 1, 2, 4, 5, 6]
 ## Contents
 This repository contains the core components of the language, including:
  - Compiler: converts text-based source code into a bytecode representation.
- - Runtime: executes the compiled bytecode and also provides built-in functions and standard library.
+ - Runtime: executes the compiled bytecode and also provides built-in functions and a standard library.
 
 ## Contribution
 Bug reports and contributions are always welcome!
