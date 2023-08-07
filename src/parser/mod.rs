@@ -665,6 +665,25 @@ impl Parser {
                     }
                 }
             }
+            // anonymous function
+            TokenType::BackDiv => {
+                self.advance();
+                let token = self.previous();
+                let (params, rest) = self.parse_params();
+                self.expect(
+                    TokenType::MinusGT,
+                    "expected '->' after anonymous function parameters",
+                );
+                let body = self.expression();
+
+                Expr::Func {
+                    name: None,
+                    params,
+                    rest,
+                    body: Box::new(body),
+                    pos: token.pos,
+                }
+            }
             // function
             TokenType::Func => {
                 self.advance();
@@ -1035,6 +1054,13 @@ mod tests {
     #[test]
     fn function_call() {
         let expr = "someFunc(:abc, ...someList) anotherFunc() anotherrrrr([1, 2, 3])";
+        let exprs = test_parse(expr);
+        // println!("{:#?}", exprs);
+    }
+
+    #[test]
+    fn anonymous_func() {
+        let expr = r#"\(a) -> \(b) -> a + b"#;
         let exprs = test_parse(expr);
         // println!("{:#?}", exprs);
     }
