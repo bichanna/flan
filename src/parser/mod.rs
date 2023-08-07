@@ -1102,7 +1102,7 @@ mod tests {
 
     #[test]
     fn edge_case() {
-        // TODO: hmm, how should i fix this?
+        // TODO: hmm, how should i fix this? Refer to https://github.com/bichanna/flan/issues/1
         let expr = "var := 3 * (3 - 4) (1 + 3) |> someFunc()";
         let exprs = test_parse(expr);
         // println!("{:#?}", exprs);
