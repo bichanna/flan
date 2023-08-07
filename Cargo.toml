@@ -4,7 +4,7 @@ version = "0.0.0"
 edition = "2021"
 rust-version = "1.56.1"
 
-description = "A simple, expression oriented programming language"
+description = "A simple, intuitive, expression-oriented programming language"
 license-file = "LICENSE.txt"
 categories = ["compilers", "virtual machines"]
 keywords = ["language", "programming language"]
