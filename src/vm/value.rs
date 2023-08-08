@@ -1093,8 +1093,8 @@ impl FFunc {
         Box::new(FFunc(heap.allocate(func)))
     }
 
-    pub fn inner_mut(&mut self) -> &mut Function {
-        unsafe { (self.0.ptr as *mut Function).as_mut().unwrap() }
+    pub fn inner_mut(&self) -> *mut Function {
+        self.0.ptr as *mut Function
     }
 
     pub fn inner(&self) -> &Function {
