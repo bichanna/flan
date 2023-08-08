@@ -646,7 +646,7 @@ impl<'a> VM<'a> {
                     }
                 }
 
-                OpCode::InitFn => {
+                OpCode::SetFnAddr => {
                     let func_obj = self.pop();
                     // getting the pointer where the function's body starts
                     let func_start = unsafe { current_frame!(self).ip.add(6) };

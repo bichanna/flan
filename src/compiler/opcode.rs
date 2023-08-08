@@ -46,6 +46,6 @@ pub enum OpCode {
     Match,
     GetProperty,
     SetProperty,
-    InitFn,
+    SetFnAddr,
     Call,
 }

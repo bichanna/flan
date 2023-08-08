@@ -60,7 +60,7 @@ impl<'a> Debug<'a> {
         match FromPrimitive::from_u8(self.bytecode[offset]).unwrap() {
             OpCode::Return => self.simple_instruction("Return"),
             OpCode::LoadConst => self.const_instruction("LoadConst"),
-            OpCode::LoadLongConst => self.const_instruction("LoadLongConst"),
+            OpCode::LoadLongConst => self.lconst_instruction("LoadLongConst"),
             OpCode::Negate => self.simple_instruction("Negate"),
             OpCode::NegateBool => self.simple_instruction("NegateBool"),
             OpCode::Add => self.simple_instruction("Add"),
@@ -105,7 +105,7 @@ impl<'a> Debug<'a> {
             OpCode::Call => todo!(),
             OpCode::GetProperty => self.simple_instruction("GetProperty"),
             OpCode::SetProperty => self.simple_instruction("SetProperty"),
-            OpCode::InitFn => self.simple_instruction("InitFn"),
+            OpCode::SetFnAddr => self.simple_instruction("SetFnAddr"),
         }
     }
 
