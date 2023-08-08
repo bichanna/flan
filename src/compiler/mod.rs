@@ -12,6 +12,7 @@ use crate::lexer::token::{Token, TokenType};
 use crate::parser::expr::{Expr, MatchBranch, WhenBranch};
 use crate::parser::test_parse;
 use crate::util::PrevPeekable;
+use crate::vm::function::Function;
 use crate::vm::gc::heap::Heap;
 use crate::vm::value::*;
 
@@ -595,7 +596,64 @@ impl Compiler {
                 rest,
                 body,
                 pos,
-            } => {}
+            } => {
+                let params_len = params.len();
+                let has_name = name.is_some();
+
+                // checking the number of parameters
+                if params_len > u8::MAX as usize {
+                    self.report_err("too many parameters".to_string(), pos);
+                }
+
+                // creating function object
+                let func = FFunc::new(&mut self.heap, Function::new(params_len, rest.is_some()));
+
+                // if there's a name for this function
+                if let Some(name) = name {
+                    self.mem_slice.add_const(FVar::new(name), pos);
+                }
+
+                // writing the instruction to load the function object
+                self.mem_slice.add_const(func, pos);
+
+                // writing the instruction to define a function
+                self.mem_slice.write_opcode(OpCode::InitFn, pos);
+
+                // adding the instruction to jump through the function body
+                backpatch_u32!(
+                    self,
+                    OpCode::LongJump,
+                    "function too big".to_string(),
+                    pos,
+                    {
+                        self.begin_scope();
+
+                        // defining the parameters
+                        params.iter().for_each(|name| match name.kind {
+                            TokenType::Id(ref name) => {
+                                self.mem_slice.add_const(FVar::new(name.clone()), pos);
+                                self.add_local(name.clone());
+                            }
+                            _ => unreachable!(),
+                        });
+                        // compiling the body of the function
+                        self.compile_expr_to_self(*body);
+
+                        self.end_scope();
+                    }
+                );
+
+                if has_name {
+                    self.mem_slice.write_opcode(
+                        if self.scope_depth == 0 {
+                            OpCode::DefGlobal
+                        } else {
+                            OpCode::DefLocal
+                        },
+                        pos,
+                    );
+                }
+            }
 
             Expr::Import { exprs, pos } => todo!(),
 

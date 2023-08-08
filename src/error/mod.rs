@@ -58,6 +58,7 @@ impl Stack {
     }
 
     pub fn new(err: ErrType, msg: String, pos: Position, path_idx: usize) -> Self {
+        // println!("err msg: {}", &msg);
         Self::new_from_node(err, msg, Node { pos, path_idx })
     }
 

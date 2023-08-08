@@ -105,6 +105,7 @@ impl<'a> Debug<'a> {
             OpCode::Call => todo!(),
             OpCode::GetProperty => self.simple_instruction("GetProperty"),
             OpCode::SetProperty => self.simple_instruction("SetProperty"),
+            OpCode::InitFn => self.simple_instruction("InitFn"),
         }
     }
 

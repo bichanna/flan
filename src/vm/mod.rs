@@ -62,7 +62,7 @@ impl<'a> VM<'a> {
         let mut frames: ArrayVec<CallFrame, FRAME_MAX> = ArrayVec::new();
         frames.push(CallFrame {
             ip: mem_slice.bytecode.as_ptr(),
-            func: Function::new(vec![], None, Some(Arc::from("main"))),
+            func: Function::new(0, false),
             slot_bottom: 0,
             slot_count: 0,
         });
@@ -644,6 +644,23 @@ impl<'a> VM<'a> {
                     } else {
                         // TODO: report an error
                     }
+                }
+
+                OpCode::InitFn => {
+                    let func_obj = self.pop();
+                    // getting the pointer where the function's body starts
+                    let func_start = unsafe { current_frame!(self).ip.add(6) };
+                    // getting the function object pointer
+                    let func_ptr = force_as_t!(func_obj, FFunc).inner_mut();
+
+                    // setting where the function starts
+                    unsafe { (*func_ptr).set_addr(func_start) };
+
+                    // re-pushing the modified function onto the stack
+                    self.push(func_obj);
+
+                    // don't need to do anything here because the LongJump instruction will skip
+                    // the body of the function
                 }
             }
 
