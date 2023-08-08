@@ -610,7 +610,10 @@ impl Compiler {
 
                 // if there's a name for this function
                 if let Some(name) = name {
-                    self.mem_slice.add_const(FVar::new(name), pos);
+                    self.mem_slice.add_const(FVar::new(name.clone()), pos);
+                    if self.scope_depth != 0 {
+                        self.add_local(name);
+                    }
                 }
 
                 // writing the instruction to load the function object
