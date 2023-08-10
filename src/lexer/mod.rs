@@ -78,6 +78,7 @@ impl<'a> Lexer<'a> {
                 ']' => self.append(TokenType::RBracket),
                 ',' => self.append(TokenType::Comma),
                 '~' => self.append(TokenType::Tilde),
+                '\\' => self.append(TokenType::BackDiv),
                 ':' => match self.peek() {
                     '=' => self.append_and_advance(TokenType::ColonEq),
                     _ => {

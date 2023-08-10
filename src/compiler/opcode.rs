@@ -1,6 +1,6 @@
 #[derive(Clone, Copy, PartialEq, ToPrimitive, FromPrimitive, Debug)]
 pub enum OpCode {
-    Return,
+    Halt,
     LoadConst,
     LoadLongConst,
     Negate,
@@ -46,5 +46,7 @@ pub enum OpCode {
     Match,
     GetProperty,
     SetProperty,
-    Call,
+    SetFnAddr,
+    CallFn,
+    RetFn,
 }

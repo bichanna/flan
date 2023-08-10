@@ -119,7 +119,7 @@ mod test {
         let pos = (1, 1);
         let mut mem_slice: MemorySlice = MemorySlice::new(5);
         mem_slice.write_byte(1, pos);
-        mem_slice.write_opcode(OpCode::Return, pos);
+        mem_slice.write_opcode(OpCode::Halt, pos);
         mem_slice.write_byte_with_index(0, 100);
         mem_slice.add_const(Box::new(FInt(100)), pos);
         mem_slice.write_bytes(&[1, 2, 3], pos);

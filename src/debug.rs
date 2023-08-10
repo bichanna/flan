@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::compiler::opcode::OpCode;
 use crate::compiler::util::{from_little_endian, from_little_endian_u32, MemorySlice};
 use crate::error::Position;
-use crate::vm::value::ValueTrait;
+use crate::vm::value::Value;
 
 use crate::num_traits::FromPrimitive;
 
@@ -14,7 +14,7 @@ pub struct Debug<'a> {
     /// Positions
     positions: &'a HashMap<usize, Position>,
     /// Constants
-    consts: &'a Vec<Box<dyn ValueTrait>>,
+    consts: &'a Vec<Value>,
     /// Index
     pub offset: usize,
 }
@@ -58,9 +58,9 @@ impl<'a> Debug<'a> {
         }
 
         match FromPrimitive::from_u8(self.bytecode[offset]).unwrap() {
-            OpCode::Return => self.simple_instruction("Return"),
+            OpCode::Halt => self.simple_instruction("Halt"),
             OpCode::LoadConst => self.const_instruction("LoadConst"),
-            OpCode::LoadLongConst => self.const_instruction("LoadLongConst"),
+            OpCode::LoadLongConst => self.lconst_instruction("LoadLongConst"),
             OpCode::Negate => self.simple_instruction("Negate"),
             OpCode::NegateBool => self.simple_instruction("NegateBool"),
             OpCode::Add => self.simple_instruction("Add"),
@@ -102,9 +102,11 @@ impl<'a> Debug<'a> {
             OpCode::SetLocalList => self.set_local_list_instruction(),
             OpCode::SetLocalObj => self.set_local_obj_instruction(),
             OpCode::Match => self.match_instruction(),
-            OpCode::Call => todo!(),
+            OpCode::CallFn => self.single_arg_instruction("CallFn"),
             OpCode::GetProperty => self.simple_instruction("GetProperty"),
             OpCode::SetProperty => self.simple_instruction("SetProperty"),
+            OpCode::SetFnAddr => self.simple_instruction("SetFnAddr"),
+            OpCode::RetFn => self.simple_instruction("RetFn"),
         }
     }
 

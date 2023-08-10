@@ -665,6 +665,25 @@ impl Parser {
                     }
                 }
             }
+            // anonymous function
+            TokenType::BackDiv => {
+                self.advance();
+                let token = self.previous();
+                let (params, rest) = self.parse_params();
+                self.expect(
+                    TokenType::MinusGT,
+                    "expected '->' after anonymous function parameters",
+                );
+                let body = self.expression();
+
+                Expr::Func {
+                    name: None,
+                    params,
+                    rest,
+                    body: Box::new(body),
+                    pos: token.pos,
+                }
+            }
             // function
             TokenType::Func => {
                 self.advance();
@@ -1040,6 +1059,13 @@ mod tests {
     }
 
     #[test]
+    fn anonymous_func() {
+        let expr = r#"\(a) -> \(b) -> a + b"#;
+        let exprs = test_parse(expr);
+        // println!("{:#?}", exprs);
+    }
+
+    #[test]
     fn pipe_expr() {
         let expr = "someFunc() |> chained(\"hello\") <| 123";
         let exprs = test_parse(expr);
@@ -1076,7 +1102,7 @@ mod tests {
 
     #[test]
     fn edge_case() {
-        // TODO: hmm, how should i fix this?
+        // TODO: hmm, how should i fix this? Refer to https://github.com/bichanna/flan/issues/1
         let expr = "var := 3 * (3 - 4) (1 + 3) |> someFunc()";
         let exprs = test_parse(expr);
         // println!("{:#?}", exprs);

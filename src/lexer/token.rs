@@ -50,6 +50,7 @@ pub enum TokenType {
     RBrace,   // }
     LBracket, // [
     RBracket, // ]
+    BackDiv,  // \
     ColonEq,  // :=
     Plus,     // +
     PlusEq,   // +=

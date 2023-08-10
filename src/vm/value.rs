@@ -1023,16 +1023,8 @@ impl ValueTrait for FFunc {
 
     fn type_str(&self) -> String {
         let func = self.inner();
-        let mut ret = format!(
-            "fn:{}({}",
-            if let Some(name) = &func.name {
-                name.as_ref()
-            } else {
-                "<anonymous>"
-            },
-            func.params.len()
-        );
-        if func.rest.is_some() {
+        let mut ret = format!("fn({}", func.params);
+        if func.rest {
             ret += ", +)";
         } else {
             ret += ")";
@@ -1044,7 +1036,7 @@ impl ValueTrait for FFunc {
         if as_t!(other, FEmpty).is_some() {
             true
         } else if let Some(other) = as_t!(other, FFunc) {
-            other.inner().name == self.inner().name
+            other.inner().addr == self.inner().addr
                 && other.inner().params == self.inner().params
                 && other.inner().rest == self.inner().rest
         } else {
@@ -1070,22 +1062,7 @@ impl ValueTrait for FFunc {
 }
 impl fmt::Display for FFunc {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let func = self.inner();
-        let mut ret = format!(
-            "fn:{}({}",
-            if let Some(name) = &func.name.clone() {
-                name.as_ref()
-            } else {
-                "<anonymous>"
-            },
-            func.params.join(", ")
-        );
-        if let Some(rest) = func.rest.clone() {
-            ret += &format!(", {}+)", rest);
-        } else {
-            ret += ")";
-        }
-        f.write_str(&ret)
+        f.write_str(&self.type_str())
     }
 }
 impl FFunc {
@@ -1093,8 +1070,8 @@ impl FFunc {
         Box::new(FFunc(heap.allocate(func)))
     }
 
-    pub fn inner_mut(&mut self) -> &mut Function {
-        unsafe { (self.0.ptr as *mut Function).as_mut().unwrap() }
+    pub fn inner_mut(&self) -> *mut Function {
+        self.0.ptr as *mut Function
     }
 
     pub fn inner(&self) -> &Function {
