@@ -15,7 +15,7 @@ Flan is an acronym for "**F**unctional **LAN**guage." Although Flan has some fun
 
 Also, I happen to love flan - a delicious custard dessert topped with caramel sauce.
 
-## Features
+## Features (most of which are not implemented yet)
  - dynamic typing
  - strongly typed
  - lexical scoping
