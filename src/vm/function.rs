@@ -1,6 +1,6 @@
 use std::ptr;
 
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 pub struct Function {
     /// Number of names of the parameters of the function
     pub params: usize,
@@ -19,6 +19,7 @@ impl Function {
         }
     }
 
+    /// Sets the address of the function in the bytecode
     pub fn set_addr(&mut self, addr: *const u8) {
         self.addr = addr;
     }

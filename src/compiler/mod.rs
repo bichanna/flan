@@ -114,7 +114,7 @@ impl Compiler {
             self.mem_slice.write_opcode(OpCode::Pop, (0, 0));
             self.next_expr();
         }
-        self.mem_slice.write_opcode(OpCode::Return, (0, 0));
+        self.mem_slice.write_opcode(OpCode::Halt, (0, 0));
     }
 
     /// Compiles an expression
@@ -633,14 +633,55 @@ impl Compiler {
 
                         // defining the parameters
                         params.iter().for_each(|name| match name.kind {
-                            TokenType::Id(ref name) => {
-                                self.mem_slice.add_const(FVar::new(name.clone()), pos);
-                                self.add_local(name.clone());
-                            }
+                            TokenType::Id(ref name) => self.add_local(name.clone()),
                             _ => unreachable!(),
                         });
+
+                        // if there's a rest parameter, define the parameter
+                        if let Some(rest) = rest {
+                            match rest.kind {
+                                TokenType::Id(ref name) => self.add_local(name.clone()),
+                                _ => unreachable!(),
+                            }
+                        }
+
                         // compiling the body of the function
                         self.compile_expr_to_self(*body);
+
+                        // calculating the number of pops needed to remove all local variables in this
+                        // particular function body
+                        let pops_needed = self.locals.iter().fold(0, |acc, local| {
+                            if local.depth > self.scope_depth - 1 {
+                                acc + 1
+                            } else {
+                                acc
+                            }
+                        });
+
+                        // adding pop instructions needed according to the number of the local variables in
+                        // this function
+                        match pops_needed.cmp(&1) {
+                            Ordering::Greater => {
+                                self.mem_slice.write_opcode(OpCode::PopExceptLastN, pos);
+                                self.mem_slice.write_byte(pops_needed as u8, pos);
+                            }
+                            Ordering::Equal => {
+                                self.mem_slice.write_opcode(OpCode::PopExceptLast, pos);
+                            }
+                            Ordering::Less => {} // do nothing
+                        }
+
+                        // removing all local variables in this block
+                        while !self.locals.is_empty()
+                            && self.locals.last().unwrap().depth > self.scope_depth - 1
+                        {
+                            self.locals.pop();
+                        }
+
+                        // writing the return instruction
+                        self.mem_slice.write_opcode(OpCode::RetFn, pos);
+
+                        // TODO: return instruction for the function body
 
                         self.end_scope();
                     }
@@ -668,7 +709,26 @@ impl Compiler {
                 pos,
             } => todo!(),
 
-            Expr::Call { callee, args, pos } => todo!(),
+            Expr::Call { callee, args, pos } => {
+                // TODO: handle unpacking arguments
+
+                // checking the length of the arguments
+                if args.len() > u8::MAX as usize {
+                    self.report_err("too many arguments".to_string(), pos);
+                }
+
+                // compiling the callee
+                self.compile_expr_to_self(*callee);
+
+                // compiling the arguments to the function
+                args.iter()
+                    .for_each(|arg| self.compile_expr_to_self(*arg.expr.clone()));
+
+                // writing the instruction to call the funcion
+                self.mem_slice.write_opcode(OpCode::CallFn, pos);
+                // writing the length of the arguments
+                self.mem_slice.write_byte(args.len() as u8, pos);
+            }
         }
     }
 

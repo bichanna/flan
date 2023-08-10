@@ -93,7 +93,9 @@ impl<'a> VM<'a> {
             }
 
             match inst {
-                OpCode::Return => break,
+                OpCode::Halt => {
+                    break;
+                }
 
                 OpCode::LoadConst => {
                     let val = self.read_const(false);
@@ -486,8 +488,6 @@ impl<'a> VM<'a> {
                     }
                 }
 
-                OpCode::Call => {}
-
                 OpCode::GetProperty => {
                     let attr = self.pop();
                     let inst = self.pop();
@@ -662,6 +662,54 @@ impl<'a> VM<'a> {
                     // don't need to do anything here because the LongJump instruction will skip
                     // the body of the function
                 }
+
+                OpCode::CallFn => {
+                    // get the length of the function
+                    let arg_len = read_byte!(self) as usize;
+                    // getting the arguments to the function
+                    let mut args = (0..arg_len)
+                        .map(|_| self.pop())
+                        .rev()
+                        .collect::<Vec<Value>>();
+                    // hopefully a function
+                    let func = self.pop();
+
+                    if let Some(func) = as_t!(func, FFunc) {
+                        let func = unsafe { *func.inner_mut() };
+
+                        if func.params > arg_len {
+                            (0..(func.params - arg_len)).for_each(|_| args.push(FNil::new()));
+                        }
+
+                        if func.params == arg_len && func.rest {
+                            args.push(FNil::new());
+                        } else if (func.params == arg_len && !func.rest)
+                            || (func.params < arg_len && func.rest)
+                        {
+                            // do nothing
+                        } else {
+                            // TODO: report an error
+                        }
+
+                        // actually calling the function
+                        self.call(func, args);
+                    } else {
+                        // TODO: report an error
+                    }
+                }
+
+                OpCode::RetFn => {
+                    #[cfg(feature = "debug")]
+                    {
+                        let diff = self.frames[self.frames.len() - 2].ip as usize
+                            - current_frame!(self).ip as usize;
+
+                        self.debugger.offset += diff;
+                    }
+
+                    // resetting the call frame
+                    self.frames.pop();
+                }
             }
 
             inst = FromPrimitive::from_u8(read_byte!(self)).unwrap();
@@ -733,6 +781,52 @@ impl<'a> VM<'a> {
         }
 
         self.push(right);
+    }
+
+    /// Calls a Flan function
+    fn call(&mut self, func: Function, args: Vec<Value>) {
+        // checking for stack overflow
+        if self.frames.len() == FRAME_MAX {
+            // TODO: report an error
+        }
+
+        // creating a new call frame for the function call
+        let frame = CallFrame {
+            func,
+            ip: unsafe { func.addr.sub(1) },
+            slot_bottom: self.stack.len(),
+            slot_count: 0,
+        };
+
+        // setting the newly created call frame as the current frame
+        self.frames.push(frame);
+
+        #[cfg(feature = "debug")]
+        {
+            let diff =
+                self.frames[self.frames.len() - 2].ip as usize - current_frame!(self).ip as usize;
+
+            println!("diff: {}", diff);
+            self.debugger.offset -= diff;
+        }
+
+        // positional arguments
+        let pos_args = &args[0..func.params];
+        // rest argument
+        let rest_args = if func.params != args.len() {
+            Some(&args[func.params..])
+        } else {
+            None
+        };
+
+        // pushing the arguments onto the stack
+        pos_args.iter().for_each(|arg| self.slots_push(arg.clone()));
+
+        // if there's rest parameter, push the rest of the arguments as a list
+        if let Some(rest_args) = rest_args {
+            let rest_param = FList::new(self.heap, rest_args.to_vec());
+            self.slots_push(rest_param);
+        }
     }
 
     /// Binds the given value to a global variable name
