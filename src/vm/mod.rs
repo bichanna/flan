@@ -525,16 +525,17 @@ impl<'a> VM<'a> {
                                     }
                                 }
                                 2 => {
-                                    if as_t!(list[0], FInt).is_some()
-                                        && as_t!(list[1], FInt).is_some()
+                                    if as_t!(range[0], FInt).is_some()
+                                        && as_t!(range[1], FInt).is_some()
                                     {
-                                        let l0 = force_as_t!(list[0], FInt).0 as usize;
-                                        let l1 = force_as_t!(list[1], FInt).0 as usize;
+                                        let l0 = force_as_t!(range[0], FInt).0 as usize;
+                                        let l1 = force_as_t!(range[1], FInt).0 as usize;
 
                                         if l0 >= list.len() || l1 >= list.len() || l0 > l1 {
                                             // TODO: report an error
                                         }
 
+                                        println!("l0, l1 = {}, {}", l0, l1);
                                         let slice = &list[l0..l1];
                                         let new_flist = FList::new(self.heap, slice.to_vec());
                                         self.push(new_flist);
@@ -666,13 +667,17 @@ impl<'a> VM<'a> {
                 OpCode::CallFn => {
                     // get the length of the function
                     let arg_len = read_byte!(self) as usize;
+
                     // getting the arguments to the function
-                    let mut args = (0..arg_len)
-                        .map(|_| self.pop())
-                        .rev()
-                        .collect::<Vec<Value>>();
+                    let mut args = (0..arg_len).map(|_| self.pop()).collect::<Vec<Value>>();
+                    args.reverse();
+
                     // hopefully a function
                     let func = self.pop();
+
+                    for arg in &args {
+                        println!("  arg: {}", arg);
+                    }
 
                     if let Some(func) = as_t!(func, FFunc) {
                         let func = unsafe { *func.inner_mut() };
@@ -806,7 +811,6 @@ impl<'a> VM<'a> {
             let diff =
                 self.frames[self.frames.len() - 2].ip as usize - current_frame!(self).ip as usize;
 
-            println!("diff: {}", diff);
             self.debugger.offset -= diff;
         }
 
