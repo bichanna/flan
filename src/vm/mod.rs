@@ -26,6 +26,8 @@ const U8_MAX: usize = u8::MAX as usize;
 const FRAME_MAX: usize = 64;
 const STACK_MAX: usize = FRAME_MAX * U8_MAX;
 
+type DefSetFunc<'a> = &'a dyn Fn(&mut VM, Arc<str>, Value, bool);
+
 struct CallFrame {
     /// Stores the information about the function
     func: Function,
@@ -45,8 +47,9 @@ pub struct VM<'a> {
     positions: Positions,
     /// Stack
     stack: ArrayVec<Value, STACK_MAX>,
-    /// All global variables are stored in here
-    globals: HashMap<Arc<str>, Value>,
+    /// All global variables are stored in here. The second value in the tuple represents whether
+    /// the variable is mutable or not
+    globals: HashMap<Arc<str>, (Value, bool)>,
     /// Call frames
     frames: ArrayVec<CallFrame, FRAME_MAX>,
 
@@ -295,17 +298,18 @@ impl<'a> VM<'a> {
                 }
 
                 OpCode::DefGlobal => {
-                    self.define_or_set(&VM::define_global);
+                    let mutability = read_byte!(self) == 1;
+                    self.define_or_set(&VM::define_global, mutability);
                 }
 
                 OpCode::SetGlobal => {
-                    self.define_or_set(&VM::set_global);
+                    self.define_or_set(&VM::set_global, false);
                 }
 
                 OpCode::GetGlobal => {
                     let v = self.pop();
                     let v = force_as_t!(v, FVar);
-                    if let Some(val) = self.globals.get(v.0.as_ref()) {
+                    if let Some((val, _)) = self.globals.get(v.0.as_ref()) {
                         self.push(val.clone());
                     } else {
                         // TODO: report an error
@@ -313,10 +317,10 @@ impl<'a> VM<'a> {
                 }
 
                 OpCode::DefLocal => {
-                    fn def_local(vm: &mut VM, _: Arc<str>, val: Value) {
+                    fn def_local(vm: &mut VM, _: Arc<str>, val: Value, _: bool) {
                         vm.slots_push(val);
                     }
-                    self.define_or_set(&def_local);
+                    self.define_or_set(&def_local, false);
                 }
 
                 OpCode::GetLocal => {
@@ -691,7 +695,7 @@ impl<'a> VM<'a> {
                         } else if (func.params == arg_len && !func.rest)
                             || (func.params < arg_len && func.rest)
                         {
-                            // do nothing
+                            {} // do nothing
                         } else {
                             // TODO: report an error
                         }
@@ -735,11 +739,11 @@ impl<'a> VM<'a> {
     }
 
     /// Defines or sets global or local variables
-    fn define_or_set(&mut self, func: &dyn Fn(&mut Self, Arc<str>, Value)) {
+    fn define_or_set(&mut self, func: DefSetFunc, mutability: bool) {
         let right = self.pop();
         let left = self.pop();
         if let Some(var) = as_t!(left, FVar) {
-            func(self, var.0.clone(), right.clone());
+            func(self, var.0.clone(), right.clone(), mutability);
         } else if let Some(left) = as_t!(left, FList) {
             if let Some(right) = as_t!(right, FList) {
                 if right.inner().len() != left.inner().len() {
@@ -750,7 +754,7 @@ impl<'a> VM<'a> {
                         .zip(right.inner().iter())
                         .for_each(|(l, r)| {
                             if let Some(v) = as_t!(l, FVar) {
-                                func(self, v.0.clone(), r.clone());
+                                func(self, v.0.clone(), r.clone(), mutability);
                             } else if as_t!(l, FEmpty).is_some() {
                                 {} // do nothing
                             } else {
@@ -769,7 +773,7 @@ impl<'a> VM<'a> {
                     left.inner().iter().for_each(|(key, assignee)| {
                         if let Some(val) = right.inner().get(key) {
                             if let Some(var) = as_t!(assignee, FVar) {
-                                func(self, var.0.clone(), val.clone());
+                                func(self, var.0.clone(), val.clone(), mutability);
                             } else if as_t!(assignee, FEmpty).is_some() {
                                 {} // do nothing
                             } else {
@@ -834,18 +838,22 @@ impl<'a> VM<'a> {
     }
 
     /// Binds the given value to a global variable name
-    fn define_global(vm: &mut VM, name: Arc<str>, val: Value) {
+    fn define_global(vm: &mut VM, name: Arc<str>, val: Value, mutable: bool) {
         if let Entry::Vacant(e) = vm.globals.entry(name) {
-            e.insert(val);
+            e.insert((val, mutable));
         } else {
             // TODO: report an error
         }
     }
 
     /// Rebinds a new value to a global variable
-    fn set_global(vm: &mut VM, name: Arc<str>, val: Value) {
+    fn set_global(vm: &mut VM, name: Arc<str>, val: Value, _: bool) {
         if let Entry::Occupied(mut o) = vm.globals.entry(name) {
-            o.insert(val);
+            let mutability = o.get().1;
+            if !mutability {
+                // TODO: report an error
+            }
+            o.insert((val, mutability));
         } else {
             // TODO: report an error
         }

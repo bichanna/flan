@@ -93,7 +93,7 @@ impl<'a> Debug<'a> {
             OpCode::LoadFalse => self.simple_instruction("LoadFalse"),
             OpCode::LoadEmpty => self.simple_instruction("LoadEmpty"),
             OpCode::LoadNil => self.simple_instruction("LoadNil"),
-            OpCode::DefGlobal => self.simple_instruction("DefGlobal"),
+            OpCode::DefGlobal => self.single_arg_instruction("DefGlobal"),
             OpCode::SetGlobal => self.simple_instruction("SetGlobal"),
             OpCode::GetGlobal => self.simple_instruction("GetGlobal"),
             OpCode::DefLocal => self.simple_instruction("DefLocal"),

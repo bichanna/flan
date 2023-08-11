@@ -13,6 +13,7 @@ pub enum CallArgType {
 pub struct CallArg {
     pub kind: CallArgType,
     pub expr: Box<Expr>,
+    pub mutable: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -50,6 +51,7 @@ pub enum Expr {
     },
     Assign {
         init: bool,
+        mutable: bool,
         left: Box<Expr>,
         right: Box<Expr>,
         pos: Position,
@@ -72,8 +74,8 @@ pub enum Expr {
     },
     Func {
         name: Option<Arc<str>>,
-        params: Vec<Token>,
-        rest: Option<Token>,
+        params: Vec<(Token, bool)>,
+        rest: Option<(Token, bool)>,
         body: Box<Expr>,
         pos: Position,
     },

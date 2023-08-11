@@ -55,7 +55,14 @@ impl Parser {
 
     /// Returns an expression related to assignment (and ranges)
     fn assignment(&mut self) -> Expr {
+        let mutable = if self.matches(TokenType::Mut) {
+            self.advance();
+            true
+        } else {
+            false
+        };
         let expr = self.or_expression();
+
         // variable assignment
         if self.matches_either(&[TokenType::Equal, TokenType::ColonEq]) {
             let init = self.matches(TokenType::ColonEq);
@@ -68,6 +75,7 @@ impl Parser {
                 left: _,
                 right: _,
                 pos: _,
+                mutable: _,
             } = val
             {
                 self.report_err("assignment value should not be an assignment");
@@ -96,6 +104,7 @@ impl Parser {
                         left: Box::new(expr),
                         right: Box::new(val),
                         pos,
+                        mutable,
                     };
                 }
                 Expr::List { elems, pos } => {
@@ -107,6 +116,7 @@ impl Parser {
                         left: Box::new(expr),
                         right: Box::new(val),
                         pos,
+                        mutable,
                     };
                 }
                 Expr::Var { name: _, pos } => {
@@ -115,6 +125,7 @@ impl Parser {
                         left: Box::new(expr),
                         right: Box::new(val),
                         pos,
+                        mutable,
                     };
                 }
                 Expr::Get { inst, attr, pos } => {
@@ -135,6 +146,11 @@ impl Parser {
             TokenType::DivEq,
             TokenType::ModEq,
         ]) {
+            if mutable {
+                let prev = self.previous();
+                self.report_err_with_token("invalid 'mut' keyword", prev);
+            }
+
             self.advance();
             let op = self.previous();
             let val = self.expression();
@@ -150,6 +166,7 @@ impl Parser {
                             op: op.clone(),
                         }),
                         pos: op.pos,
+                        mutable,
                     }
                 }
                 _ => self.report_err_with_token("expected a variable", op),
@@ -300,15 +317,29 @@ impl Parser {
         self.expect(TokenType::LParen, "expected '('");
 
         let mut args: Vec<CallArg> = vec![];
+        let mut mutable: bool = false;
+
+        if self.matches(TokenType::Mut) {
+            self.advance();
+            mutable = true;
+        }
 
         if let Some(arg) = arg {
             args.push(CallArg {
                 kind: CallArgType::Positional,
                 expr: Box::new(arg),
+                mutable,
             });
         }
 
+        mutable = false;
+
         if !self.matches(TokenType::RParen) {
+            if self.matches(TokenType::Mut) {
+                self.advance();
+                mutable = true;
+            }
+
             args.push(CallArg {
                 kind: if self.matches(TokenType::Ellipsis) {
                     CallArgType::Unpacking
@@ -316,22 +347,35 @@ impl Parser {
                     CallArgType::Positional
                 },
                 expr: Box::new(self.expression()),
+                mutable,
             });
+
+            mutable = false;
 
             while self.matches(TokenType::Comma) {
                 self.advance();
+
+                if self.matches(TokenType::Mut) {
+                    self.advance();
+                    mutable = true;
+                }
+
                 if self.matches(TokenType::Ellipsis) {
                     self.advance();
                     args.push(CallArg {
                         kind: CallArgType::Unpacking,
                         expr: Box::new(self.expression()),
+                        mutable,
                     });
                 } else {
                     args.push(CallArg {
                         kind: CallArgType::Positional,
                         expr: Box::new(self.expression()),
+                        mutable,
                     });
                 }
+
+                mutable = false;
             }
         }
 
@@ -345,6 +389,7 @@ impl Parser {
             args.push(CallArg {
                 kind: CallArgType::Positional,
                 expr: Box::new(self.expression()),
+                mutable: false,
             });
         // check for `<~`
         } else if self.matches(TokenType::LTilde) {
@@ -357,7 +402,7 @@ impl Parser {
             let body = self.expression();
             let func = Expr::Func {
                 name: None,
-                params: vec![param],
+                params: vec![(param, false)],
                 rest: None,
                 body: Box::new(body),
                 pos: token.pos,
@@ -366,6 +411,7 @@ impl Parser {
             args.push(CallArg {
                 kind: CallArgType::Positional,
                 expr: Box::new(func),
+                mutable: false,
             });
         // check for `~`
         } else if self.matches(TokenType::Tilde) {
@@ -388,6 +434,7 @@ impl Parser {
             args.push(CallArg {
                 kind: CallArgType::Positional,
                 expr: Box::new(func),
+                mutable: false,
             });
         }
 
@@ -857,15 +904,22 @@ impl Parser {
     /* Helper functions */
 
     /// Parses parameters of a function
-    fn parse_params(&mut self) -> (Vec<Token>, Option<Token>) {
+    fn parse_params(&mut self) -> (Vec<(Token, bool)>, Option<(Token, bool)>) {
         self.expect(TokenType::LParen, "expected '('");
-        let mut params: Vec<Token> = vec![];
-        let mut rest: Option<Token> = None;
+        let mut params: Vec<(Token, bool)> = vec![];
+        let mut rest: Option<(Token, bool)> = None;
 
         if !self.matches(TokenType::RParen) {
             while !self.is_end() {
                 if rest.is_some() {
                     self.report_err("required parameter cannot follow a rest parameter")
+                }
+
+                let mut mutable = false;
+
+                if self.matches(TokenType::Mut) {
+                    self.advance();
+                    mutable = true;
                 }
 
                 match self.current.kind {
@@ -874,17 +928,19 @@ impl Parser {
                         let param = self.previous();
                         if self.matches(TokenType::Plus) {
                             self.advance();
-                            rest = Some(param);
+                            rest = Some((param, mutable));
                         } else {
-                            params.push(param);
+                            params.push((param, mutable));
                         }
                     }
                     TokenType::Empty => {
                         self.advance();
-                        params.push(self.previous().clone());
+                        params.push((self.previous().clone(), false));
                     }
                     _ => {}
                 }
+
+                mutable = false;
 
                 if !self.matches(TokenType::Comma) {
                     break;

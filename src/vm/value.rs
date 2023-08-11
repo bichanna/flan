@@ -1036,9 +1036,7 @@ impl ValueTrait for FFunc {
         if as_t!(other, FEmpty).is_some() {
             true
         } else if let Some(other) = as_t!(other, FFunc) {
-            other.inner().addr == self.inner().addr
-                && other.inner().params == self.inner().params
-                && other.inner().rest == self.inner().rest
+            self.inner().addr == other.inner().addr
         } else {
             false
         }

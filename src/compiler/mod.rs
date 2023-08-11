@@ -72,6 +72,7 @@ macro_rules! backpatch_u32 {
 struct Local {
     name: Arc<str>,
     depth: usize,
+    mutable: bool,
 }
 
 pub struct Compiler {
@@ -169,7 +170,7 @@ impl Compiler {
             }
 
             Expr::Var { name, pos } => {
-                let result = self.resolve_local(name.clone(), true, pos);
+                let result = self.resolve_local(name.clone(), true, false, pos);
                 if self.scope_depth != 0 {
                     if let Some(result) = result {
                         self.mem_slice.write_opcode(OpCode::GetLocal, pos);
@@ -189,6 +190,7 @@ impl Compiler {
                 left,
                 right,
                 pos,
+                mutable,
             } => {
                 if self.scope_depth == 0 {
                     // global variable
@@ -214,14 +216,13 @@ impl Compiler {
                     }
 
                     self.compile_expr_to_self(*right);
-                    self.mem_slice.write_opcode(
-                        if init {
-                            OpCode::DefGlobal
-                        } else {
-                            OpCode::SetGlobal
-                        },
-                        pos,
-                    );
+
+                    if init {
+                        self.mem_slice.write_opcode(OpCode::DefGlobal, pos);
+                        self.mem_slice.write_byte(if mutable { 1 } else { 0 }, pos);
+                    } else {
+                        self.mem_slice.write_opcode(OpCode::SetGlobal, pos);
+                    }
                 } else {
                     // local variable
                     if init {
@@ -232,7 +233,7 @@ impl Compiler {
                             match expr {
                                 Expr::Var { name, pos } => {
                                     c.mem_slice.add_const(FVar::new(name.clone()), *pos);
-                                    c.add_local(name.clone());
+                                    c.add_local(name.clone(), false);
                                 }
                                 Expr::Empty(pos) => {
                                     c.mem_slice.write_opcode(OpCode::LoadEmpty, *pos);
@@ -244,7 +245,7 @@ impl Compiler {
                         match *left {
                             Expr::Var { name, pos } => {
                                 self.mem_slice.add_const(FVar::new(name.clone()), pos);
-                                self.add_local(name);
+                                self.add_local(name, mutable);
                             }
                             Expr::List { elems, pos } => {
                                 self.compile_list(elems, pos, compile);
@@ -266,7 +267,8 @@ impl Compiler {
                                 Expr::Var { name, pos } => {
                                     c.mem_slice.write_byte(1, *pos);
                                     c.mem_slice.write_byte(
-                                        c.resolve_local(name.clone(), false, *pos).unwrap() as u8,
+                                        c.resolve_local(name.clone(), false, true, *pos).unwrap()
+                                            as u8,
                                         *pos,
                                     );
                                 }
@@ -282,7 +284,7 @@ impl Compiler {
                             Expr::Var { name, pos } => {
                                 self.mem_slice.write_opcode(OpCode::SetLocalVar, pos);
                                 self.mem_slice.write_byte(
-                                    self.resolve_local(name, false, pos).unwrap() as u8,
+                                    self.resolve_local(name, false, true, pos).unwrap() as u8,
                                     pos,
                                 );
                             }
@@ -314,7 +316,7 @@ impl Compiler {
                                 // writing the references to the local variables
                                 vals.iter().for_each(|expr| match expr {
                                     Expr::Var { name, pos } => self.mem_slice.write_byte(
-                                        self.resolve_local(name.clone(), false, *pos).unwrap()
+                                        self.resolve_local(name.clone(), false, true, *pos).unwrap()
                                             as u8,
                                         *pos,
                                     ),
@@ -493,6 +495,7 @@ impl Compiler {
                     left: _,
                     right: _,
                     pos,
+                    mutable: _,
                 } = &last_expr
                 {
                     if *init {
@@ -612,7 +615,7 @@ impl Compiler {
                 if let Some(name) = name {
                     self.mem_slice.add_const(FVar::new(name.clone()), pos);
                     if self.scope_depth != 0 {
-                        self.add_local(name);
+                        self.add_local(name, true);
                     }
                 }
 
@@ -632,15 +635,15 @@ impl Compiler {
                         self.begin_scope();
 
                         // defining the parameters
-                        params.iter().for_each(|name| match name.kind {
-                            TokenType::Id(ref name) => self.add_local(name.clone()),
+                        params.iter().for_each(|p| match p.0.kind {
+                            TokenType::Id(ref name) => self.add_local(name.clone(), p.1),
                             _ => unreachable!(),
                         });
 
                         // if there's a rest parameter, define the parameter
                         if let Some(rest) = rest {
-                            match rest.kind {
-                                TokenType::Id(ref name) => self.add_local(name.clone()),
+                            match rest.0.kind {
+                                TokenType::Id(ref name) => self.add_local(name.clone(), rest.1),
                                 _ => unreachable!(),
                             }
                         }
@@ -688,14 +691,12 @@ impl Compiler {
                 );
 
                 if has_name {
-                    self.mem_slice.write_opcode(
-                        if self.scope_depth == 0 {
-                            OpCode::DefGlobal
-                        } else {
-                            OpCode::DefLocal
-                        },
-                        pos,
-                    );
+                    if self.scope_depth == 0 {
+                        self.mem_slice.write_opcode(OpCode::DefGlobal, pos);
+                        self.mem_slice.write_byte(1, pos);
+                    } else {
+                        self.mem_slice.write_opcode(OpCode::DefLocal, pos);
+                    }
                 }
             }
 
@@ -779,20 +780,33 @@ impl Compiler {
     }
 
     /// Adds a reference to a local variable
-    fn add_local(&mut self, name: Arc<str>) {
+    fn add_local(&mut self, name: Arc<str>, mutable: bool) {
         self.locals.push(Local {
             name,
             depth: self.scope_depth,
+            mutable,
         });
     }
 
     /// Resolves a local variable and returns the index of the variable
-    fn resolve_local(&self, name: Arc<str>, global: bool, pos: Position) -> Option<usize> {
+    fn resolve_local(
+        &self,
+        name: Arc<str>,
+        global: bool,
+        reassign: bool,
+        pos: Position,
+    ) -> Option<usize> {
         if self.locals.is_empty() {
             return None;
         }
         for idx in (0..=(self.locals.len() - 1)).rev() {
             if self.locals[idx].name == name {
+                if reassign && !self.locals[idx].mutable {
+                    self.report_err(
+                        format!("local variable {} is immutable", name.as_ref()),
+                        pos,
+                    );
+                }
                 return Some(idx);
             }
         }

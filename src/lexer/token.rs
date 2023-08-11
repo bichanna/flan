@@ -13,6 +13,7 @@ impl TokenType {
     /// Returns the TokenType of the keyword if the given &str is a keyword
     pub fn get_type(value: &str) -> Option<TokenType> {
         match value.to_lowercase().as_str() {
+            "mut" => Some(TokenType::Mut),
             "if" => Some(TokenType::If),
             "fn" => Some(TokenType::Func),
             "match" => Some(TokenType::Match),
@@ -82,6 +83,7 @@ pub enum TokenType {
     DotEq,    // ..=
     LDot,     // ..<
 
+    Mut,     // mut
     Func,    // fn
     If,      // if
     With,    // with
