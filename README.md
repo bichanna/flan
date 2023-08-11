@@ -19,12 +19,11 @@ Also, I happen to love flan - a delicious custard dessert topped with caramel sa
  - dynamic typing
  - strongly typed
  - lexical scoping
- - immutability by default
- - concurrency (via Actor Model)
- - expression-oriented (everything is an expression)
+ - concurrency
+ - expression-oriented
  - nested functions
  - closures
- - garbage collection (mark-and-sweep)
+ - automatic memory management
  - built-in JSON serializer/deserializer
 
 ## Snippets
@@ -55,9 +54,9 @@ i{each, range} := import("std")
 
 fn bubbleSort(mut list) =
     range(0, len(list)) |> each() ~ (i)
-        range(0, len(list) - i - 1) |> each() ~ (j)
-            if list.j > list.(j + 1) then
-                [list.j, list.(j + 1)] = [list.(j + 1), list.j]
+    range(0, len(list) - i - 1) |> each() ~ (j)
+    if list.j > list.(j + 1) then
+        [list.j, list.(j + 1)] = [list.(j + 1), list.j]
 
 mut list := [-2, 4, 2, 1, 0, 5, -1, 6]
 bubbleSort(list)
