@@ -15,7 +15,7 @@
     - [x] If expression
     - [x] Match expression
     - [x] When expression
-    - [ ] Function
+    - [x] Function
     - [ ] Closure
     - [ ] Module system
     - [ ] Concurrency (actor model)
