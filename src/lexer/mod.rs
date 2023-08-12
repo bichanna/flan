@@ -233,7 +233,49 @@ impl<'a> Lexer<'a> {
                 '"' => {
                     // string
                     self.advance();
-                    let value = self.build_str(|l| l.current != '"');
+
+                    let mut value = String::new();
+                    while !self.is_end() && self.current != '"' {
+                        if self.current == '\\' {
+                            // escape sequences
+                            match self.peek() {
+                                '\\' => {
+                                    value.push('\\');
+                                    self.advance();
+                                }
+                                '0' => {
+                                    value.push('\0');
+                                    self.advance();
+                                }
+                                '"' => {
+                                    value.push('"');
+                                    self.advance();
+                                }
+                                'n' => {
+                                    value.push('\n');
+                                    self.advance()
+                                }
+                                't' => {
+                                    value.push('\t');
+                                    self.advance()
+                                }
+                                _ => value.push(self.current),
+                            }
+                        } else {
+                            value.push(self.current);
+                        }
+                        self.advance();
+                    }
+
+                    // let value = self.build_str(|l| l.current != '"');
+
+                    // let mut builder = String::new();
+                    // while !self.is_end() && func(self) {
+                    //     builder.push(self.current);
+                    //     self.advance();
+                    // }
+                    // builder
+
                     self.append(TokenType::Str(value));
                 }
                 _ => self.report_error(&format!("unexpected character: '{}'", self.current)),
@@ -390,5 +432,12 @@ mod tests {
         assert_eq!(tokens[9].kind, TokenType::Not);
         assert_eq!(tokens[10].kind, TokenType::False);
         assert_eq!(tokens[11].kind, TokenType::Import);
+    }
+
+    #[test]
+    fn escape_sequences() {
+        let expr = r#" "\n\t hello" "#;
+        let tokens = test_tokenize(expr);
+        assert_eq!(tokens.len(), 1 + 1);
     }
 }
