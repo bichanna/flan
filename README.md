@@ -24,7 +24,7 @@ Also, I happen to love flan - a delicious custard dessert topped with caramel sa
  - nested functions
  - closures
  - automatic memory management
- - optional lazy evaluation (infinite list!)
+ - optional lazy evaluation
  - built-in JSON serializer/deserializer
 
 ## Snippets
@@ -59,7 +59,7 @@ fn bubbleSort(mut list) =
     if list.j > list.(j + 1) then
         [list.j, list.(j + 1)] = [list.(j + 1), list.j]
 
-mut list := [-2, 4, 2, 1, 0, 5, -1, 6]
+list := [-2, 4, 2, 1, 0, 5, -1, 6]
 bubbleSort(list)
 println(list) // [-2, -1, 0, 1, 2, 4, 5, 6]
 ```
