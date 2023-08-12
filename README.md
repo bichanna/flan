@@ -24,6 +24,7 @@ Also, I happen to love flan - a delicious custard dessert topped with caramel sa
  - nested functions
  - closures
  - automatic memory management
+ - optional lazy evaluation (infinite list!)
  - built-in JSON serializer/deserializer
 
 ## Snippets

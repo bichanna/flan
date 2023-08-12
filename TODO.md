@@ -1,7 +1,7 @@
 # TODO list
 
  - Features 
-    - [x] Basic data types
+    - [x] Data types
         - [x] Integer: `1`, `42`, `0xABC`
         - [x] Float: `3.14`, `4.0`
         - [x] String: `"bichanna"`
@@ -9,6 +9,7 @@
         - [x] Boolean: `true`, `false`
         - [x] Nil: `nil`
         - [x] List: `[1, 1.6, "Hello!", :err, false]`
+        - [ ] Tuple: `$(1, 3)`, `$(:err1, err2)`
         - [x] Object: `{name->"bichanna", country->:jp, email->"nobu.bichanna@gmail.com"}`
     - [x] Basic arithmetics
     - [x] Global and local variables
@@ -18,41 +19,40 @@
     - [x] Function
     - [ ] Closure
     - [ ] Module system
+    - [ ] Lazy evaluation
     - [ ] Concurrency (actor model)
 
  - Built-in functions
     - [ ] `import(xs+)`: `imports` imports modules `xs`.
     - [ ] `str(x)`: `str` converts `x` to a string.
-    - [ ] `int(x)`: `int` converts `x` to an integer (wrapped with `opt`).
-    - [ ] `float(x)`: `float` converts `x` to a float (wrapped with `opt`).
-    - [ ] `type(x)`: `type` returns the type of `x` as an atom: `:int`, `:float`, `:str`, `:atom`, `:list`, or `:obj`.
-    - [ ] `len(xs)`: `len` returns the length of a string, a list, or an object.
+    - [ ] `int(x)`: `int` converts `x` to an integer.
+    - [ ] `float(x)`: `float` converts `x` to a float.
+    - [ ] `type(x)`: `type` returns the type of `x` as an atom: `:int`, `:float`, `:str`, `:atom`, `:list`, `:tup`, or `:obj`.
+    - [ ] `len(xs)`: `len` returns the length of a string, a list, a tuple, or an object.
     - [ ] `append(xs, x)`: `append`creates a new list or string, `x` appended to `xs`.
     - [ ] `mappend(xs, x)`: `mappend` appends `x` to `xs`, a list or string, mutating it.
-    - [ ] `pop(xs, i)`: `pop` creates a new list or string, the item (wrapped with `opt`) at index `i` popped from `xs`, and returns a list of the new value and the popped value. `i` is optional and defaults to `len(xs) - 1`.
-    - [ ] `mpop(xs, i)`: `mpop` pops the value (wrapped with `opt`) of `xs` at index `i`, mutating the list or string. `i` is optional and defaults to `len(xs) - 1`.
+    - [ ] `pop(xs, i)`: `pop` creates a new list or string, the item at index `i` popped from `xs`, and returns a list of the new value and the popped value. `i` is optional and defaults to `len(xs) - 1`.
+    - [ ] `mpop(xs, i)`: `mpop` pops the value of `xs` at index `i`, mutating the list or string. `i` is optional and defaults to `len(xs) - 1`.
     - [ ] `keys(obj)`: `keys` returns a list of the keys of the object `obj`.
     - [ ] `values(obj)`: `values` returns a list of the values of the object `obj`.
     - [ ] `args()`: `args` returns a list of command line arguments.
     - [ ] `env()`: `env` returns all environment variables as an object.
-    - [ ] `get(obj, key)`: returns the value (wrapped with `opt`) of the item with the key `key`, which could be an atom or a string.
+    - [ ] `get(obj, key)`: returns the value of the item with the key `key`, which could be an atom or a string.
     - [ ] `print(xs+)`: `print` prints `xs` concatenated to the standard output stream.
     - [ ] `println(xs+)`: `println` prints `xs` concatenated to the standard output stream with a new line at the end.
     - [ ] `eprint(xs+)`: `eprint` prints `xs` concatenated to the standard error stream.
 
  - Built-in modules
     - [ ] `std`: functions that provide iterators, control flow, etc.
-    - [ ] `io`: basic I/O operations for files and directories
+    - [ ] `fs`: basic I/O operations for files and directories
     - [ ] `cli`: rudimentary parser for CLI arguments
     - [ ] `fmt`: string formatting
     - [ ] `dtm`: functions for working with human-readable dates and UNIX timestamps
-    - [ ] `opt`: for Rust-like `Option`
     - [ ] `sys`: variables and functions used or maintained by the interpreter
-    - [ ] `json`: rudimentary JSON serializer and deserializer
+    - [ ] `json`: JSON serializer and deserializer
     - [ ] `math`: mathematical functions (no support for complex numbers)
     - [ ] `cmpx`: mathematical functions for working with complex numbers
     - [ ] `strs`: functions for working with strings
     - [ ] `rand`: functions for working with insecure, pseudorandom sources of randomness
     - [ ] `bnum`: functions for working with big numbers
-    - [ ] `result`: for Rust-like `Result`
-    - [ ] `regex`: functions for working with Regex
+    - [ ] `regex`: functions for working with RegEx
