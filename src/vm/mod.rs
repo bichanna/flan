@@ -15,10 +15,12 @@ use crate::*;
 
 use self::function::Function;
 use self::gc::heap::Heap;
+use self::native::native_func::FNative;
 use self::value::*;
 
 pub mod function;
 pub mod gc;
+pub mod native;
 mod util_macro;
 pub mod value;
 
@@ -679,11 +681,8 @@ impl<'a> VM<'a> {
                     // hopefully a function
                     let func = self.pop();
 
-                    for arg in &args {
-                        println!("  arg: {}", arg);
-                    }
-
                     if let Some(func) = as_t!(func, FFunc) {
+                        // normal function
                         let func = unsafe { *func.inner_mut() };
 
                         if func.params > arg_len {
@@ -702,6 +701,24 @@ impl<'a> VM<'a> {
 
                         // actually calling the function
                         self.call(func, args);
+                    } else if let Some(nfunc) = as_t!(func, FNative) {
+                        // native function
+                        let func = nfunc.0;
+
+                        self.add_frame(
+                            Function {
+                                params: 0,
+                                rest: false,
+                                addr: std::ptr::null(),
+                            },
+                            std::ptr::null(),
+                        );
+
+                        // calling the native function
+                        func(self, args);
+
+                        // removing the call frame
+                        self.frames.pop();
                     } else {
                         // TODO: report an error
                     }
@@ -794,21 +811,7 @@ impl<'a> VM<'a> {
 
     /// Calls a Flan function
     fn call(&mut self, func: Function, args: Vec<Value>) {
-        // checking for stack overflow
-        if self.frames.len() == FRAME_MAX {
-            // TODO: report an error
-        }
-
-        // creating a new call frame for the function call
-        let frame = CallFrame {
-            func,
-            ip: unsafe { func.addr.sub(1) },
-            slot_bottom: self.stack.len(),
-            slot_count: 0,
-        };
-
-        // setting the newly created call frame as the current frame
-        self.frames.push(frame);
+        self.add_frame(func, unsafe { func.addr.sub(1) });
 
         #[cfg(feature = "debug")]
         {
@@ -893,6 +896,25 @@ impl<'a> VM<'a> {
 
         current_frame_slot!(self) = val;
         current_frame!(self).slot_count += 1;
+    }
+
+    /// Pushes a new call frame to the frames array
+    fn add_frame(&mut self, func: Function, addr: *const u8) {
+        // checking for stack overflow
+        if self.frames.len() == FRAME_MAX {
+            // TODO: report an error
+        }
+
+        // creating a new call frame for the function call
+        let frame = CallFrame {
+            func,
+            ip: addr,
+            slot_bottom: self.stack.len(),
+            slot_count: 0,
+        };
+
+        // setting the newly created call frame as the current frame
+        self.frames.push(frame);
     }
 }
 
