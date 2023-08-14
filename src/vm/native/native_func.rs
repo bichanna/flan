@@ -47,7 +47,7 @@ impl fmt::Display for FNative {
     }
 }
 impl FNative {
-    pub fn new(func: NativeFunc) -> Value {
+    pub fn build(func: NativeFunc) -> Value {
         Box::new(FNative(func))
     }
 }

@@ -165,7 +165,7 @@ impl<'a> VM<'a> {
                     // adding elements to the list
                     (0..len).for_each(|_| list.push(self.pop()));
                     list.reverse();
-                    let flist = FList::new(self.heap, list);
+                    let flist = FList::build(self.heap, list);
                     self.push(flist);
                 }
 
@@ -184,7 +184,7 @@ impl<'a> VM<'a> {
                             // TODO: report error
                         }
                     });
-                    let fobj = FObj::new(self.heap, obj);
+                    let fobj = FObj::build(self.heap, obj);
                     self.push(fobj);
                 }
 
@@ -222,81 +222,81 @@ impl<'a> VM<'a> {
                 OpCode::Equal => {
                     let right = self.pop();
                     let left = self.pop();
-                    self.push(FBool::new(left.equal(&right)));
+                    self.push(FBool::build(left.equal(&right)));
                 }
 
                 OpCode::NotEqual => {
                     let right = self.pop();
                     let left = self.pop();
-                    self.push(FBool::new(!left.equal(&right)));
+                    self.push(FBool::build(!left.equal(&right)));
                 }
 
                 OpCode::GT => {
                     let right = self.pop();
                     let left = self.pop();
-                    self.push(FBool::new(left.greater_than(&right)));
+                    self.push(FBool::build(left.greater_than(&right)));
                 }
 
                 OpCode::LT => {
                     let right = self.pop();
                     let left = self.pop();
-                    self.push(FBool::new(left.less_than(&right)));
+                    self.push(FBool::build(left.less_than(&right)));
                 }
 
                 OpCode::GTEq => {
                     let right = self.pop();
                     let left = self.pop();
-                    self.push(FBool::new(left.greater_than_or_eq(&right)));
+                    self.push(FBool::build(left.greater_than_or_eq(&right)));
                 }
 
                 OpCode::LTEq => {
                     let right = self.pop();
                     let left = self.pop();
-                    self.push(FBool::new(left.less_than_or_eq(&right)));
+                    self.push(FBool::build(left.less_than_or_eq(&right)));
                 }
 
                 OpCode::And => {
                     let right = self.pop();
                     let left = self.pop();
-                    self.push(FBool::new(left.truthy() && right.truthy()));
+                    self.push(FBool::build(left.truthy() && right.truthy()));
                 }
 
                 OpCode::Or => {
                     let right = self.pop();
                     let left = self.pop();
-                    self.push(FBool::new(left.truthy() || right.truthy()));
+                    self.push(FBool::build(left.truthy() || right.truthy()));
                 }
 
                 OpCode::LoadInt0 => {
-                    self.push(FInt::new(0));
+                    self.push(FInt::build(0));
                 }
 
                 OpCode::LoadInt1 => {
-                    self.push(FInt::new(1));
+                    self.push(FInt::build(1));
                 }
 
                 OpCode::LoadInt2 => {
-                    self.push(FInt::new(2));
+                    self.push(FInt::build(2));
                 }
 
                 OpCode::LoadInt3 => {
-                    self.push(FInt::new(3));
+                    self.push(FInt::build(3));
                 }
 
                 OpCode::LoadTrue => {
-                    self.push(FBool::new(true));
+                    self.push(FBool::build(true));
                 }
 
                 OpCode::LoadFalse => {
-                    self.push(FBool::new(false));
+                    self.push(FBool::build(false));
                 }
 
                 OpCode::LoadEmpty => {
-                    self.push(FEmpty::new());
+                    self.push(FEmpty::build());
                 }
 
                 OpCode::LoadNil => {
-                    self.push(FNil::new());
+                    self.push(FNil::build());
                 }
 
                 OpCode::DefGlobal => {
@@ -512,7 +512,7 @@ impl<'a> VM<'a> {
                             match range.len() {
                                 0 => {
                                     let new_list = list.clone();
-                                    let new_flist = FList::new(self.heap, new_list);
+                                    let new_flist = FList::build(self.heap, new_list);
                                     self.push(new_flist);
                                 }
                                 1 => {
@@ -524,7 +524,7 @@ impl<'a> VM<'a> {
                                         }
 
                                         let slice = &list[l..];
-                                        let new_flist = FList::new(self.heap, slice.to_vec());
+                                        let new_flist = FList::build(self.heap, slice.to_vec());
                                         self.push(new_flist);
                                     } else {
                                         // TODO: report an error
@@ -543,7 +543,7 @@ impl<'a> VM<'a> {
 
                                         println!("l0, l1 = {}, {}", l0, l1);
                                         let slice = &list[l0..l1];
-                                        let new_flist = FList::new(self.heap, slice.to_vec());
+                                        let new_flist = FList::build(self.heap, slice.to_vec());
                                         self.push(new_flist);
                                     } else {
                                         // TODO: report an error
@@ -573,15 +573,17 @@ impl<'a> VM<'a> {
                                 // TODO: report an error
                             }
 
-                            let new_str =
-                                FStr::new(self.heap, string.chars().nth(idx).unwrap().to_string());
+                            let new_str = FStr::build(
+                                self.heap,
+                                string.chars().nth(idx).unwrap().to_string(),
+                            );
                             self.push(new_str);
                         } else if let Some(flist) = as_t!(attr, FList) {
                             let list = flist.inner();
                             match list.len() {
                                 0 => {
                                     let new_str = string.clone();
-                                    let new_fstr = FStr::new(self.heap, new_str);
+                                    let new_fstr = FStr::build(self.heap, new_str);
                                     self.push(new_fstr);
                                 }
                                 1 => {
@@ -593,7 +595,7 @@ impl<'a> VM<'a> {
                                         }
 
                                         let slice = &string[l..];
-                                        let new_fstr = FStr::new(self.heap, slice.to_string());
+                                        let new_fstr = FStr::build(self.heap, slice.to_string());
                                         self.push(new_fstr);
                                     } else {
                                         // TODO: report an error
@@ -611,7 +613,7 @@ impl<'a> VM<'a> {
                                         }
 
                                         let slice = &string[l0..l1];
-                                        let new_fstr = FStr::new(self.heap, slice.to_string());
+                                        let new_fstr = FStr::build(self.heap, slice.to_string());
                                         self.push(new_fstr);
                                     } else {
                                         // TODO: report an error
@@ -686,11 +688,11 @@ impl<'a> VM<'a> {
                         let func = unsafe { *func.inner_mut() };
 
                         if func.params > arg_len {
-                            (0..(func.params - arg_len)).for_each(|_| args.push(FNil::new()));
+                            (0..(func.params - arg_len)).for_each(|_| args.push(FNil::build()));
                         }
 
                         if func.params == arg_len && func.rest {
-                            args.push(FNil::new());
+                            args.push(FNil::build());
                         } else if (func.params == arg_len && !func.rest)
                             || (func.params < arg_len && func.rest)
                         {
@@ -835,7 +837,7 @@ impl<'a> VM<'a> {
 
         // if there's rest parameter, push the rest of the arguments as a list
         if let Some(rest_args) = rest_args {
-            let rest_param = FList::new(self.heap, rest_args.to_vec());
+            let rest_param = FList::build(self.heap, rest_args.to_vec());
             self.slots_push(rest_param);
         }
     }
@@ -870,7 +872,7 @@ impl<'a> VM<'a> {
             read_byte!(self) as usize
         };
 
-        replace(&mut self.constants[idx], FNil::new())
+        replace(&mut self.constants[idx], FNil::build())
     }
 
     /// Pops a `Value` off from `stack`
@@ -892,7 +894,7 @@ impl<'a> VM<'a> {
 
     fn slots_push(&mut self, val: Value) {
         // placeholder
-        self.stack.push(FNil::new());
+        self.stack.push(FNil::build());
 
         current_frame_slot!(self) = val;
         current_frame!(self).slot_count += 1;
