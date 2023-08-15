@@ -70,6 +70,7 @@ impl<'a> Debug<'a> {
             OpCode::Rem => self.simple_instruction("Rem"),
             OpCode::Pop => self.simple_instruction("Pop"),
             OpCode::PopN => self.single_arg_instruction("PopN"),
+            OpCode::InitTup => self.single_arg_instruction("InitTup"),
             OpCode::InitList => self.single_arg_instruction("InitList"),
             OpCode::InitObj => self.single_arg_instruction("InitObj"),
             OpCode::PopExceptLast => self.simple_instruction("PopExceptLast"),
@@ -99,7 +100,8 @@ impl<'a> Debug<'a> {
             OpCode::DefLocal => self.simple_instruction("DefLocal"),
             OpCode::GetLocal => self.single_arg_instruction("GetLocal"),
             OpCode::SetLocalVar => self.single_arg_instruction("SetLocalVar"),
-            OpCode::SetLocalList => self.set_local_list_instruction(),
+            OpCode::SetLocalTup => self.set_local_list_or_tup_instruction("SetLocalTup"),
+            OpCode::SetLocalList => self.set_local_list_or_tup_instruction("SetLocalList"),
             OpCode::SetLocalObj => self.set_local_obj_instruction(),
             OpCode::Match => self.match_instruction(),
             OpCode::CallFn => self.single_arg_instruction("CallFn"),
@@ -178,7 +180,7 @@ impl<'a> Debug<'a> {
         println!("{:-16} {:>6} => {:?} {}", "Match", idx, opcode, has_next);
     }
 
-    fn set_local_list_instruction(&mut self) {
+    fn set_local_list_or_tup_instruction(&mut self, name: &'static str) {
         let len = self.bytecode[self.offset + 1] as usize;
         self.offset += 1;
         let idxs = vec![
@@ -197,7 +199,7 @@ impl<'a> Debug<'a> {
             "}".to_string(),
         ]
         .join(", ");
-        println!("{:-16} {:>6} {}", "SetLocalList", len, idxs);
+        println!("{:-16} {:>6} {}", name, len, idxs);
         self.offset += len * 2 + 1;
     }
 

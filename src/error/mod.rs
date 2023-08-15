@@ -71,7 +71,7 @@ impl Stack {
     }
 
     pub fn report(&self, code: i32) {
-        println!("{}", self);
+        // println!("{}", self);
         exit(code);
     }
 }

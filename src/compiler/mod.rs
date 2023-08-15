@@ -210,6 +210,7 @@ impl Compiler {
                         Expr::Var { name, pos } => {
                             self.mem_slice.add_const(FVar::build(name), pos);
                         }
+                        Expr::Tuple { elems, pos } => self.compile_tuple(elems, pos, compile),
                         Expr::List { elems, pos } => self.compile_list(elems, pos, compile),
                         Expr::Obj { keys, vals, pos } => self.compile_obj(keys, vals, pos, compile),
                         _ => unreachable!(),
@@ -247,6 +248,9 @@ impl Compiler {
                                 self.mem_slice.add_const(FVar::build(name.clone()), pos);
                                 self.add_local(name, mutable);
                             }
+                            Expr::Tuple { elems, pos } => {
+                                self.compile_tuple(elems, pos, compile);
+                            }
                             Expr::List { elems, pos } => {
                                 self.compile_list(elems, pos, compile);
                             }
@@ -262,7 +266,7 @@ impl Compiler {
                         // reassignment
                         self.compile_expr_to_self(*right);
 
-                        fn compile_for_list(c: &mut Compiler, expr: &Expr) {
+                        fn compile_for_list_and_tup(c: &mut Compiler, expr: &Expr) {
                             match expr {
                                 Expr::Var { name, pos } => {
                                     c.mem_slice.write_byte(1, *pos);
@@ -288,9 +292,13 @@ impl Compiler {
                                     pos,
                                 );
                             }
+                            Expr::Tuple { elems, pos } => {
+                                self.mem_slice.write_opcode(OpCode::SetLocalTup, pos);
+                                self.compile_tuple(elems, pos, compile_for_list_and_tup);
+                            }
                             Expr::List { elems, pos } => {
                                 self.mem_slice.write_opcode(OpCode::SetLocalList, pos);
-                                self.compile_list(elems, pos, compile_for_list);
+                                self.compile_list(elems, pos, compile_for_list_and_tup);
                             }
                             Expr::Obj { keys, vals, pos } => {
                                 // checking the length of the object
@@ -301,7 +309,7 @@ impl Compiler {
                                 fn token_to_str(t: &Token) -> Arc<str> {
                                     match t.clone().kind {
                                         TokenType::Id(name) => name,
-                                        _ => todo!(), // just panic
+                                        _ => unreachable!(),
                                     }
                                 }
 
@@ -562,6 +570,13 @@ impl Compiler {
 
             Expr::Nil(pos) => self.mem_slice.write_opcode(OpCode::LoadNil, pos),
 
+            Expr::Tuple { elems, pos } => {
+                fn compile_expr(c: &mut Compiler, expr: &Expr) {
+                    c.compile_expr_to_self(expr.clone());
+                }
+                self.compile_tuple(elems, pos, compile_expr);
+            }
+
             Expr::List { elems, pos } => {
                 fn compile_expr(c: &mut Compiler, expr: &Expr) {
                     c.compile_expr_to_self(expr.clone());
@@ -734,6 +749,23 @@ impl Compiler {
         }
     }
 
+    /// Compiles into a tuple
+    fn compile_tuple(&mut self, elems: Box<[Expr]>, pos: Position, func: fn(&mut Compiler, &Expr)) {
+        // checking the length of the tuple
+        if elems.len() > u8::MAX as usize {
+            self.report_err("tuple literal too big".to_string(), pos);
+        }
+
+        // compiling the elements
+        elems.iter().for_each(|expr| func(self, expr));
+
+        // adding the tuple initialization instruction
+        self.mem_slice.write_opcode(OpCode::InitTup, pos);
+
+        // writing the length
+        self.mem_slice.write_byte(elems.len() as u8, pos);
+    }
+
     /// Compiles into a list
     fn compile_list(&mut self, elems: Vec<Expr>, pos: Position, func: fn(&mut Compiler, &Expr)) {
         // checking the length of the list
@@ -835,6 +867,9 @@ impl Compiler {
                         );
                     }
                 }
+                Expr::Tuple { elems, pos: _ } => elems
+                    .iter()
+                    .for_each(|i| check(s, local.clone(), i.clone())),
                 Expr::List { elems, pos: _ } => elems
                     .iter()
                     .for_each(|i| check(s, local.clone(), i.clone())),

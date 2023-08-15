@@ -127,6 +127,10 @@ pub enum Expr {
         elems: Vec<Expr>,
         pos: Position,
     },
+    Tuple {
+        elems: Box<[Expr]>,
+        pos: Position,
+    },
     Obj {
         keys: Vec<Token>,
         vals: Vec<Expr>,

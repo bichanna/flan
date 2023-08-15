@@ -159,6 +159,18 @@ impl<'a> VM<'a> {
                     self.popn(n);
                 }
 
+                OpCode::InitTup => {
+                    let len = read_byte!(self) as usize;
+                    // adding each elements to the tuple
+                    let tup = (0..len)
+                        .map(|_| self.pop())
+                        .rev()
+                        .collect::<Vec<Value>>()
+                        .into_boxed_slice();
+                    let ftup = FTup::build(self.heap, tup);
+                    self.push(ftup);
+                }
+
                 OpCode::InitList => {
                     let len = read_byte!(self) as usize;
                     let mut list: Vec<Value> = Vec::with_capacity(len);
@@ -337,7 +349,32 @@ impl<'a> VM<'a> {
                     self.slot_assign(idx, right.clone());
                     self.push(right)
                 }
+                OpCode::SetLocalTup => {
+                    let right = self.pop();
+                    let len = read_byte!(self) as usize;
+                    let slots = (0..len)
+                        .map(|_| (read_byte!(self) == 0, read_byte!(self) as usize))
+                        .rev()
+                        .collect::<Vec<(bool, usize)>>();
 
+                    if as_t!(right, FTup).is_none() {
+                        // TODO: report an error
+                    }
+
+                    let right_tup = &force_as_t!(right, FTup).inner();
+
+                    if right_tup.len() != slots.len() {
+                        // TODO: report an error
+                    }
+
+                    slots.iter().zip(right_tup.iter()).for_each(|(slot, val)| {
+                        if slot.0 {
+                            self.slot_assign(slot.1, val.clone());
+                        }
+                    });
+
+                    self.push(right.clone());
+                }
                 OpCode::SetLocalList => {
                     let right = self.pop();
                     let len = read_byte!(self) as usize;
@@ -541,8 +578,63 @@ impl<'a> VM<'a> {
                                             // TODO: report an error
                                         }
 
-                                        println!("l0, l1 = {}, {}", l0, l1);
                                         let slice = &list[l0..l1];
+                                        let new_flist = FList::build(self.heap, slice.to_vec());
+                                        self.push(new_flist);
+                                    } else {
+                                        // TODO: report an error
+                                    }
+                                }
+                                _ => {} // TODO: report an error
+                            }
+                        } else {
+                            // TODO: report an error
+                        }
+                    } else if let Some(ftup) = as_t!(inst, FTup) {
+                        let tup = ftup.inner();
+                        if let Some(idx) = as_t!(attr, FInt) {
+                            let idx = idx.0 as usize;
+                            if let Some(val) = tup.get(idx) {
+                                self.push(val.clone());
+                            } else {
+                                // TODO: report an error
+                            }
+                        } else if let Some(range) = as_t!(attr, FList) {
+                            let range = range.inner();
+                            match range.len() {
+                                0 => {
+                                    let l: Vec<Value> = tup.into();
+                                    let new_tup = l.into_boxed_slice();
+                                    let new_ftup = FTup::build(self.heap, new_tup);
+                                    self.push(new_ftup);
+                                }
+                                1 => {
+                                    if let Some(l) = as_t!(range[0], FInt) {
+                                        let l = l.0 as usize;
+
+                                        if l >= tup.len() {
+                                            // TODO: report an error
+                                        }
+
+                                        let slice = &tup[l..];
+                                        let new_flist = FList::build(self.heap, slice.to_vec());
+                                        self.push(new_flist);
+                                    } else {
+                                        // TODO: report an error
+                                    }
+                                }
+                                2 => {
+                                    if as_t!(range[0], FInt).is_some()
+                                        && as_t!(range[1], FInt).is_some()
+                                    {
+                                        let l0 = force_as_t!(range[0], FInt).0 as usize;
+                                        let l1 = force_as_t!(range[1], FInt).0 as usize;
+
+                                        if l0 >= tup.len() || l1 >= tup.len() || l0 > l1 {
+                                            // TODO: report an error
+                                        }
+
+                                        let slice = &tup[l0..l1];
                                         let new_flist = FList::build(self.heap, slice.to_vec());
                                         self.push(new_flist);
                                     } else {
@@ -650,6 +742,8 @@ impl<'a> VM<'a> {
                         } else {
                             // TODO: report an error
                         }
+                    } else if as_t!(inst, FTup).is_some() {
+                        // TODO: report an error
                     } else {
                         // TODO: report an error
                     }
@@ -763,6 +857,27 @@ impl<'a> VM<'a> {
         let left = self.pop();
         if let Some(var) = as_t!(left, FVar) {
             func(self, var.0.clone(), right.clone(), mutability);
+        } else if let Some(left) = as_t!(left, FTup) {
+            if let Some(right) = as_t!(right, FTup) {
+                if right.inner().len() != left.inner().len() {
+                    // TODO: report an error
+                } else {
+                    left.inner()
+                        .iter()
+                        .zip(right.inner().iter())
+                        .for_each(|(l, r)| {
+                            if let Some(v) = as_t!(l, FVar) {
+                                func(self, v.0.clone(), r.clone(), mutability);
+                            } else if as_t!(l, FEmpty).is_some() {
+                                {} // do nothing
+                            } else {
+                                // TODO: report an error
+                            }
+                        });
+                }
+            } else {
+                // TODO: report an error
+            }
         } else if let Some(left) = as_t!(left, FList) {
             if let Some(right) = as_t!(right, FList) {
                 if right.inner().len() != left.inner().len() {

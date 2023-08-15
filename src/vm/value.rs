@@ -764,6 +764,103 @@ impl FBool {
 }
 
 #[derive(Clone)]
+pub struct FTup(Object);
+impl ValueTrait for FTup {
+    fn truthy(&self) -> bool {
+        !self.inner().is_empty()
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn type_str(&self) -> String {
+        "tup".to_string()
+    }
+
+    fn equal(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FTup) {
+            let mut is_equal = true;
+            for (a, b) in self.inner().iter().zip(other.inner().iter()) {
+                if !a.equal(b) {
+                    is_equal = false;
+                    break;
+                }
+            }
+            is_equal
+        } else {
+            false
+        }
+    }
+
+    fn less_than(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FTup) {
+            self.inner().len() < other.inner().len()
+        } else {
+            false
+        }
+    }
+
+    fn greater_than(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FTup) {
+            self.inner().len() > other.inner().len()
+        } else {
+            false
+        }
+    }
+
+    fn less_than_or_eq(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FTup) {
+            self.inner().len() <= other.inner().len()
+        } else {
+            false
+        }
+    }
+
+    fn greater_than_or_eq(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FTup) {
+            self.inner().len() >= other.inner().len()
+        } else {
+            false
+        }
+    }
+}
+impl fmt::Display for FTup {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let list = self
+            .inner()
+            .iter()
+            .map(|v| v.to_string())
+            .collect::<Vec<String>>()
+            .join(", ");
+        f.write_str(&format!("({})", list))
+    }
+}
+impl FTup {
+    pub fn build(heap: &mut Heap, tuple: Box<[Value]>) -> Value {
+        Box::new(FTup(heap.allocate(tuple.to_owned())))
+    }
+
+    pub fn inner_mut(&self) -> *mut Box<[Value]> {
+        self.0.ptr as *mut Box<[Value]>
+    }
+
+    pub fn inner(&self) -> &[Value] {
+        unsafe { (self.0.ptr as *const Box<[Value]>).as_ref().unwrap() }
+    }
+}
+
+#[derive(Clone)]
 pub struct FList(Object);
 impl ValueTrait for FList {
     fn truthy(&self) -> bool {

@@ -97,8 +97,14 @@ impl Parser {
 
             match expr.clone() {
                 Expr::Obj { keys: _, vals, pos } => {
-                    vals.into_iter()
-                        .for_each(|v| check(self, pos, v, "expected variable name or _ as values"));
+                    vals.iter().for_each(|v| {
+                        check(
+                            self,
+                            pos,
+                            v.clone(),
+                            "expected variable name or _ as values",
+                        )
+                    });
                     return Expr::Assign {
                         init,
                         left: Box::new(expr),
@@ -108,8 +114,13 @@ impl Parser {
                     };
                 }
                 Expr::List { elems, pos } => {
-                    elems.into_iter().for_each(|v| {
-                        check(self, pos, v, "expected variable name or _ as elements");
+                    elems.iter().for_each(|v| {
+                        check(
+                            self,
+                            pos,
+                            v.clone(),
+                            "expected variable name or _ as elements",
+                        );
                     });
                     return Expr::Assign {
                         init,
@@ -117,6 +128,23 @@ impl Parser {
                         right: Box::new(val),
                         pos,
                         mutable,
+                    };
+                }
+                Expr::Tuple { elems, pos } => {
+                    elems.iter().for_each(|v| {
+                        check(
+                            self,
+                            pos,
+                            v.clone(),
+                            "expected variable name or _ as elements",
+                        );
+                    });
+                    return Expr::Assign {
+                        init,
+                        mutable,
+                        left: Box::new(expr),
+                        right: Box::new(val),
+                        pos,
                     };
                 }
                 Expr::Var { name: _, pos } => {
@@ -510,13 +538,35 @@ impl Parser {
             // grouping
             TokenType::LParen => {
                 self.advance();
+                let token = self.previous();
                 let expr = self.expression();
 
-                // grouping
-                self.expect(TokenType::RParen, "expected ')'");
-                Expr::Group(Box::new(expr))
+                if self.matches(TokenType::Comma) {
+                    self.advance();
+                    // tuple
+                    let mut elems: Vec<Expr> = vec![expr];
+
+                    // appends elements to the tuple
+                    while !self.is_end() && !self.matches(TokenType::RParen) {
+                        elems.push(self.expression());
+                        if self.matches(TokenType::RBracket) || !self.matches(TokenType::Comma) {
+                            break;
+                        } else {
+                            self.advance();
+                        }
+                    }
+                    self.expect(TokenType::RParen, "expected ')' after elements");
+                    Expr::Tuple {
+                        elems: elems.into_boxed_slice(),
+                        pos: token.pos,
+                    }
+                } else {
+                    // grouping
+                    self.expect(TokenType::RParen, "expected ')'");
+                    Expr::Group(Box::new(expr))
+                }
             }
-            // list or range literal
+            // list
             TokenType::LBracket => {
                 self.advance();
                 let token = self.previous();
@@ -1030,6 +1080,7 @@ pub fn test_parse(src: &str) -> Vec<Expr> {
         exprs: vec![],
     };
     parser._parse();
+
     parser.exprs
 }
 
@@ -1056,6 +1107,13 @@ mod tests {
         let expr = "[1, 2, :null] {name->\"Nobu\", country->:jp}";
         let exprs = test_parse(expr);
         // println!("{:#?}", exprs);
+    }
+
+    #[test]
+    fn tuples() {
+        let expr = "(1, 2)";
+        let exprs = test_parse(expr);
+        println!("{:#?}", exprs);
     }
 
     #[test]
