@@ -743,7 +743,7 @@ impl<'a> VM<'a> {
                             // TODO: report an error
                         }
                     } else if as_t!(inst, FTup).is_some() {
-                        // TODO: report an error
+                        {} // TODO: report an error
                     } else {
                         // TODO: report an error
                     }

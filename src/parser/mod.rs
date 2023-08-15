@@ -990,8 +990,6 @@ impl Parser {
                     _ => {}
                 }
 
-                mutable = false;
-
                 if !self.matches(TokenType::Comma) {
                     break;
                 } else {
