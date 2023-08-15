@@ -19,12 +19,13 @@ Also, I happen to love flan - a delicious custard dessert topped with caramel sa
  - dynamic typing
  - strongly typed
  - lexical scoping
- - concurrency
+ - immutability by default
  - expression-oriented
  - nested functions
  - closures
  - automatic memory management
  - optional lazy evaluation
+ - concurrency
  - built-in JSON serializer/deserializer
 
 ## Snippets
@@ -54,12 +55,11 @@ range(101) |> each() <~ fizzBuzz(it) |> println()
 i{each, range} := import("std")
 
 fn bubbleSort(mut list) =
-    range(0, len(list)) |> each() ~ (i)
-    range(0, len(list) - i - 1) |> each() ~ (j)
+    range(0, len(list)) |> each() ~ (i) range(0, len(list) - i - 1) |> each() ~ (j)
     if list.j > list.(j + 1) then
         [list.j, list.(j + 1)] = [list.(j + 1), list.j]
 
-list := [-2, 4, 2, 1, 0, 5, -1, 6]
+list := mut [-2, 4, 2, 1, 0, 5, -1, 6]
 bubbleSort(list)
 println(list) // [-2, -1, 0, 1, 2, 4, 5, 6]
 ```

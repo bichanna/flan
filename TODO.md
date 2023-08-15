@@ -9,8 +9,9 @@
         - [x] Boolean: `true`, `false`
         - [x] Nil: `nil`
         - [x] List: `[1, 1.6, "Hello!", :err, false]`
-        - [x] Tuple: `$(1, 3)`, `$(:err1, err2)`
+        - [x] Tuple: `(1, 3)`, `(:err1, err2)`
         - [x] Object: `{name->"bichanna", country->:jp, email->"nobu.bichanna@gmail.com"}`
+    - [x] Immutability by default for strings, lists, and objects
     - [x] Basic arithmetics
     - [x] Global and local variables
     - [x] If expression
