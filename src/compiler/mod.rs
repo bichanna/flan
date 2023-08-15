@@ -211,8 +211,17 @@ impl Compiler {
                             self.mem_slice.add_const(FVar::build(name), pos);
                         }
                         Expr::Tuple { elems, pos } => self.compile_tuple(elems, pos, compile),
-                        Expr::List { elems, pos } => self.compile_list(elems, pos, compile),
-                        Expr::Obj { keys, vals, pos } => self.compile_obj(keys, vals, pos, compile),
+                        Expr::List {
+                            elems,
+                            pos,
+                            mutable,
+                        } => self.compile_list(elems, mutable, pos, compile),
+                        Expr::Obj {
+                            keys,
+                            vals,
+                            pos,
+                            mutable,
+                        } => self.compile_obj(keys, vals, mutable, pos, compile),
                         _ => unreachable!(),
                     }
 
@@ -251,11 +260,20 @@ impl Compiler {
                             Expr::Tuple { elems, pos } => {
                                 self.compile_tuple(elems, pos, compile);
                             }
-                            Expr::List { elems, pos } => {
-                                self.compile_list(elems, pos, compile);
+                            Expr::List {
+                                elems,
+                                mutable,
+                                pos,
+                            } => {
+                                self.compile_list(elems, mutable, pos, compile);
                             }
-                            Expr::Obj { keys, vals, pos } => {
-                                self.compile_obj(keys, vals, pos, compile);
+                            Expr::Obj {
+                                keys,
+                                vals,
+                                mutable,
+                                pos,
+                            } => {
+                                self.compile_obj(keys, vals, mutable, pos, compile);
                             }
                             _ => unreachable!(),
                         }
@@ -296,11 +314,20 @@ impl Compiler {
                                 self.mem_slice.write_opcode(OpCode::SetLocalTup, pos);
                                 self.compile_tuple(elems, pos, compile_for_list_and_tup);
                             }
-                            Expr::List { elems, pos } => {
+                            Expr::List {
+                                elems,
+                                mutable,
+                                pos,
+                            } => {
                                 self.mem_slice.write_opcode(OpCode::SetLocalList, pos);
-                                self.compile_list(elems, pos, compile_for_list_and_tup);
+                                self.compile_list(elems, mutable, pos, compile_for_list_and_tup);
                             }
-                            Expr::Obj { keys, vals, pos } => {
+                            Expr::Obj {
+                                keys,
+                                vals,
+                                mutable,
+                                pos,
+                            } => {
                                 // checking the length of the object
                                 if keys.len() > u8::MAX as usize {
                                     self.report_err("object literal too big".to_string(), pos);
@@ -541,9 +568,9 @@ impl Compiler {
                 self.end_scope();
             }
 
-            Expr::Str { val, pos } => self
+            Expr::Str { val, mutable, pos } => self
                 .mem_slice
-                .add_const(FStr::build(&mut self.heap, val), pos),
+                .add_const(FStr::build(&mut self.heap, val, mutable), pos),
 
             Expr::Atom { val, pos } => self.mem_slice.add_const(FAtom::build(val), pos),
 
@@ -577,18 +604,27 @@ impl Compiler {
                 self.compile_tuple(elems, pos, compile_expr);
             }
 
-            Expr::List { elems, pos } => {
+            Expr::List {
+                elems,
+                mutable,
+                pos,
+            } => {
                 fn compile_expr(c: &mut Compiler, expr: &Expr) {
                     c.compile_expr_to_self(expr.clone());
                 }
-                self.compile_list(elems, pos, compile_expr);
+                self.compile_list(elems, mutable, pos, compile_expr);
             }
 
-            Expr::Obj { keys, vals, pos } => {
+            Expr::Obj {
+                keys,
+                vals,
+                mutable,
+                pos,
+            } => {
                 fn compile_expr(c: &mut Compiler, expr: &Expr) {
                     c.compile_expr_to_self(expr.clone());
                 }
-                self.compile_obj(keys, vals, pos, compile_expr);
+                self.compile_obj(keys, vals, mutable, pos, compile_expr);
             }
 
             Expr::Get { inst, attr, pos } => {
@@ -767,7 +803,13 @@ impl Compiler {
     }
 
     /// Compiles into a list
-    fn compile_list(&mut self, elems: Vec<Expr>, pos: Position, func: fn(&mut Compiler, &Expr)) {
+    fn compile_list(
+        &mut self,
+        elems: Vec<Expr>,
+        mutable: bool,
+        pos: Position,
+        func: fn(&mut Compiler, &Expr),
+    ) {
         // checking the length of the list
         if elems.len() > u8::MAX as usize {
             self.report_err("list literal too big".to_string(), pos);
@@ -781,6 +823,9 @@ impl Compiler {
 
         // writing the length
         self.mem_slice.write_byte(elems.len() as u8, pos);
+
+        // whether the value is mutable or not
+        self.mem_slice.write_byte(if mutable { 1 } else { 0 }, pos);
     }
 
     /// Compiles into an object
@@ -788,6 +833,7 @@ impl Compiler {
         &mut self,
         keys: Vec<Token>,
         vals: Vec<Expr>,
+        mutable: bool,
         pos: Position,
         func: fn(&mut Compiler, &Expr),
     ) {
@@ -810,6 +856,9 @@ impl Compiler {
 
         // writing the length
         self.mem_slice.write_byte(keys.len() as u8, pos);
+
+        // whether the value is mutable or not
+        self.mem_slice.write_byte(if mutable { 1 } else { 0 }, pos);
     }
 
     /// Adds a reference to a local variable
@@ -870,12 +919,17 @@ impl Compiler {
                 Expr::Tuple { elems, pos: _ } => elems
                     .iter()
                     .for_each(|i| check(s, local.clone(), i.clone())),
-                Expr::List { elems, pos: _ } => elems
+                Expr::List {
+                    elems,
+                    mutable: _,
+                    pos: _,
+                } => elems
                     .iter()
                     .for_each(|i| check(s, local.clone(), i.clone())),
                 Expr::Obj {
                     keys: _,
                     vals,
+                    mutable: _,
                     pos: _,
                 } => vals.iter().for_each(|i| check(s, local.clone(), i.clone())),
                 Expr::Empty(_) => {} // do nothing

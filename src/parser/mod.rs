@@ -96,7 +96,12 @@ impl Parser {
             }
 
             match expr.clone() {
-                Expr::Obj { keys: _, vals, pos } => {
+                Expr::Obj {
+                    keys: _,
+                    vals,
+                    mutable: _,
+                    pos,
+                } => {
                     vals.iter().for_each(|v| {
                         check(
                             self,
@@ -113,7 +118,11 @@ impl Parser {
                         mutable,
                     };
                 }
-                Expr::List { elems, pos } => {
+                Expr::List {
+                    elems,
+                    mutable: _,
+                    pos,
+                } => {
                     elems.iter().for_each(|v| {
                         check(
                             self,
@@ -164,6 +173,7 @@ impl Parser {
                         pos,
                     };
                 }
+
                 _ => self.report_err("invalid assignment target"),
             }
         // short cut assignments
@@ -324,11 +334,12 @@ impl Parser {
                 // object access or list indexing
                 self.advance();
                 let token = self.previous();
+                let attr = self.or_expression();
                 expr = Expr::Get {
                     inst: Box::new(expr),
-                    attr: Box::new(self.expression()),
+                    attr: Box::new(attr),
                     pos: token.pos,
-                };
+                }
             } else if self.matches(TokenType::BarGT) {
                 // pipe expression |>
                 self.advance();
@@ -475,9 +486,22 @@ impl Parser {
 
     /// Handles `if`, `try`, function, primitive and complex types, and block expressions
     fn primary_expression(&mut self) -> Expr {
+        let mutable = if let TokenType::Mut = self.previous().kind {
+            true
+        } else {
+            false
+        };
+
+        fn check_mut(p: &Parser, mutable: bool) {
+            if mutable {
+                p.report_err("unexpected 'mut'");
+            }
+        }
+
         match self.current.clone().kind {
             // booleans
             TokenType::True | TokenType::False => {
+                check_mut(self, mutable);
                 self.advance();
                 let token = self.previous();
                 Expr::Bool {
@@ -487,16 +511,19 @@ impl Parser {
             }
             // empty
             TokenType::Empty => {
+                check_mut(self, mutable);
                 self.advance();
                 Expr::Empty(self.previous().pos)
             }
             // nil
             TokenType::Nil => {
+                check_mut(self, mutable);
                 self.advance();
                 Expr::Nil(self.previous().pos)
             }
             // integer
             TokenType::Int(v) => {
+                check_mut(self, mutable);
                 self.advance();
                 Expr::Int {
                     val: v,
@@ -505,6 +532,7 @@ impl Parser {
             }
             // float
             TokenType::Float(v) => {
+                check_mut(self, mutable);
                 self.advance();
                 Expr::Float {
                     val: v,
@@ -516,11 +544,13 @@ impl Parser {
                 self.advance();
                 Expr::Str {
                     val: v,
+                    mutable,
                     pos: self.previous().pos,
                 }
             }
             // atom
             TokenType::Atom(v) => {
+                check_mut(self, mutable);
                 self.advance();
                 Expr::Atom {
                     val: v,
@@ -529,6 +559,7 @@ impl Parser {
             }
             // variable
             TokenType::Id(v) => {
+                check_mut(self, mutable);
                 self.advance();
                 Expr::Var {
                     name: v,
@@ -537,6 +568,7 @@ impl Parser {
             }
             // grouping
             TokenType::LParen => {
+                check_mut(self, mutable);
                 self.advance();
                 let token = self.previous();
                 let expr = self.expression();
@@ -585,12 +617,14 @@ impl Parser {
                 self.expect(TokenType::RBracket, "expected ']' after elements");
 
                 Expr::List {
+                    mutable,
                     elems,
                     pos: token.pos,
                 }
             }
             // set object
             TokenType::SLBrace => {
+                check_mut(self, mutable);
                 self.advance();
                 let token = self.previous();
                 let mut keys: Vec<Token> = vec![];
@@ -624,11 +658,13 @@ impl Parser {
                 Expr::Obj {
                     keys,
                     vals,
+                    mutable: false,
                     pos: token.pos,
                 }
             }
             // identifier object
             TokenType::ILBrace => {
+                check_mut(self, mutable);
                 self.advance();
                 let token = self.previous();
                 let mut keys: Vec<Token> = vec![];
@@ -663,6 +699,7 @@ impl Parser {
                     .collect::<Vec<Expr>>();
 
                 Expr::Obj {
+                    mutable: false,
                     keys,
                     vals,
                     pos: token.pos,
@@ -679,6 +716,7 @@ impl Parser {
                     self.advance();
 
                     Expr::Obj {
+                        mutable,
                         keys: vec![],
                         vals: vec![],
                         pos: token.pos,
@@ -741,11 +779,13 @@ impl Parser {
                         self.expect(TokenType::RBrace, "expected '}'");
 
                         Expr::Obj {
+                            mutable,
                             keys,
                             vals,
                             pos: token.pos,
                         }
                     } else {
+                        check_mut(self, mutable);
                         // it's a block
                         let mut exprs: Vec<Expr> = vec![first_expr];
 
@@ -1015,7 +1055,10 @@ impl Parser {
 
     /// Returns the previous token
     fn previous(&mut self) -> Token {
-        self.tokens.prev().unwrap()
+        self.tokens.prev().unwrap_or(Token {
+            kind: TokenType::Nil,
+            pos: (0, 0),
+        })
     }
 
     /// If the type of the current token is as expected, do `advance`, if not, `report_err` with the given message

@@ -283,7 +283,7 @@ impl FEmpty {
 pub struct FStr(Object);
 impl ValueTrait for FStr {
     fn truthy(&self) -> bool {
-        !self.inner().is_empty()
+        !self.inner().0.is_empty()
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -346,20 +346,20 @@ impl ValueTrait for FStr {
 }
 impl fmt::Display for FStr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.inner())
+        f.write_str(&self.inner().0)
     }
 }
 impl FStr {
-    pub fn build(heap: &mut Heap, val: String) -> Value {
-        Box::new(FStr(heap.allocate(val)))
+    pub fn build(heap: &mut Heap, val: String, mutable: bool) -> Value {
+        Box::new(FStr(heap.allocate((val, mutable))))
     }
 
-    pub fn inner_mut(&mut self) -> &mut String {
-        unsafe { (self.0.ptr as *mut String).as_mut().unwrap() }
+    pub fn inner_mut(&mut self) -> &mut (String, bool) {
+        unsafe { (self.0.ptr as *mut (String, bool)).as_mut().unwrap() }
     }
 
-    pub fn inner(&self) -> &String {
-        unsafe { (self.0.ptr as *const String).as_ref().unwrap() }
+    pub fn inner(&self) -> &(String, bool) {
+        unsafe { (self.0.ptr as *const (String, bool)).as_ref().unwrap() }
     }
 }
 
@@ -864,7 +864,7 @@ impl FTup {
 pub struct FList(Object);
 impl ValueTrait for FList {
     fn truthy(&self) -> bool {
-        !self.inner().is_empty()
+        !self.inner().0.is_empty()
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -880,7 +880,7 @@ impl ValueTrait for FList {
             true
         } else if let Some(other) = as_t!(other, FList) {
             let mut is_equal = true;
-            for (a, b) in self.inner().iter().zip(other.inner().iter()) {
+            for (a, b) in self.inner().0.iter().zip(other.inner().0.iter()) {
                 if !a.equal(b) {
                     is_equal = false;
                     break;
@@ -896,7 +896,7 @@ impl ValueTrait for FList {
         if as_t!(other, FEmpty).is_some() {
             true
         } else if let Some(other) = as_t!(other, FList) {
-            self.inner().len() < other.inner().len()
+            self.inner().0.len() < other.inner().0.len()
         } else {
             false
         }
@@ -906,7 +906,7 @@ impl ValueTrait for FList {
         if as_t!(other, FEmpty).is_some() {
             true
         } else if let Some(other) = as_t!(other, FList) {
-            self.inner().len() > other.inner().len()
+            self.inner().0.len() > other.inner().0.len()
         } else {
             false
         }
@@ -916,7 +916,7 @@ impl ValueTrait for FList {
         if as_t!(other, FEmpty).is_some() {
             true
         } else if let Some(other) = as_t!(other, FList) {
-            self.inner().len() <= other.inner().len()
+            self.inner().0.len() <= other.inner().0.len()
         } else {
             false
         }
@@ -926,7 +926,7 @@ impl ValueTrait for FList {
         if as_t!(other, FEmpty).is_some() {
             true
         } else if let Some(other) = as_t!(other, FList) {
-            self.inner().len() >= other.inner().len()
+            self.inner().0.len() >= other.inner().0.len()
         } else {
             false
         }
@@ -936,6 +936,7 @@ impl fmt::Display for FList {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let list = self
             .inner()
+            .0
             .iter()
             .map(|v| v.to_string())
             .collect::<Vec<String>>()
@@ -944,16 +945,16 @@ impl fmt::Display for FList {
     }
 }
 impl FList {
-    pub fn build(heap: &mut Heap, list: Vec<Value>) -> Value {
-        Box::new(FList(heap.allocate(list)))
+    pub fn build(heap: &mut Heap, list: Vec<Value>, mutable: bool) -> Value {
+        Box::new(FList(heap.allocate((list, mutable))))
     }
 
-    pub fn inner_mut(&self) -> *mut Vec<Value> {
-        self.0.ptr as *mut Vec<Value>
+    pub fn inner_mut(&self) -> *mut (Vec<Value>, bool) {
+        self.0.ptr as *mut (Vec<Value>, bool)
     }
 
-    pub fn inner(&self) -> &Vec<Value> {
-        unsafe { (self.0.ptr as *const Vec<Value>).as_ref().unwrap() }
+    pub fn inner(&self) -> &(Vec<Value>, bool) {
+        unsafe { (self.0.ptr as *const (Vec<Value>, bool)).as_ref().unwrap() }
     }
 }
 
@@ -961,7 +962,7 @@ impl FList {
 pub struct FObj(Object);
 impl ValueTrait for FObj {
     fn truthy(&self) -> bool {
-        !self.inner().is_empty()
+        !self.inner().0.is_empty()
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -977,7 +978,9 @@ impl ValueTrait for FObj {
             true
         } else if let Some(other) = as_t!(other, FObj) {
             let mut is_equal = true;
-            for ((a_key, a_val), (b_key, b_val)) in self.inner().iter().zip(other.inner().iter()) {
+            for ((a_key, a_val), (b_key, b_val)) in
+                self.inner().0.iter().zip(other.inner().0.iter())
+            {
                 if a_key != b_key && !a_val.equal(b_val) {
                     is_equal = false;
                     break;
@@ -993,7 +996,7 @@ impl ValueTrait for FObj {
         if as_t!(other, FEmpty).is_some() {
             true
         } else if let Some(other) = as_t!(other, FObj) {
-            self.inner().len() < other.inner().len()
+            self.inner().0.len() < other.inner().0.len()
         } else {
             false
         }
@@ -1003,7 +1006,7 @@ impl ValueTrait for FObj {
         if as_t!(other, FEmpty).is_some() {
             true
         } else if let Some(other) = as_t!(other, FObj) {
-            self.inner().len() > other.inner().len()
+            self.inner().0.len() > other.inner().0.len()
         } else {
             false
         }
@@ -1013,7 +1016,7 @@ impl ValueTrait for FObj {
         if as_t!(other, FEmpty).is_some() {
             true
         } else if let Some(other) = as_t!(other, FObj) {
-            self.inner().len() <= other.inner().len()
+            self.inner().0.len() <= other.inner().0.len()
         } else {
             false
         }
@@ -1023,7 +1026,7 @@ impl ValueTrait for FObj {
         if as_t!(other, FEmpty).is_some() {
             true
         } else if let Some(other) = as_t!(other, FObj) {
-            self.inner().len() >= other.inner().len()
+            self.inner().0.len() >= other.inner().0.len()
         } else {
             false
         }
@@ -1033,6 +1036,7 @@ impl fmt::Display for FObj {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let obj = self
             .inner()
+            .0
             .iter()
             .map(|(k, v)| format!("{}->{}", k.as_ref(), v))
             .collect::<Vec<String>>()
@@ -1044,17 +1048,17 @@ impl fmt::Display for FObj {
     }
 }
 impl FObj {
-    pub fn build(heap: &mut Heap, obj: HashMap<Arc<str>, Value>) -> Value {
-        Box::new(FObj(heap.allocate(obj)))
+    pub fn build(heap: &mut Heap, obj: HashMap<Arc<str>, Value>, mutable: bool) -> Value {
+        Box::new(FObj(heap.allocate((obj, mutable))))
     }
 
-    pub fn inner_mut(&self) -> *mut HashMap<Arc<str>, Value> {
-        self.0.ptr as *mut HashMap<Arc<str>, Value>
+    pub fn inner_mut(&self) -> *mut (HashMap<Arc<str>, Value>, bool) {
+        self.0.ptr as *mut (HashMap<Arc<str>, Value>, bool)
     }
 
-    pub fn inner(&self) -> &HashMap<Arc<str>, Value> {
+    pub fn inner(&self) -> &(HashMap<Arc<str>, Value>, bool) {
         unsafe {
-            (self.0.ptr as *const HashMap<Arc<str>, Value>)
+            (self.0.ptr as *const (HashMap<Arc<str>, Value>, bool))
                 .as_ref()
                 .unwrap()
         }

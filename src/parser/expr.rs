@@ -103,6 +103,7 @@ pub enum Expr {
         pos: Position,
     },
     Str {
+        mutable: bool,
         val: String,
         pos: Position,
     },
@@ -124,6 +125,7 @@ pub enum Expr {
     },
     Empty(Position),
     List {
+        mutable: bool,
         elems: Vec<Expr>,
         pos: Position,
     },
@@ -132,6 +134,7 @@ pub enum Expr {
         pos: Position,
     },
     Obj {
+        mutable: bool,
         keys: Vec<Token>,
         vals: Vec<Expr>,
         pos: Position,

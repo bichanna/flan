@@ -173,16 +173,18 @@ impl<'a> VM<'a> {
 
                 OpCode::InitList => {
                     let len = read_byte!(self) as usize;
+                    let mutable = read_byte!(self) == 1;
                     let mut list: Vec<Value> = Vec::with_capacity(len);
                     // adding elements to the list
                     (0..len).for_each(|_| list.push(self.pop()));
                     list.reverse();
-                    let flist = FList::build(self.heap, list);
+                    let flist = FList::build(self.heap, list, mutable);
                     self.push(flist);
                 }
 
                 OpCode::InitObj => {
                     let len = read_byte!(self) as usize;
+                    let mutable = read_byte!(self) == 1;
                     let mut obj: HashMap<Arc<str>, Value> = HashMap::with_capacity(len);
                     (0..len).for_each(|_| {
                         // getting the key
@@ -196,7 +198,7 @@ impl<'a> VM<'a> {
                             // TODO: report error
                         }
                     });
-                    let fobj = FObj::build(self.heap, obj);
+                    let fobj = FObj::build(self.heap, obj, mutable);
                     self.push(fobj);
                 }
 
@@ -387,7 +389,7 @@ impl<'a> VM<'a> {
                         // TODO: report an error
                     }
 
-                    let right_list = &force_as_t!(right, FList).inner();
+                    let right_list = &force_as_t!(right, FList).inner().0;
 
                     if right_list.len() != slots.len() {
                         // TODO: report an error
@@ -418,7 +420,7 @@ impl<'a> VM<'a> {
                         // TODO: report an error
                     }
 
-                    let right_obj = &force_as_t!(right, FObj).inner();
+                    let right_obj = &force_as_t!(right, FObj).inner().0;
                     if right_obj.len() < slots.len() {
                         // TODO: report an error
                     }
@@ -486,13 +488,13 @@ impl<'a> VM<'a> {
                                 *is_body_running = true;
                             }
                         } else if let Some(flist) = as_t!(cond, FList) {
-                            let list = flist.inner();
+                            let list = &flist.inner().0;
                             if as_t!(target, FEmpty).is_some() {
                                 {} // do nothing
                             } else if as_t!(target, FVar).is_some() {
                                 // TODO: fix this later
                             } else if let Some(t_flist) = as_t!(target, FList) {
-                                let t_list = t_flist.inner();
+                                let t_list = &t_flist.inner().0;
                                 if list.len() != t_list.len() {
                                     // TODO: report an error
                                 }
@@ -504,13 +506,13 @@ impl<'a> VM<'a> {
                                 *is_body_running = true;
                             }
                         } else if let Some(fobj) = as_t!(cond, FObj) {
-                            let obj = fobj.inner();
+                            let obj = &fobj.inner().0;
                             if as_t!(target, FEmpty).is_some() {
                                 {} // do nothing
                             } else if as_t!(target, FVar).is_some() {
                                 // TODO: fix this later
                             } else if let Some(t_fobj) = as_t!(target, FObj) {
-                                let t_obj = t_fobj.inner();
+                                let t_obj = &t_fobj.inner().0;
                                 if t_obj.len() != obj.len() {
                                     // TODO: report an error
                                 }
@@ -536,7 +538,7 @@ impl<'a> VM<'a> {
                     let inst = self.pop();
 
                     if let Some(flist) = as_t!(inst, FList) {
-                        let list = flist.inner();
+                        let (list, mutable) = flist.inner();
                         if let Some(idx) = as_t!(attr, FInt) {
                             let idx = idx.0 as usize;
                             if let Some(val) = list.get(idx) {
@@ -545,11 +547,11 @@ impl<'a> VM<'a> {
                                 // TODO: report an error
                             }
                         } else if let Some(range) = as_t!(attr, FList) {
-                            let range = range.inner();
+                            let range = &range.inner().0;
                             match range.len() {
                                 0 => {
                                     let new_list = list.clone();
-                                    let new_flist = FList::build(self.heap, new_list);
+                                    let new_flist = FList::build(self.heap, new_list, true);
                                     self.push(new_flist);
                                 }
                                 1 => {
@@ -561,7 +563,8 @@ impl<'a> VM<'a> {
                                         }
 
                                         let slice = &list[l..];
-                                        let new_flist = FList::build(self.heap, slice.to_vec());
+                                        let new_flist =
+                                            FList::build(self.heap, slice.to_vec(), *mutable);
                                         self.push(new_flist);
                                     } else {
                                         // TODO: report an error
@@ -579,7 +582,8 @@ impl<'a> VM<'a> {
                                         }
 
                                         let slice = &list[l0..l1];
-                                        let new_flist = FList::build(self.heap, slice.to_vec());
+                                        let new_flist =
+                                            FList::build(self.heap, slice.to_vec(), *mutable);
                                         self.push(new_flist);
                                     } else {
                                         // TODO: report an error
@@ -600,7 +604,7 @@ impl<'a> VM<'a> {
                                 // TODO: report an error
                             }
                         } else if let Some(range) = as_t!(attr, FList) {
-                            let range = range.inner();
+                            let range = &range.inner().0;
                             match range.len() {
                                 0 => {
                                     let l: Vec<Value> = tup.into();
@@ -617,7 +621,8 @@ impl<'a> VM<'a> {
                                         }
 
                                         let slice = &tup[l..];
-                                        let new_flist = FList::build(self.heap, slice.to_vec());
+                                        let new_flist =
+                                            FList::build(self.heap, slice.to_vec(), false);
                                         self.push(new_flist);
                                     } else {
                                         // TODO: report an error
@@ -635,7 +640,8 @@ impl<'a> VM<'a> {
                                         }
 
                                         let slice = &tup[l0..l1];
-                                        let new_flist = FList::build(self.heap, slice.to_vec());
+                                        let new_flist =
+                                            FList::build(self.heap, slice.to_vec(), false);
                                         self.push(new_flist);
                                     } else {
                                         // TODO: report an error
@@ -647,7 +653,7 @@ impl<'a> VM<'a> {
                             // TODO: report an error
                         }
                     } else if let Some(fobj) = as_t!(inst, FObj) {
-                        let obj = fobj.inner();
+                        let obj = &fobj.inner().0;
                         if let Some(key) = as_t!(attr, FVar) {
                             if let Some(val) = obj.get(&key.0) {
                                 self.push(val.clone());
@@ -658,7 +664,7 @@ impl<'a> VM<'a> {
                             // TODO: report an error
                         }
                     } else if let Some(fstr) = as_t!(inst, FStr) {
-                        let string = fstr.inner();
+                        let (string, mutable) = fstr.inner();
                         if let Some(idx) = as_t!(attr, FInt) {
                             let idx = idx.0 as usize;
                             if idx >= string.len() {
@@ -668,14 +674,15 @@ impl<'a> VM<'a> {
                             let new_str = FStr::build(
                                 self.heap,
                                 string.chars().nth(idx).unwrap().to_string(),
+                                false,
                             );
                             self.push(new_str);
                         } else if let Some(flist) = as_t!(attr, FList) {
-                            let list = flist.inner();
+                            let list = &flist.inner().0;
                             match list.len() {
                                 0 => {
                                     let new_str = string.clone();
-                                    let new_fstr = FStr::build(self.heap, new_str);
+                                    let new_fstr = FStr::build(self.heap, new_str, true);
                                     self.push(new_fstr);
                                 }
                                 1 => {
@@ -687,7 +694,8 @@ impl<'a> VM<'a> {
                                         }
 
                                         let slice = &string[l..];
-                                        let new_fstr = FStr::build(self.heap, slice.to_string());
+                                        let new_fstr =
+                                            FStr::build(self.heap, slice.to_string(), *mutable);
                                         self.push(new_fstr);
                                     } else {
                                         // TODO: report an error
@@ -705,7 +713,8 @@ impl<'a> VM<'a> {
                                         }
 
                                         let slice = &string[l0..l1];
-                                        let new_fstr = FStr::build(self.heap, slice.to_string());
+                                        let new_fstr =
+                                            FStr::build(self.heap, slice.to_string(), *mutable);
                                         self.push(new_fstr);
                                     } else {
                                         // TODO: report an error
@@ -725,20 +734,32 @@ impl<'a> VM<'a> {
                     let inst = self.pop();
 
                     if let Some(flist) = as_t!(inst, FList) {
-                        let list = unsafe { flist.inner_mut().as_mut().unwrap() };
+                        let (list, mutable) = unsafe { flist.inner_mut().as_mut().unwrap() };
+
+                        // checking for mutability
+                        if !*mutable {
+                            // TODO: report an error
+                        }
+
                         if let Some(idx) = as_t!(attr, FInt) {
                             let idx = idx.0 as usize;
                             if idx >= list.len() {
                                 // TODO: report an error
                             }
-                            list[idx] = val;
+                            list[idx] = val.clone();
                         } else {
                             // TODO: report an error
                         }
                     } else if let Some(fobj) = as_t!(inst, FObj) {
-                        let obj = unsafe { fobj.inner_mut().as_mut().unwrap() };
+                        let (obj, mutable) = unsafe { fobj.inner_mut().as_mut().unwrap() };
+
+                        // checking for mutability
+                        if !*mutable {
+                            // TODO: report an error
+                        }
+
                         if let Some(key) = as_t!(attr, FVar) {
-                            obj.insert(key.0.clone(), val);
+                            obj.insert(key.0.clone(), val.clone());
                         } else {
                             // TODO: report an error
                         }
@@ -747,6 +768,8 @@ impl<'a> VM<'a> {
                     } else {
                         // TODO: report an error
                     }
+
+                    self.push(val);
                 }
 
                 OpCode::SetFnAddr => {
@@ -880,12 +903,13 @@ impl<'a> VM<'a> {
             }
         } else if let Some(left) = as_t!(left, FList) {
             if let Some(right) = as_t!(right, FList) {
-                if right.inner().len() != left.inner().len() {
+                if right.inner().0.len() != left.inner().0.len() {
                     // TODO: report an error
                 } else {
                     left.inner()
+                        .0
                         .iter()
-                        .zip(right.inner().iter())
+                        .zip(right.inner().0.iter())
                         .for_each(|(l, r)| {
                             if let Some(v) = as_t!(l, FVar) {
                                 func(self, v.0.clone(), r.clone(), mutability);
@@ -901,11 +925,11 @@ impl<'a> VM<'a> {
             }
         } else if let Some(left) = as_t!(left, FObj) {
             if let Some(right) = as_t!(right, FObj) {
-                if right.inner().len() != left.inner().len() {
+                if right.inner().0.len() != left.inner().0.len() {
                     // TODO: report an error
                 } else {
-                    left.inner().iter().for_each(|(key, assignee)| {
-                        if let Some(val) = right.inner().get(key) {
+                    left.inner().0.iter().for_each(|(key, assignee)| {
+                        if let Some(val) = right.inner().0.get(key) {
                             if let Some(var) = as_t!(assignee, FVar) {
                                 func(self, var.0.clone(), val.clone(), mutability);
                             } else if as_t!(assignee, FEmpty).is_some() {
@@ -952,7 +976,7 @@ impl<'a> VM<'a> {
 
         // if there's rest parameter, push the rest of the arguments as a list
         if let Some(rest_args) = rest_args {
-            let rest_param = FList::build(self.heap, rest_args.to_vec());
+            let rest_param = FList::build(self.heap, rest_args.to_vec(), false);
             self.slots_push(rest_param);
         }
     }

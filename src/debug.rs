@@ -71,8 +71,8 @@ impl<'a> Debug<'a> {
             OpCode::Pop => self.simple_instruction("Pop"),
             OpCode::PopN => self.single_arg_instruction("PopN"),
             OpCode::InitTup => self.single_arg_instruction("InitTup"),
-            OpCode::InitList => self.single_arg_instruction("InitList"),
-            OpCode::InitObj => self.single_arg_instruction("InitObj"),
+            OpCode::InitList => self.init_list_instruction(),
+            OpCode::InitObj => self.init_obj_instruction(),
             OpCode::PopExceptLast => self.simple_instruction("PopExceptLast"),
             OpCode::PopExceptLastN => self.single_arg_instruction("PopExceptLastN"),
             OpCode::LongJump => self.long_jump_instruction(),
@@ -136,6 +136,20 @@ impl<'a> Debug<'a> {
         let next_b = self.bytecode[self.offset + 1];
         println!("{:-16} {:>6}", name, next_b);
         self.offset += 2;
+    }
+
+    fn init_list_instruction(&mut self) {
+        let next_b = self.bytecode[self.offset + 1];
+        let mutable = self.bytecode[self.offset + 2] == 1;
+        println!("{:-16} {:>6} {}", "InitList", next_b, mutable);
+        self.offset += 3;
+    }
+
+    fn init_obj_instruction(&mut self) {
+        let next_b = self.bytecode[self.offset + 1];
+        let mutable = self.bytecode[self.offset + 2] == 1;
+        println!("{:-16} {:>6} {}", "InitObj", next_b, mutable);
+        self.offset += 3;
     }
 
     fn jump_instruction(&mut self, name: &'static str) {
