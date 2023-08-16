@@ -346,7 +346,11 @@ impl ValueTrait for FStr {
 }
 impl fmt::Display for FStr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.inner().0)
+        f.write_str(&format!(
+            "{}{}",
+            if self.inner().1 { "mut " } else { "" },
+            self.inner().0
+        ))
     }
 }
 impl FStr {
@@ -354,8 +358,8 @@ impl FStr {
         Box::new(FStr(heap.allocate((val, mutable))))
     }
 
-    pub fn inner_mut(&mut self) -> &mut (String, bool) {
-        unsafe { (self.0.ptr as *mut (String, bool)).as_mut().unwrap() }
+    pub fn inner_mut(&self) -> *mut (String, bool) {
+        self.0.ptr as *mut (String, bool)
     }
 
     pub fn inner(&self) -> &(String, bool) {
@@ -941,7 +945,11 @@ impl fmt::Display for FList {
             .map(|v| v.to_string())
             .collect::<Vec<String>>()
             .join(", ");
-        f.write_str(&format!("[{}]", list))
+        f.write_str(&format!(
+            "{}[{}]",
+            if self.inner().1 { "mut " } else { "" },
+            list
+        ))
     }
 }
 impl FList {
@@ -1041,7 +1049,7 @@ impl fmt::Display for FObj {
             .map(|(k, v)| format!("{}->{}", k.as_ref(), v))
             .collect::<Vec<String>>()
             .join(", ");
-        let mut string = "{".to_string();
+        let mut string = (if self.inner().1 { "mut {" } else { "{" }).to_string();
         string.push_str(&obj);
         string.push('}');
         f.write_str(&string)

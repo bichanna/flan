@@ -46,6 +46,7 @@ pub enum OpCode {
     SetLocalList,
     SetLocalObj,
     Match,
+    Const,
     GetProperty,
     SetProperty,
     SetFnAddr,

@@ -145,6 +145,11 @@ impl Compiler {
                 self.compile_expr_to_self(*expr);
             }
 
+            Expr::Const { expr, pos } => {
+                self.compile_expr_to_self(*expr);
+                self.mem_slice.write_opcode(OpCode::Const, pos);
+            }
+
             Expr::Unary { right, op } => {
                 self.compile_expr_to_self(*right);
                 self.mem_slice.write_opcode(

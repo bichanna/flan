@@ -59,6 +59,7 @@ impl<'a> Debug<'a> {
 
         match FromPrimitive::from_u8(self.bytecode[offset]).unwrap() {
             OpCode::Halt => self.simple_instruction("Halt"),
+            OpCode::Const => self.simple_instruction("Const"),
             OpCode::LoadConst => self.const_instruction("LoadConst"),
             OpCode::LoadLongConst => self.lconst_instruction("LoadLongConst"),
             OpCode::Negate => self.simple_instruction("Negate"),

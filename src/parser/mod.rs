@@ -566,6 +566,16 @@ impl Parser {
                     pos: self.previous().pos,
                 }
             }
+            // "const"ing
+            TokenType::Const => {
+                check_mut(self, mutable);
+                self.advance();
+                let token = self.previous();
+                Expr::Const {
+                    expr: Box::new(self.expression()),
+                    pos: token.pos,
+                }
+            }
             // grouping
             TokenType::LParen => {
                 check_mut(self, mutable);

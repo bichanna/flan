@@ -130,6 +130,20 @@ impl<'a> VM<'a> {
                     }
                 }
 
+                OpCode::Const => {
+                    let val = self.pop();
+                    if let Some(fstr) = as_t!(val, FStr) {
+                        unsafe { (*fstr.inner_mut()).1 = false };
+                    } else if let Some(flist) = as_t!(val, FList) {
+                        unsafe { (*flist.inner_mut()).1 = false };
+                    } else if let Some(fobj) = as_t!(val, FObj) {
+                        unsafe { (*fobj.inner_mut()).1 = false };
+                    } else {
+                        // TODO: report an error
+                    }
+                    self.push(val);
+                }
+
                 OpCode::Add => {
                     binary_op!(self, +);
                 }

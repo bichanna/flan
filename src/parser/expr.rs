@@ -149,4 +149,8 @@ pub enum Expr {
         body: Box<Expr>,
         pos: Position,
     },
+    Const {
+        expr: Box<Expr>,
+        pos: Position,
+    },
 }
