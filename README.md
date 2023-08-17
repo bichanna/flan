@@ -42,10 +42,10 @@ names |> iter() |> each() ~ (name)
 ```javascript
 i{each, range} := import("std")
 
-fn fizzBuzz(n) = match [n % 3, n % 5] with
-    | [0, 0] -> "fizzbuzz"
-    | [0, _] -> "fizz"
-    | [_, 0] -> "buzz"
+fn fizzBuzz(n) = match (n % 3, n % 5) with
+    | (0, 0) -> "fizzbuzz"
+    | (0, _) -> "fizz"
+    | (_, 0) -> "buzz"
     | _ -> str(n)
 
 range(101) |> each() <~ fizzBuzz(it) |> println()
