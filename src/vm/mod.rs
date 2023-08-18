@@ -614,6 +614,14 @@ impl<'a> VM<'a> {
                         } else if let Some(range) = as_t!(attr, FList) {
                             let range = &range.inner().0;
                             match range.len() {
+                                0 => {
+                                    // deep cloning the tuple (since tuple is immutable, this is a
+                                    // bit redundant)
+                                    let new_tup = FTup::build(
+                                        tup.iter().cloned().collect::<Vec<Value>>().into(),
+                                    );
+                                    self.push(new_tup);
+                                }
                                 1 => {
                                     if let Some(l) = as_t!(range[0], FInt) {
                                         let l = l.0 as usize;
