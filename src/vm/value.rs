@@ -768,10 +768,10 @@ impl FBool {
 }
 
 #[derive(Clone)]
-pub struct FTup(Object);
+pub struct FTup(pub Arc<[Value]>);
 impl ValueTrait for FTup {
     fn truthy(&self) -> bool {
-        !self.inner().is_empty()
+        !self.0.is_empty()
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -787,7 +787,7 @@ impl ValueTrait for FTup {
             true
         } else if let Some(other) = as_t!(other, FTup) {
             let mut is_equal = true;
-            for (a, b) in self.inner().iter().zip(other.inner().iter()) {
+            for (a, b) in self.0.iter().zip(other.0.iter()) {
                 if !a.equal(b) {
                     is_equal = false;
                     break;
@@ -803,7 +803,7 @@ impl ValueTrait for FTup {
         if as_t!(other, FEmpty).is_some() {
             true
         } else if let Some(other) = as_t!(other, FTup) {
-            self.inner().len() < other.inner().len()
+            self.0.len() < other.0.len()
         } else {
             false
         }
@@ -813,7 +813,7 @@ impl ValueTrait for FTup {
         if as_t!(other, FEmpty).is_some() {
             true
         } else if let Some(other) = as_t!(other, FTup) {
-            self.inner().len() > other.inner().len()
+            self.0.len() > other.0.len()
         } else {
             false
         }
@@ -823,7 +823,7 @@ impl ValueTrait for FTup {
         if as_t!(other, FEmpty).is_some() {
             true
         } else if let Some(other) = as_t!(other, FTup) {
-            self.inner().len() <= other.inner().len()
+            self.0.len() <= other.0.len()
         } else {
             false
         }
@@ -833,7 +833,7 @@ impl ValueTrait for FTup {
         if as_t!(other, FEmpty).is_some() {
             true
         } else if let Some(other) = as_t!(other, FTup) {
-            self.inner().len() >= other.inner().len()
+            self.0.len() >= other.0.len()
         } else {
             false
         }
@@ -842,7 +842,7 @@ impl ValueTrait for FTup {
 impl fmt::Display for FTup {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let list = self
-            .inner()
+            .0
             .iter()
             .map(|v| v.to_string())
             .collect::<Vec<String>>()
@@ -851,16 +851,8 @@ impl fmt::Display for FTup {
     }
 }
 impl FTup {
-    pub fn build(heap: &mut Heap, tuple: Box<[Value]>) -> Value {
-        Box::new(FTup(heap.allocate(tuple.to_owned())))
-    }
-
-    pub fn inner_mut(&self) -> *mut Box<[Value]> {
-        self.0.ptr as *mut Box<[Value]>
-    }
-
-    pub fn inner(&self) -> &[Value] {
-        unsafe { (self.0.ptr as *const Box<[Value]>).as_ref().unwrap() }
+    pub fn build(tuple: Arc<[Value]>) -> Value {
+        Box::new(FTup(tuple))
     }
 }
 

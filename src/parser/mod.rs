@@ -486,11 +486,7 @@ impl Parser {
 
     /// Handles `if`, `try`, function, primitive and complex types, and block expressions
     fn primary_expression(&mut self) -> Expr {
-        let mutable = if let TokenType::Mut = self.previous().kind {
-            true
-        } else {
-            false
-        };
+        let mutable = matches!(self.previous().kind, TokenType::Mut);
 
         fn check_mut(p: &Parser, mutable: bool) {
             if mutable {

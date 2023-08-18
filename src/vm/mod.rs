@@ -176,21 +176,17 @@ impl<'a> VM<'a> {
                 OpCode::InitTup => {
                     let len = read_byte!(self) as usize;
                     // adding each elements to the tuple
-                    let tup = (0..len)
-                        .map(|_| self.pop())
-                        .rev()
-                        .collect::<Vec<Value>>()
-                        .into_boxed_slice();
-                    let ftup = FTup::build(self.heap, tup);
+                    let mut tup = (0..len).map(|_| self.pop()).collect::<Vec<Value>>();
+                    tup.reverse();
+                    let ftup = FTup::build(tup.into());
                     self.push(ftup);
                 }
 
                 OpCode::InitList => {
                     let len = read_byte!(self) as usize;
                     let mutable = read_byte!(self) == 1;
-                    let mut list: Vec<Value> = Vec::with_capacity(len);
-                    // adding elements to the list
-                    (0..len).for_each(|_| list.push(self.pop()));
+                    // creating the list
+                    let mut list = (0..len).map(|_| self.pop()).collect::<Vec<Value>>();
                     list.reverse();
                     let flist = FList::build(self.heap, list, mutable);
                     self.push(flist);
@@ -199,19 +195,17 @@ impl<'a> VM<'a> {
                 OpCode::InitObj => {
                     let len = read_byte!(self) as usize;
                     let mutable = read_byte!(self) == 1;
-                    let mut obj: HashMap<Arc<str>, Value> = HashMap::with_capacity(len);
-                    (0..len).for_each(|_| {
-                        // getting the key
-                        let key = self.pop();
-                        // getting the value
-                        let val = self.pop();
+                    let obj = (0..len)
+                        .map(|_| {
+                            let key = self.pop();
+                            // getting the key
+                            let key = force_as_t!(key, FVar);
+                            // getting the value
+                            let val = self.pop();
 
-                        if let Some(key) = as_t!(key, FVar) {
-                            obj.insert(key.0.clone(), val);
-                        } else {
-                            // TODO: report error
-                        }
-                    });
+                            (key.0.clone(), val)
+                        })
+                        .collect::<HashMap<Arc<str>, Value>>();
                     let fobj = FObj::build(self.heap, obj, mutable);
                     self.push(fobj);
                 }
@@ -377,7 +371,7 @@ impl<'a> VM<'a> {
                         // TODO: report an error
                     }
 
-                    let right_tup = &force_as_t!(right, FTup).inner();
+                    let right_tup = &force_as_t!(right, FTup).0;
 
                     if right_tup.len() != slots.len() {
                         // TODO: report an error
@@ -609,7 +603,7 @@ impl<'a> VM<'a> {
                             // TODO: report an error
                         }
                     } else if let Some(ftup) = as_t!(inst, FTup) {
-                        let tup = ftup.inner();
+                        let tup = &ftup.0;
                         if let Some(idx) = as_t!(attr, FInt) {
                             let idx = idx.0 as usize;
                             if let Some(val) = tup.get(idx) {
@@ -620,12 +614,6 @@ impl<'a> VM<'a> {
                         } else if let Some(range) = as_t!(attr, FList) {
                             let range = &range.inner().0;
                             match range.len() {
-                                0 => {
-                                    let l: Vec<Value> = tup.into();
-                                    let new_tup = l.into_boxed_slice();
-                                    let new_ftup = FTup::build(self.heap, new_tup);
-                                    self.push(new_ftup);
-                                }
                                 1 => {
                                     if let Some(l) = as_t!(range[0], FInt) {
                                         let l = l.0 as usize;
@@ -896,21 +884,18 @@ impl<'a> VM<'a> {
             func(self, var.0.clone(), right.clone(), mutability);
         } else if let Some(left) = as_t!(left, FTup) {
             if let Some(right) = as_t!(right, FTup) {
-                if right.inner().len() != left.inner().len() {
+                if right.0.len() != left.0.len() {
                     // TODO: report an error
                 } else {
-                    left.inner()
-                        .iter()
-                        .zip(right.inner().iter())
-                        .for_each(|(l, r)| {
-                            if let Some(v) = as_t!(l, FVar) {
-                                func(self, v.0.clone(), r.clone(), mutability);
-                            } else if as_t!(l, FEmpty).is_some() {
-                                {} // do nothing
-                            } else {
-                                // TODO: report an error
-                            }
-                        });
+                    left.0.iter().zip(right.0.iter()).for_each(|(l, r)| {
+                        if let Some(v) = as_t!(l, FVar) {
+                            func(self, v.0.clone(), r.clone(), mutability);
+                        } else if as_t!(l, FEmpty).is_some() {
+                            {} // do nothing
+                        } else {
+                            // TODO: report an error
+                        }
+                    });
                 }
             } else {
                 // TODO: report an error
