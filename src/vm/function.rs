@@ -8,13 +8,16 @@ pub struct Function {
     pub rest: bool,
     /// Address of the function in the bytecode
     pub addr: *const u8,
+    /// Path index used for reporting errors
+    pub path_idx: usize,
 }
 
 impl Function {
-    pub fn new(params: usize, rest: bool) -> Self {
+    pub fn new(params: usize, rest: bool, path_idx: usize) -> Self {
         Self {
             params,
             rest,
+            path_idx,
             addr: ptr::null(),
         }
     }

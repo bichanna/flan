@@ -51,7 +51,7 @@ macro_rules! try_push {
     ($self: expr, $val: expr) => {
         match $val {
             Ok(v) => $self.push(v),
-            Err(_msg) => {} // TODO: report an error
+            Err(msg) => $self.runtime_err(msg),
         }
     };
 }

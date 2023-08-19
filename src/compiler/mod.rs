@@ -666,7 +666,10 @@ impl Compiler {
                 }
 
                 // creating function object
-                let func = FFunc::build(&mut self.heap, Function::new(params_len, rest.is_some()));
+                let func = FFunc::build(
+                    &mut self.heap,
+                    Function::new(params_len, rest.is_some(), Stack::last_path_index()),
+                );
 
                 // if there's a name for this function
                 if let Some(name) = name {

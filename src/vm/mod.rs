@@ -10,7 +10,7 @@ use crate::compiler::opcode::OpCode;
 use crate::compiler::test_compile;
 use crate::compiler::util::{from_little_endian, from_little_endian_u32, MemorySlice};
 use crate::debug::Debug;
-use crate::error::Positions;
+use crate::error::{ErrType, Node, Positions, Stack};
 use crate::*;
 
 use self::function::Function;
@@ -41,6 +41,8 @@ struct CallFrame {
 }
 
 pub struct VM<'a> {
+    /// Pointer to the first instruction
+    first_ip: *const u8,
     /// Heap
     heap: &'a mut Heap,
     /// Constants
@@ -64,15 +66,18 @@ impl<'a> VM<'a> {
     pub fn execute(mem_slice: MemorySlice, heap: &'a mut Heap) {
         let stack: ArrayVec<Value, STACK_MAX> = ArrayVec::new();
 
+        let ip = mem_slice.bytecode.as_ptr();
+
         let mut frames: ArrayVec<CallFrame, FRAME_MAX> = ArrayVec::new();
         frames.push(CallFrame {
-            ip: mem_slice.bytecode.as_ptr(),
-            func: Function::new(0, false),
+            ip,
+            func: Function::new(0, false, 0),
             slot_bottom: 0,
             slot_count: 0,
         });
 
         let mut vm = VM {
+            first_ip: ip,
             heap,
             constants: mem_slice.constants.clone(),
             positions: mem_slice.positions.clone(),
@@ -114,19 +119,17 @@ impl<'a> VM<'a> {
 
                 OpCode::Negate => {
                     let val = self.pop();
-                    if let Ok(num) = -val {
-                        self.push(num);
-                    } else {
-                        // TODO: report an error
+                    match -val {
+                        Ok(num) => self.push(num),
+                        Err(err) => self.runtime_err(err),
                     }
                 }
 
                 OpCode::NegateBool => {
                     let val = self.pop();
-                    if let Ok(num) = !val {
-                        self.push(num);
-                    } else {
-                        // TODO: report an error
+                    match !val {
+                        Ok(val) => self.push(val),
+                        Err(err) => self.runtime_err(err),
                     }
                 }
 
@@ -138,8 +141,6 @@ impl<'a> VM<'a> {
                         unsafe { (*flist.inner_mut()).1 = false };
                     } else if let Some(fobj) = as_t!(val, FObj) {
                         unsafe { (*fobj.inner_mut()).1 = false };
-                    } else {
-                        // TODO: report an error
                     }
                     self.push(val);
                 }
@@ -336,7 +337,7 @@ impl<'a> VM<'a> {
                     if let Some((val, _)) = self.globals.get(v.0.as_ref()) {
                         self.push(val.clone());
                     } else {
-                        // TODO: report an error
+                        self.runtime_err(format!("global variable {} is not defined", v.0));
                     }
                 }
 
@@ -368,13 +369,17 @@ impl<'a> VM<'a> {
                         .collect::<Vec<(bool, usize)>>();
 
                     if as_t!(right, FTup).is_none() {
-                        // TODO: report an error
+                        self.runtime_err(format!("expected type tup but got {}", right.type_str()));
                     }
 
                     let right_tup = &force_as_t!(right, FTup).0;
 
                     if right_tup.len() != slots.len() {
-                        // TODO: report an error
+                        self.runtime_err(format!(
+                            "invalid length: {} and {}",
+                            slots.len(),
+                            right_tup.len()
+                        ));
                     }
 
                     slots.iter().zip(right_tup.iter()).for_each(|(slot, val)| {
@@ -394,13 +399,20 @@ impl<'a> VM<'a> {
                         .collect::<Vec<(bool, usize)>>();
 
                     if as_t!(right, FList).is_none() {
-                        // TODO: report an error
+                        self.runtime_err(format!(
+                            "expected type list but got {}",
+                            right.type_str()
+                        ));
                     }
 
                     let right_list = &force_as_t!(right, FList).inner().0;
 
                     if right_list.len() != slots.len() {
-                        // TODO: report an error
+                        self.runtime_err(format!(
+                            "invalid length: {} and {}",
+                            slots.len(),
+                            right_list.len()
+                        ));
                     }
 
                     slots.iter().zip(right_list.iter()).for_each(|(slot, val)| {
@@ -425,12 +437,19 @@ impl<'a> VM<'a> {
                     let right = self.pop();
 
                     if as_t!(right, FObj).is_none() {
-                        // TODO: report an error
+                        self.runtime_err(format!(
+                            "expected type obj just got {}",
+                            right.type_str()
+                        ));
                     }
 
                     let right_obj = &force_as_t!(right, FObj).inner().0;
                     if right_obj.len() < slots.len() {
-                        // TODO: report an error
+                        self.runtime_err(format!(
+                            "invalid length: {} and {}",
+                            slots.len(),
+                            right_obj.len()
+                        ));
                     }
 
                     // actually doing the reassignments
@@ -438,7 +457,7 @@ impl<'a> VM<'a> {
                         if right_obj.contains_key(key) {
                             self.slot_assign(*slot, right_obj[key].clone());
                         } else {
-                            // TODO: report an error
+                            self.runtime_err(format!("key '{}' does not exist", key));
                         }
                     });
 
@@ -504,7 +523,11 @@ impl<'a> VM<'a> {
                             } else if let Some(t_flist) = as_t!(target, FList) {
                                 let t_list = &t_flist.inner().0;
                                 if list.len() != t_list.len() {
-                                    // TODO: report an error
+                                    vm.runtime_err(format!(
+                                        "invalid length: {} and {}",
+                                        list.len(),
+                                        t_list.len()
+                                    ));
                                 }
                                 list.iter().zip(t_list.iter()).for_each(|(l, r)| {
                                     match_expr(vm, l.clone(), r.clone(), jump, is_body_running);
@@ -522,7 +545,11 @@ impl<'a> VM<'a> {
                             } else if let Some(t_fobj) = as_t!(target, FObj) {
                                 let t_obj = &t_fobj.inner().0;
                                 if t_obj.len() != obj.len() {
-                                    // TODO: report an error
+                                    vm.runtime_err(format!(
+                                        "invalid length: {} and {}",
+                                        obj.len(),
+                                        t_obj.len()
+                                    ));
                                 }
                                 obj.iter().for_each(|(l_key, l_val)| {
                                     if t_obj.contains_key(l_key) {
@@ -552,7 +579,7 @@ impl<'a> VM<'a> {
                             if let Some(val) = list.get(idx) {
                                 self.push(val.clone());
                             } else {
-                                // TODO: report an error
+                                self.runtime_err(format!("invalid index {}", idx));
                             }
                         } else if let Some(range) = as_t!(attr, FList) {
                             let range = &range.inner().0;
@@ -567,7 +594,7 @@ impl<'a> VM<'a> {
                                         let l = l.0 as usize;
 
                                         if l >= list.len() {
-                                            // TODO: report an error
+                                            self.runtime_err(format!("invalid index {}", l));
                                         }
 
                                         let slice = &list[l..];
@@ -575,7 +602,10 @@ impl<'a> VM<'a> {
                                             FList::build(self.heap, slice.to_vec(), *mutable);
                                         self.push(new_flist);
                                     } else {
-                                        // TODO: report an error
+                                        self.runtime_err(format!(
+                                            "expected type int but got {}",
+                                            range[0].type_str()
+                                        ));
                                     }
                                 }
                                 2 => {
@@ -586,7 +616,10 @@ impl<'a> VM<'a> {
                                         let l1 = force_as_t!(range[1], FInt).0 as usize;
 
                                         if l0 >= list.len() || l1 >= list.len() || l0 > l1 {
-                                            // TODO: report an error
+                                            self.runtime_err(format!(
+                                                "invalid range [{}, {})",
+                                                l0, l1
+                                            ));
                                         }
 
                                         let slice = &list[l0..l1];
@@ -594,13 +627,19 @@ impl<'a> VM<'a> {
                                             FList::build(self.heap, slice.to_vec(), *mutable);
                                         self.push(new_flist);
                                     } else {
-                                        // TODO: report an error
+                                        self.runtime_err(format!(
+                                            "expected ints but got {} and {}",
+                                            range[0].type_str(),
+                                            range[1].type_str()
+                                        ));
                                     }
                                 }
-                                _ => {} // TODO: report an error
+                                _ => {
+                                    self.runtime_err(format!("invalid number {}", range.len()));
+                                }
                             }
                         } else {
-                            // TODO: report an error
+                            self.runtime_err(format!("expected list but got {}", attr.type_str()));
                         }
                     } else if let Some(ftup) = as_t!(inst, FTup) {
                         let tup = &ftup.0;
@@ -609,7 +648,7 @@ impl<'a> VM<'a> {
                             if let Some(val) = tup.get(idx) {
                                 self.push(val.clone());
                             } else {
-                                // TODO: report an error
+                                self.runtime_err(format!("invalid index: {}", idx));
                             }
                         } else if let Some(range) = as_t!(attr, FList) {
                             let range = &range.inner().0;
@@ -627,7 +666,7 @@ impl<'a> VM<'a> {
                                         let l = l.0 as usize;
 
                                         if l >= tup.len() {
-                                            // TODO: report an error
+                                            self.runtime_err(format!("invalid index {}", l));
                                         }
 
                                         let slice = &tup[l..];
@@ -635,7 +674,10 @@ impl<'a> VM<'a> {
                                             FList::build(self.heap, slice.to_vec(), false);
                                         self.push(new_flist);
                                     } else {
-                                        // TODO: report an error
+                                        self.runtime_err(format!(
+                                            "expected type int but got {}",
+                                            range[0].type_str(),
+                                        ));
                                     }
                                 }
                                 2 => {
@@ -646,7 +688,10 @@ impl<'a> VM<'a> {
                                         let l1 = force_as_t!(range[1], FInt).0 as usize;
 
                                         if l0 >= tup.len() || l1 >= tup.len() || l0 > l1 {
-                                            // TODO: report an error
+                                            self.runtime_err(format!(
+                                                "invalid range [{}, {})",
+                                                l0, l1
+                                            ));
                                         }
 
                                         let slice = &tup[l0..l1];
@@ -654,31 +699,37 @@ impl<'a> VM<'a> {
                                             FList::build(self.heap, slice.to_vec(), false);
                                         self.push(new_flist);
                                     } else {
-                                        // TODO: report an error
+                                        self.runtime_err(format!(
+                                            "expected ints but got {} and {}",
+                                            range[0].type_str(),
+                                            range[1].type_str()
+                                        ));
                                     }
                                 }
-                                _ => {} // TODO: report an error
+                                _ => {
+                                    self.runtime_err(format!("invalid number {}", range.len()));
+                                }
                             }
                         } else {
-                            // TODO: report an error
+                            self.runtime_err(format!(
+                                "expected either int or list but got {}",
+                                attr.type_str()
+                            ));
                         }
                     } else if let Some(fobj) = as_t!(inst, FObj) {
                         let obj = &fobj.inner().0;
-                        if let Some(key) = as_t!(attr, FVar) {
-                            if let Some(val) = obj.get(&key.0) {
-                                self.push(val.clone());
-                            } else {
-                                // TODO: report an error
-                            }
+                        let key = force_as_t!(attr, FVar);
+                        if let Some(val) = obj.get(&key.0) {
+                            self.push(val.clone());
                         } else {
-                            // TODO: report an error
+                            self.runtime_err(format!("key {} does not exist", key.0));
                         }
                     } else if let Some(fstr) = as_t!(inst, FStr) {
                         let (string, mutable) = fstr.inner();
                         if let Some(idx) = as_t!(attr, FInt) {
                             let idx = idx.0 as usize;
                             if idx >= string.len() {
-                                // TODO: report an error
+                                self.runtime_err(format!("invalid index {}", idx));
                             }
 
                             let new_str = FStr::build(
@@ -700,7 +751,7 @@ impl<'a> VM<'a> {
                                         let l = l.0 as usize;
 
                                         if l >= string.len() {
-                                            // TODO: report an error
+                                            self.runtime_err(format!("invalid index {}", l));
                                         }
 
                                         let slice = &string[l..];
@@ -708,7 +759,10 @@ impl<'a> VM<'a> {
                                             FStr::build(self.heap, slice.to_string(), *mutable);
                                         self.push(new_fstr);
                                     } else {
-                                        // TODO: report an error
+                                        self.runtime_err(format!(
+                                            "expected int but got {}",
+                                            attr.type_str()
+                                        ));
                                     }
                                 }
                                 2 => {
@@ -719,7 +773,10 @@ impl<'a> VM<'a> {
                                         let l1 = force_as_t!(list[1], FInt).0 as usize;
 
                                         if l0 >= string.len() || l1 >= string.len() {
-                                            // TODO: report an error
+                                            self.runtime_err(format!(
+                                                "invalid range [{}, {})",
+                                                l0, l1
+                                            ));
                                         }
 
                                         let slice = &string[l0..l1];
@@ -727,14 +784,23 @@ impl<'a> VM<'a> {
                                             FStr::build(self.heap, slice.to_string(), *mutable);
                                         self.push(new_fstr);
                                     } else {
-                                        // TODO: report an error
+                                        self.runtime_err(format!(
+                                            "expected ints but got {} and {}",
+                                            list[0].type_str(),
+                                            list[1].type_str()
+                                        ));
                                     }
                                 }
-                                _ => {} // TODO: report an error
+                                _ => {
+                                    self.runtime_err(format!("invalid number {}", list.len()));
+                                }
                             }
                         }
                     } else {
-                        // TODO: report an error
+                        self.runtime_err(format!(
+                            "expected either list, tuple, or str but got {}",
+                            attr.type_str()
+                        ));
                     }
                 }
 
@@ -748,57 +814,72 @@ impl<'a> VM<'a> {
 
                         // checking for mutability
                         if !*mutable {
-                            // TODO: report an error
+                            self.runtime_err("value is immutable".to_string());
                         }
 
                         if let Some(idx) = as_t!(attr, FInt) {
                             let idx = idx.0 as usize;
                             if idx >= list.len() {
-                                // TODO: report an error
+                                self.runtime_err(format!("invalid index {}", idx));
                             }
                             list[idx] = val.clone();
                         } else if let Some(idxs) = as_t!(attr, FList) {
                             let idxs = unsafe { &(*idxs.inner_mut()).0 };
-                            if idxs.len() > 0 {
+                            if !idxs.is_empty() {
                                 if let Some(val) = as_t!(val, FList) {
                                     let rlist = &val.inner().0;
                                     if rlist.len() != idxs.len() {
-                                        // TODO: report an error
+                                        self.runtime_err(format!(
+                                            "invalid length: {} and {}",
+                                            idxs.len(),
+                                            rlist.len()
+                                        ));
                                     }
                                     idxs.iter().zip(rlist.iter()).for_each(|(idx, val)| {
                                         if let Some(idx) = as_t!(idx, FInt) {
                                             let idx = idx.0 as usize;
                                             list[idx] = val.clone();
                                         } else {
-                                            // TODO: report an error
+                                            self.runtime_err(format!(
+                                                "expected int but got {}",
+                                                attr.type_str()
+                                            ));
                                         }
                                     });
                                 } else {
-                                    // TODO: report an error
+                                    self.runtime_err(format!(
+                                        "expected type list but got {}",
+                                        val.type_str()
+                                    ));
                                 }
                             } else {
-                                // TODO: report an error
+                                self.runtime_err("indexes must not be empty".to_string());
                             }
                         } else {
-                            // TODO: report an error
+                            self.runtime_err(format!(
+                                "expected type list but got {}",
+                                attr.type_str()
+                            ));
                         }
                     } else if let Some(fobj) = as_t!(inst, FObj) {
                         let (obj, mutable) = unsafe { fobj.inner_mut().as_mut().unwrap() };
 
                         // checking for mutability
                         if !*mutable {
-                            // TODO: report an error
+                            self.runtime_err("value is immutable".to_string());
                         }
 
-                        if let Some(key) = as_t!(attr, FVar) {
-                            obj.insert(key.0.clone(), val.clone());
-                        } else {
-                            // TODO: report an error
-                        }
+                        let key = force_as_t!(attr, FVar);
+                        obj.insert(key.0.clone(), val.clone());
+                    } else if let Some(fstr) = as_t!(inst, FStr) {
+                        // TODO: implement this
                     } else if as_t!(inst, FTup).is_some() {
-                        {} // TODO: report an error
+                        self.runtime_err("tuple is immutable".to_string());
                     } else {
-                        // TODO: report an error
+                        self.runtime_err(format!(
+                            "expected type obj, list, or str but got {}",
+                            inst.type_str()
+                        ));
                     }
 
                     self.push(val);
@@ -847,7 +928,10 @@ impl<'a> VM<'a> {
                         {
                             {} // do nothing
                         } else {
-                            // TODO: report an error
+                            self.runtime_err(format!(
+                                "expected {} arguments but got {}",
+                                func.params, arg_len
+                            ));
                         }
 
                         // actually calling the function
@@ -856,14 +940,8 @@ impl<'a> VM<'a> {
                         // native function
                         let func = nfunc.0;
 
-                        self.add_frame(
-                            Function {
-                                params: 0,
-                                rest: false,
-                                addr: std::ptr::null(),
-                            },
-                            std::ptr::null(),
-                        );
+                        // TODO: what path index should i pass here?
+                        self.add_frame(Function::new(0, false, usize::MAX), std::ptr::null());
 
                         // calling the native function
                         func(self, args);
@@ -871,7 +949,10 @@ impl<'a> VM<'a> {
                         // removing the call frame
                         self.frames.pop();
                     } else {
-                        // TODO: report an error
+                        self.runtime_err(format!(
+                            "expected a function but got {}",
+                            func.type_str()
+                        ));
                     }
                 }
 
@@ -915,7 +996,11 @@ impl<'a> VM<'a> {
         } else if let Some(left) = as_t!(left, FTup) {
             if let Some(right) = as_t!(right, FTup) {
                 if right.0.len() != left.0.len() {
-                    // TODO: report an error
+                    self.runtime_err(format!(
+                        "invalid length: {} and {}",
+                        left.0.len(),
+                        right.0.len()
+                    ));
                 } else {
                     left.0.iter().zip(right.0.iter()).for_each(|(l, r)| {
                         if let Some(v) = as_t!(l, FVar) {
@@ -923,17 +1008,24 @@ impl<'a> VM<'a> {
                         } else if as_t!(l, FEmpty).is_some() {
                             {} // do nothing
                         } else {
-                            // TODO: report an error
+                            self.runtime_err(format!(
+                                "expected left side to be variable but got {}",
+                                l.type_str()
+                            ));
                         }
                     });
                 }
             } else {
-                // TODO: report an error
+                self.runtime_err(format!("expected tup but got {}", right.type_str()));
             }
         } else if let Some(left) = as_t!(left, FList) {
             if let Some(right) = as_t!(right, FList) {
                 if right.inner().0.len() != left.inner().0.len() {
-                    // TODO: report an error
+                    self.runtime_err(format!(
+                        "invalid length: {} and {}",
+                        left.inner().0.len(),
+                        right.inner().0.len()
+                    ));
                 } else {
                     left.inner()
                         .0
@@ -945,17 +1037,24 @@ impl<'a> VM<'a> {
                             } else if as_t!(l, FEmpty).is_some() {
                                 {} // do nothing
                             } else {
-                                // TODO: report an error
+                                self.runtime_err(format!(
+                                    "expected left side to be variable but got {}",
+                                    l.type_str()
+                                ));
                             }
                         });
                 }
             } else {
-                // TODO: report an error
+                self.runtime_err(format!("expected list but got {}", left.type_str()));
             }
         } else if let Some(left) = as_t!(left, FObj) {
             if let Some(right) = as_t!(right, FObj) {
                 if right.inner().0.len() != left.inner().0.len() {
-                    // TODO: report an error
+                    self.runtime_err(format!(
+                        "invalid length: {} and {}",
+                        left.inner().0.len(),
+                        right.inner().0.len()
+                    ));
                 } else {
                     left.inner().0.iter().for_each(|(key, assignee)| {
                         if let Some(val) = right.inner().0.get(key) {
@@ -964,16 +1063,22 @@ impl<'a> VM<'a> {
                             } else if as_t!(assignee, FEmpty).is_some() {
                                 {} // do nothing
                             } else {
-                                // TODO: report an error
+                                self.runtime_err(format!(
+                                    "expected left side to be variable but got {}",
+                                    assignee.type_str()
+                                ));
                             }
                         }
                     });
                 }
             } else {
-                // TODO: report an error
+                self.runtime_err(format!("expected obj but got {}", right.type_str()));
             }
         } else {
-            // TODO: report an error
+            self.runtime_err(format!(
+                "expected either list, tup, or obj but got {}",
+                left.type_str()
+            ));
         }
 
         self.push(right);
@@ -1012,23 +1117,23 @@ impl<'a> VM<'a> {
 
     /// Binds the given value to a global variable name
     fn define_global(vm: &mut VM, name: Arc<str>, val: Value, mutable: bool) {
-        if let Entry::Vacant(e) = vm.globals.entry(name) {
+        if let Entry::Vacant(e) = vm.globals.entry(name.clone()) {
             e.insert((val, mutable));
         } else {
-            // TODO: report an error
+            vm.runtime_err(format!("global variable {} is already defined", name));
         }
     }
 
     /// Rebinds a new value to a global variable
     fn set_global(vm: &mut VM, name: Arc<str>, val: Value, _: bool) {
-        if let Entry::Occupied(mut o) = vm.globals.entry(name) {
-            let mutability = o.get().1;
-            if !mutability {
-                // TODO: report an error
-            }
-            o.insert((val, mutability));
+        if vm.globals.get(&name).is_none() {
+            vm.runtime_err(format!("global variable {} is not defined", &name));
         } else {
-            // TODO: report an error
+            let mutable = vm.globals[&name].1;
+            if !mutable {
+                vm.runtime_err(format!("global variable {} cannot be reassigned", &name));
+            }
+            vm.globals.insert(name, (val, mutable));
         }
     }
 
@@ -1072,7 +1177,7 @@ impl<'a> VM<'a> {
     fn add_frame(&mut self, func: Function, addr: *const u8) {
         // checking for stack overflow
         if self.frames.len() == FRAME_MAX {
-            // TODO: report an error
+            self.runtime_err("stack overflow".to_string());
         }
 
         // creating a new call frame for the function call
@@ -1085,6 +1190,27 @@ impl<'a> VM<'a> {
 
         // setting the newly created call frame as the current frame
         self.frames.push(frame);
+    }
+
+    fn runtime_err(&mut self, msg: String) {
+        let mut offset = unsafe { current_frame!(self).ip.offset_from(self.first_ip) } as usize;
+        let mut pos = self.positions.get(&offset).unwrap();
+        let mut node = Node {
+            pos: *pos,
+            path_idx: current_frame!(self).func.path_idx,
+        };
+        let mut stack = Stack::new_from_node(ErrType::Runtime, msg, node);
+        while self.frames.len() != 1 {
+            self.frames.pop();
+            offset = unsafe { current_frame!(self).ip.offset_from(self.first_ip) } as usize;
+            pos = self.positions.get(&offset).unwrap();
+            node = Node {
+                pos: *pos,
+                path_idx: current_frame!(self).func.path_idx,
+            };
+            stack.add_node(node);
+        }
+        stack.report(1);
     }
 }
 

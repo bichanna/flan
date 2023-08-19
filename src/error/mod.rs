@@ -20,6 +20,7 @@ pub type Positions = HashMap<usize, Position>;
 #[derive(Debug)]
 pub enum ErrType {
     Syntax,
+    Runtime,
 }
 
 /// The error stack
@@ -43,9 +44,9 @@ pub fn flan_panic_exit(msg: &str, code: i32) {
 #[derive(Debug)]
 pub struct Node {
     /// The position of where the function is called
-    pos: Position,
+    pub pos: Position,
     /// The path index of the place where the error occurred
-    path_idx: usize,
+    pub path_idx: usize,
 }
 
 impl Stack {
@@ -62,6 +63,11 @@ impl Stack {
         Self::new_from_node(err, msg, Node { pos, path_idx })
     }
 
+    pub fn add_node(&mut self, node: Node) -> &mut Self {
+        self.stack.push(node);
+        self
+    }
+
     pub fn add_path(path: PathBuf) {
         unsafe { PATHS.push(path) }
     }
@@ -71,7 +77,7 @@ impl Stack {
     }
 
     pub fn report(&self, code: i32) {
-        // println!("{}", self);
+        println!("{}", self);
         exit(code);
     }
 }
