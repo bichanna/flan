@@ -757,6 +757,28 @@ impl<'a> VM<'a> {
                                 // TODO: report an error
                             }
                             list[idx] = val.clone();
+                        } else if let Some(idxs) = as_t!(attr, FList) {
+                            let idxs = unsafe { &(*idxs.inner_mut()).0 };
+                            if idxs.len() > 0 {
+                                if let Some(val) = as_t!(val, FList) {
+                                    let rlist = &val.inner().0;
+                                    if rlist.len() != idxs.len() {
+                                        // TODO: report an error
+                                    }
+                                    idxs.iter().zip(rlist.iter()).for_each(|(idx, val)| {
+                                        if let Some(idx) = as_t!(idx, FInt) {
+                                            let idx = idx.0 as usize;
+                                            list[idx] = val.clone();
+                                        } else {
+                                            // TODO: report an error
+                                        }
+                                    });
+                                } else {
+                                    // TODO: report an error
+                                }
+                            } else {
+                                // TODO: report an error
+                            }
                         } else {
                             // TODO: report an error
                         }

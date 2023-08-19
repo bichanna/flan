@@ -55,9 +55,11 @@ range(101) |> each() <~ fizzBuzz(it) |> println()
 i{each, range} := import("std")
 
 fn bubbleSort(mut list) =
-    range(0, len(list)) |> each() ~ (i) range(0, len(list) - i - 1) |> each() ~ (j)
+    range(0, len(list)) |> each() ~ (i)
+    range(0, len(list) - i - 1) |> each() ~ (j)
     if list.j > list.(j + 1) then
-        [list.j, list.(j + 1)] = [list.(j + 1), list.j]
+        # swapping the values
+        list.[j, (j + 1)] = [list.(j + 1), list.j]
 
 list := mut [-2, 4, 2, 1, 0, 5, -1, 6]
 bubbleSort(list)
