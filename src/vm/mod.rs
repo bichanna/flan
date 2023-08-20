@@ -871,13 +871,11 @@ impl<'a> VM<'a> {
 
                         let key = force_as_t!(attr, FVar);
                         obj.insert(key.0.clone(), val.clone());
-                    } else if let Some(fstr) = as_t!(inst, FStr) {
-                        // TODO: implement this
                     } else if as_t!(inst, FTup).is_some() {
                         self.runtime_err("tuple is immutable".to_string());
                     } else {
                         self.runtime_err(format!(
-                            "expected type obj, list, or str but got {}",
+                            "expected type obj or list but got {}",
                             inst.type_str()
                         ));
                     }

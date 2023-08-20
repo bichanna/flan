@@ -1,3 +1,6 @@
+use cli::{parse_args, run_file};
+
+mod cli;
 mod compiler;
 mod debug;
 mod error;
@@ -11,5 +14,8 @@ extern crate num_derive;
 extern crate num_traits;
 
 fn main() {
-    println!("Hello, world!");
+    let config = parse_args();
+    if let Some(path) = config.input {
+        run_file(path);
+    }
 }

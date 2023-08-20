@@ -93,7 +93,7 @@ pub struct Compiler {
 }
 
 impl Compiler {
-    pub fn compile(exprs: Vec<Expr>, heap: Heap, tok_num: usize) -> MemorySlice {
+    pub fn compile(exprs: Vec<Expr>, heap: Heap, tok_num: usize) -> (MemorySlice, Heap) {
         let mut exprs = PrevPeekable::new(exprs.into_iter());
         let current = exprs.next().unwrap();
         let mut compiler = Compiler {
@@ -106,7 +106,7 @@ impl Compiler {
             current,
         };
         compiler._compile();
-        compiler.mem_slice
+        (compiler.mem_slice, compiler.heap)
     }
 
     fn _compile(&mut self) {
