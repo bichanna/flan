@@ -54,7 +54,7 @@ range(101) |> each() <~ fizzBuzz(it) |> println()
 ```javascript
 i{each, range} := import("std")
 
-fn bubbleSort(mut list) =
+fn bubbleSort(list mut) =
     range(0, len(list)) |> each() ~ (i)
     range(0, len(list) - i - 1) |> each() ~ (j)
     if list.j > list.(j + 1) then

@@ -469,7 +469,7 @@ impl<'a> VM<'a> {
                     let cond = self.pop();
                     let jump = read_4bytes!(self);
                     let has_next = read_byte!(self) == 1;
-                    let mut is_body_running = false;
+                    let mut body_not_run = false;
 
                     // recalculating the jump
                     let jump = if has_next { jump - 1 + 5 } else { jump - 1 } as usize;
@@ -479,18 +479,18 @@ impl<'a> VM<'a> {
                         cond: Value,
                         target: Value,
                         jump: usize,
-                        is_body_running: &mut bool,
+                        body_not_run: &mut bool,
                     ) {
                         if as_t!(cond, FEmpty).is_some() {
                             {} // do nothing
                         } else if let Some(int) = as_t!(cond, FInt) {
-                            partial_match!(vm, target, jump, int, FInt, is_body_running);
+                            partial_match!(vm, target, jump, int, FInt, body_not_run);
                         } else if let Some(float) = as_t!(cond, FFloat) {
-                            partial_match!(vm, target, jump, float, FFloat, is_body_running);
+                            partial_match!(vm, target, jump, float, FFloat, body_not_run);
                         } else if let Some(b) = as_t!(cond, FBool) {
-                            partial_match!(vm, target, jump, b, FBool, is_body_running);
+                            partial_match!(vm, target, jump, b, FBool, body_not_run);
                         } else if let Some(atom) = as_t!(cond, FAtom) {
-                            partial_match!(vm, target, jump, atom, FAtom, is_body_running);
+                            partial_match!(vm, target, jump, atom, FAtom, body_not_run);
                         } else if as_t!(cond, FNil).is_some() {
                             if as_t!(target, FNil).is_some() || as_t!(target, FEmpty).is_some() {
                                 {} // do nothing
@@ -498,7 +498,7 @@ impl<'a> VM<'a> {
                                 // TODO: fix this later
                             } else {
                                 vm.jump(jump);
-                                *is_body_running = true;
+                                *body_not_run = true;
                             }
                         } else if let Some(string) = as_t!(cond, FStr) {
                             if as_t!(target, FEmpty).is_some() {
@@ -506,13 +506,13 @@ impl<'a> VM<'a> {
                             } else if let Some(t_str) = as_t!(target, FStr) {
                                 if t_str.inner() != string.inner() {
                                     vm.jump(jump);
-                                    *is_body_running = true;
+                                    *body_not_run = true;
                                 }
                             } else if as_t!(target, FVar).is_some() {
                                 // TODO: fix this later
                             } else {
                                 vm.jump(jump);
-                                *is_body_running = true;
+                                *body_not_run = true;
                             }
                         } else if let Some(flist) = as_t!(cond, FList) {
                             let list = &flist.inner().0;
@@ -530,11 +530,31 @@ impl<'a> VM<'a> {
                                     ));
                                 }
                                 list.iter().zip(t_list.iter()).for_each(|(l, r)| {
-                                    match_expr(vm, l.clone(), r.clone(), jump, is_body_running);
+                                    match_expr(vm, l.clone(), r.clone(), jump, body_not_run);
                                 });
                             } else {
                                 vm.jump(jump);
-                                *is_body_running = true;
+                                *body_not_run = true;
+                            }
+                        } else if let Some(ftup) = as_t!(cond, FTup) {
+                            let tup = ftup.0.clone();
+                            if as_t!(target, FVar).is_some() {
+                                // TODO: fix this later
+                            } else if let Some(t_ftup) = as_t!(target, FTup) {
+                                let t_tup = t_ftup.0.clone();
+                                if tup.len() != t_tup.len() {
+                                    vm.runtime_err(format!(
+                                        "invalid length: {} and {}",
+                                        tup.len(),
+                                        t_tup.len()
+                                    ));
+                                }
+                                tup.iter().zip(t_tup.iter()).for_each(|(l, r)| {
+                                    match_expr(vm, l.clone(), r.clone(), jump, body_not_run);
+                                });
+                            } else {
+                                vm.jump(jump);
+                                *body_not_run = true;
                             }
                         } else if let Some(fobj) = as_t!(cond, FObj) {
                             let obj = &fobj.inner().0;
@@ -554,17 +574,19 @@ impl<'a> VM<'a> {
                                 obj.iter().for_each(|(l_key, l_val)| {
                                     if t_obj.contains_key(l_key) {
                                         let t_val = t_obj.get(l_key).unwrap().clone();
-                                        match_expr(vm, l_val.clone(), t_val, jump, is_body_running);
+                                        match_expr(vm, l_val.clone(), t_val, jump, body_not_run);
                                     }
                                 });
                             }
                         }
                     }
 
-                    match_expr(self, cond.clone(), target, jump, &mut is_body_running);
+                    match_expr(self, cond.clone(), target, jump, &mut body_not_run);
 
-                    if is_body_running && has_next {
+                    if body_not_run && has_next {
                         self.push(cond);
+                    } else if body_not_run && !has_next {
+                        self.push(FNil::build());
                     }
                 }
 

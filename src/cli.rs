@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use clap::Parser;
 
 use crate::compiler::Compiler;
+use crate::debug::Debug;
 use crate::lexer::Lexer;
 use crate::parser::Parser as FParser;
 use crate::vm::gc::heap::Heap;
@@ -36,6 +37,13 @@ pub fn run_file(path: PathBuf) {
     let heap = Heap::new();
     // compiling
     let (mem_slice, mut heap) = Compiler::compile(exprs, heap, tok_num);
+
+    #[cfg(feature = "debug")]
+    {
+        Debug::run("TEST DEBUG", &mem_slice);
+        println!("\n\n");
+    }
+
     // executing
     VM::execute(mem_slice, &mut heap);
 }
