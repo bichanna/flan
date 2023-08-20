@@ -15,18 +15,16 @@ Flan is an acronym for "**F**unctional **LAN**guage." Although Flan has some fun
 
 Also, I happen to love flan - a delicious custard dessert topped with caramel sauce.
 
-## Features (most of which are not implemented yet)
+## Features (most of which are not fully implemented yet)
  - dynamic typing
  - strongly typed
  - lexical scoping
- - immutability by default
+ - immutable by default
  - expression-oriented
  - nested functions
  - closures
  - automatic memory management
- - optional lazy evaluation
  - concurrency
- - built-in JSON serializer/deserializer
 
 ## Snippets
 Both the runtime (VM and standard library) and the compiler are only partially implemented, but here are some Flan code:
