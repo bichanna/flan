@@ -117,7 +117,8 @@ impl fmt::Display for Node {
             .split('\n')
             .map(Arc::from)
             .collect::<Vec<Arc<str>>>();
-        let line = lines.get(self.pos.1);
+        let line = lines.get(self.pos.1 - 1);
+
         if line.is_none() {
             flan_panic_exit(&format!("invalid line number {}", self.pos.1), 1)
         }
