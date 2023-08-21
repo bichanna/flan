@@ -93,7 +93,7 @@ impl fmt::Display for Stack {
 
         let last = &self.stack[0];
 
-        to_be_written.push_str("\n");
+        to_be_written.push('\n');
         to_be_written.push_str(&last.to_string());
 
         to_be_written.push_str(
