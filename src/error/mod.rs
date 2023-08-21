@@ -91,9 +91,22 @@ impl fmt::Display for Stack {
             .collect::<Vec<String>>()
             .join("\n\n");
 
-        to_be_written.push_str("\n\n");
-        to_be_written.push_str(&self.stack[0].to_string());
-        to_be_written.push_str(&format!("\n{:?}: {}\n", self.err, self.msg));
+        let last = &self.stack[0];
+
+        to_be_written.push_str("\n");
+        to_be_written.push_str(&last.to_string());
+
+        to_be_written.push_str(
+            &(0..last.pos.0)
+                .map(|_| ' ')
+                .collect::<Vec<char>>()
+                .iter()
+                .collect::<String>(),
+        );
+
+        to_be_written.push('^');
+
+        to_be_written.push_str(&format!("\n{:?}Error: {}\n", self.err, self.msg));
 
         f.write_str(&to_be_written)
     }
@@ -123,23 +136,13 @@ impl fmt::Display for Node {
             flan_panic_exit(&format!("invalid line number {}", self.pos.1), 1)
         }
 
-        let mut err_msg = format!(
+        let err_msg = format!(
             "{}:{}:{}\n{}\n",
             path.display(),
             self.pos.0,
             self.pos.1,
             line.unwrap()
         );
-
-        err_msg.push_str(
-            &(0..=self.pos.0)
-                .map(|_| ' ')
-                .collect::<Vec<char>>()
-                .iter()
-                .collect::<String>(),
-        );
-
-        err_msg.push('^');
 
         f.write_str(&err_msg)
     }
