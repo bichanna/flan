@@ -4,6 +4,7 @@ use std::fmt;
 use std::ops;
 use std::sync::Arc;
 
+use super::closure::Closure;
 use super::function::Function;
 use crate::vm::gc::heap::{Heap, Object};
 
@@ -1112,7 +1113,7 @@ impl FNil {
 }
 
 #[derive(Clone)]
-pub struct FFunc(Object);
+pub struct FFunc(pub Object);
 impl ValueTrait for FFunc {
     fn truthy(&self) -> bool {
         false
@@ -1175,5 +1176,72 @@ impl FFunc {
 
     pub fn inner(&self) -> &Function {
         unsafe { (self.0.ptr as *const Function).as_ref().unwrap() }
+    }
+}
+
+#[derive(Clone)]
+pub struct FClos(Object);
+impl ValueTrait for FClos {
+    fn truthy(&self) -> bool {
+        false
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn type_str(&self) -> String {
+        let func = self.inner();
+        let mut ret = format!("fn({}", func.params);
+        if func.rest {
+            ret += ", +)";
+        } else {
+            ret += ")";
+        }
+        ret
+    }
+
+    fn equal(&self, other: &Value) -> bool {
+        if as_t!(other, FEmpty).is_some() {
+            true
+        } else if let Some(other) = as_t!(other, FClos) {
+            self.inner().addr == other.inner().addr
+        } else {
+            false
+        }
+    }
+
+    fn less_than(&self, _: &Value) -> bool {
+        false
+    }
+
+    fn greater_than(&self, _: &Value) -> bool {
+        false
+    }
+
+    fn less_than_or_eq(&self, _: &Value) -> bool {
+        false
+    }
+
+    fn greater_than_or_eq(&self, _: &Value) -> bool {
+        false
+    }
+}
+impl fmt::Display for FClos {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.type_str())
+    }
+}
+impl FClos {
+    pub fn build(heap: &mut Heap, clos: Closure) -> Value {
+        Box::new(FClos(heap.allocate(clos)))
+    }
+
+    pub fn inner_mut(&self) -> *mut Function {
+        unsafe { (*(self.0.ptr as *mut Closure)).function.ptr as *mut Function }
+    }
+
+    pub fn inner(&self) -> &Function {
+        unsafe { self.inner_mut().as_ref().unwrap() }
     }
 }

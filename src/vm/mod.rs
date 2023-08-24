@@ -13,11 +13,13 @@ use crate::debug::Debug;
 use crate::error::{ErrType, Node, Positions, Stack};
 use crate::*;
 
+use self::closure::Closure;
 use self::function::Function;
 use self::gc::heap::Heap;
 use self::native::native_func::FNative;
 use self::value::*;
 
+pub mod closure;
 pub mod function;
 pub mod gc;
 pub mod native;
@@ -905,18 +907,23 @@ impl<'a> VM<'a> {
                     self.push(val);
                 }
 
-                OpCode::SetFnAddr => {
+                OpCode::WrapClosure => {
                     let func_obj = self.pop();
                     // getting the pointer where the function's body starts
                     let func_start = unsafe { current_frame!(self).ip.add(6) };
+                    let ffunc = force_as_t!(func_obj, FFunc);
                     // getting the function object pointer
-                    let func_ptr = force_as_t!(func_obj, FFunc).inner_mut();
+                    let func_ptr = ffunc.inner_mut();
 
                     // setting where the function starts
                     unsafe { (*func_ptr).set_addr(func_start) };
 
+                    // wrapping the function in a closure
+                    let closure = Closure::new(ffunc.clone());
+                    let closure = FClos::build(self.heap, closure);
+
                     // re-pushing the modified function onto the stack
-                    self.push(func_obj);
+                    self.push(closure);
 
                     // don't need to do anything here because the LongJump instruction will skip
                     // the body of the function
@@ -933,7 +940,7 @@ impl<'a> VM<'a> {
                     // hopefully a function
                     let func = self.pop();
 
-                    if let Some(func) = as_t!(func, FFunc) {
+                    if let Some(func) = as_t!(func, FClos) {
                         // normal function
                         let func = unsafe { *func.inner_mut() };
 

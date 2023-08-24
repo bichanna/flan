@@ -49,7 +49,7 @@ pub enum OpCode {
     Const,
     GetProperty,
     SetProperty,
-    SetFnAddr,
+    WrapClosure,
     CallFn,
     RetFn,
 }

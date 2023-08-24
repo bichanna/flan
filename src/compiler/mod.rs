@@ -682,8 +682,8 @@ impl Compiler {
                 // writing the instruction to load the function object
                 self.mem_slice.add_const(func, pos);
 
-                // writing the instruction to define a function
-                self.mem_slice.write_opcode(OpCode::SetFnAddr, pos);
+                // writing the instruction to define a function (wrapped in closure)
+                self.mem_slice.write_opcode(OpCode::WrapClosure, pos);
 
                 // adding the instruction to jump through the function body
                 backpatch_u32!(

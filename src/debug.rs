@@ -108,7 +108,7 @@ impl<'a> Debug<'a> {
             OpCode::CallFn => self.single_arg_instruction("CallFn"),
             OpCode::GetProperty => self.simple_instruction("GetProperty"),
             OpCode::SetProperty => self.simple_instruction("SetProperty"),
-            OpCode::SetFnAddr => self.simple_instruction("SetFnAddr"),
+            OpCode::WrapClosure => self.simple_instruction("WrapClosure"),
             OpCode::RetFn => self.simple_instruction("RetFn"),
         }
     }
