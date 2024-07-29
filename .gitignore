@@ -1,2 +1,3 @@
-/target
+generated/
+builddir/
 .DS_Store
