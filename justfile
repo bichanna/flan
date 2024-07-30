@@ -1,13 +1,8 @@
 BUILD_DIR := "builddir"
-CAPNP_DIR := "generated"
 
 default: build
 
-generate_capnp:
-  mkdir -p {{CAPNP_DIR}}
-  capnp compile -oc++:{{CAPNP_DIR}} program.capnp
-
-configure: generate_capnp
+configure:
   meson setup --buildtype=debug {{BUILD_DIR}}
 
 build: configure

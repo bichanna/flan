@@ -1,5 +1,6 @@
-#include <iostream>
+int main(int argc, char *argv[]) {
+  if (argc < 2) return 1;
+  (void)argv;
 
-int main() {
-  std::cout << "Hello, world\n";
+  // auto inputFileName = argv[1];
 }
