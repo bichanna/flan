@@ -10,6 +10,8 @@ project('impala', 'cpp',
 impala_include = include_directories('include')
 src = [
   'src/impala.cpp',
+  'src/gc.cpp',
+  'src/vm.cpp',
 ]
 
 executable('impala',

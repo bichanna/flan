@@ -3,7 +3,7 @@ BasedOnStyle: Google
 IndentWidth: 2
 UseTab: Never
 PointerAlignment: Right
-ColumnLimit: 100
+ColumnLimit: 80
 AllowShortFunctionsOnASingleLine: None
 AlignEscapedNewlines: Right
 AlignOperands: true

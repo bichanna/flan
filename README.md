@@ -8,7 +8,7 @@
 <div align="center">
 </div>
 
-**WARNING!! THIS LANGUAGE IS NOT IN DEVELOPMENT ANYMORE**
+**WARNING!! THIS LANGUAGE IS IN DEVELOPMENT**
  --------------------------------------------------------------------------------------------------------
 **IMP**ure function**A**l **LA**nguage is a high-level, dynamically- and strongly-typed, functional programming language that runs on a virtual machine.
 **Impala** is my high school Computer Science project written in C++.
