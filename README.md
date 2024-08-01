@@ -1,8 +1,8 @@
 <div align="center">
     <h1>The Flan Programming Language</h1>
-    |
+    <!-- |
     <a href="https://bichanna.github.io/flan-book/">Doc</a>
-    |
+    | -->
 </div><br>
 
 <div align="center">
