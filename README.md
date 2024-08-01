@@ -19,7 +19,7 @@ Almost nothing works currently...
 ```js
 std := import(Std)
 
-names := ["Tsoding", "ThePrimeagen"]
+names := ["Tsoding", "ThePrimeagen", "Fireship"]
 std::for(names) ::: (name)
   std::println("I substribe to {{}}!", name)
 ```
