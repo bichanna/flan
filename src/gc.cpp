@@ -2,7 +2,7 @@
 
 #include <variant>
 
-using namespace impala;
+using namespace flan;
 
 void Object::mark() {
   if (this->marked) return;

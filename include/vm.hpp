@@ -5,14 +5,14 @@
 
 #include "gc.hpp"
 
-using namespace impala;
+using namespace flan;
 namespace fs = std::filesystem;
 
-namespace impala {
+namespace flan {
 
 const std::uint8_t VERSION[3] = {0, 0, 0};
 
-const std::uint8_t MAGIC_NUMBER[4] = {0x49, 0x4D, 0x50, 0x41};
+const std::uint8_t MAGIC_NUMBER[4] = {0x46, 0x4C, 0x41, 0x4E};
 
 class VM {
  public:
@@ -84,4 +84,4 @@ enum class InstructionType : std::uint8_t {
   InitList,
   InitObj,
 };
-}  // namespace impala
+}  // namespace flan

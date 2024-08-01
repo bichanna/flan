@@ -6,7 +6,7 @@
 #include <variant>
 #include <vector>
 
-namespace impala {
+namespace flan {
 
 struct Object {
   bool marked{false};
@@ -52,4 +52,4 @@ class GC {
   GC(std::vector<Value>* stack) : stack{stack} {};
   void addObject(Object* object);
 };
-}  // namespace impala
+}  // namespace flan

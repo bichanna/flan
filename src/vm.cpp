@@ -12,7 +12,7 @@
 
 #include "gc.hpp"
 
-using namespace impala;
+using namespace flan;
 
 VM::VM(fs::path fileName) : gc{GC(&this->stack)} {
   auto inputStream = std::ifstream(fileName);

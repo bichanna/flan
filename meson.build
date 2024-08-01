@@ -1,4 +1,4 @@
-project('impala', 'cpp',
+project('flan', 'cpp',
   version: '0.0.0',
   license: 'MIT',
   default_options: [
@@ -9,12 +9,12 @@ project('impala', 'cpp',
 )
 impala_include = include_directories('include')
 src = [
-  'src/impala.cpp',
+  'src/flan.cpp',
   'src/gc.cpp',
   'src/vm.cpp',
 ]
 
-executable('impala',
+executable('flan',
   sources: src,
   include_directories: impala_include,
 )
