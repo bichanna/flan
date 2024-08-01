@@ -1,7 +1,7 @@
 <div align="center">
-    <h1>The Impala Programming Language</h1>
+    <h1>The Flan Programming Language</h1>
     |
-    <a href="https://bichanna.github.io/impala-book/">Doc</a>
+    <a href="https://bichanna.github.io/flan-book/">Doc</a>
     |
 </div><br>
 
@@ -10,8 +10,8 @@
 
 **WARNING!! THIS LANGUAGE IS IN DEVELOPMENT**
  --------------------------------------------------------------------------------------------------------
-**IMP**ure function**A**l **LA**nguage is a high-level, dynamically- and strongly-typed, functional programming language that runs on a virtual machine.
-**Impala** is my high school Computer Science project written in C++.
+**F** **LAN**guage is a high-level, dynamically- and strongly-typed, functional programming language that runs on a virtual machine.
+**Flan** is my high school Computer Science project written in C++.
 
  -------------------------
 Almost nothing works currently...
