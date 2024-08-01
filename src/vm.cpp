@@ -25,7 +25,7 @@ void VM::run() {
   std::streamsize size = this->inputStream.tellg();
   this->inputStream.seekg(0, std::ios::beg);
 
-  char *buffer = new char[size];
+  char* buffer = new char[size];
   if (!this->inputStream.read(buffer, size)) {
     delete[] buffer;
     std::stringstream ss;
@@ -35,7 +35,7 @@ void VM::run() {
 
   inputStream.close();
 
-  std::uint8_t *bufferPtr = (std::uint8_t *)buffer;
+  std::uint8_t* bufferPtr = (std::uint8_t*)buffer;
 
   if (this->checkMagicNumber(bufferPtr)) {
     // TODO: Throw error
@@ -54,7 +54,7 @@ void VM::run() {
         for (auto i = 0; i < length; i++) {
           try {
             this->push(this->readValue(bufferPtr));
-          } catch (const std::exception &e) {
+          } catch (const std::exception& e) {
             // TODO: Throw error
           }
         }
@@ -82,6 +82,67 @@ void VM::run() {
       }
 
       case InstructionType::Add: {
+        this->push(this->performAdd(bufferPtr));
+        break;
+      }
+
+      case InstructionType::Sub: {
+        this->push(this->performSub(bufferPtr));
+        break;
+      }
+
+      case InstructionType::Mul: {
+        this->push(this->performMul(bufferPtr));
+        break;
+      }
+
+      case InstructionType::Div: {
+        this->push(this->performDiv(bufferPtr));
+        break;
+      }
+
+      case InstructionType::Mod: {
+        this->push(this->performMod(bufferPtr));
+        break;
+      }
+
+      case InstructionType::Eq: {
+        this->push(this->performEq(bufferPtr));
+        break;
+      }
+
+      case InstructionType::NEq: {
+        this->push(this->performNEq(bufferPtr));
+        break;
+      }
+
+      case InstructionType::LT: {
+        this->push(this->performLT(bufferPtr));
+        break;
+      }
+
+      case InstructionType::LTE: {
+        this->push(this->performLTE(bufferPtr));
+        break;
+      }
+
+      case InstructionType::GT: {
+        this->push(this->performLTE(bufferPtr));
+        break;
+      }
+
+      case InstructionType::GTE: {
+        this->push(this->performGTE(bufferPtr));
+        break;
+      }
+
+      case InstructionType::And: {
+        this->push(this->performAnd(bufferPtr));
+        break;
+      }
+
+      case InstructionType::Or: {
+        this->push(this->performOr(bufferPtr));
         break;
       }
 
@@ -93,32 +154,162 @@ void VM::run() {
   delete[] buffer;
 }
 
-bool VM::checkMagicNumber(std::uint8_t *bufferPtr) {
+Value VM::performAdd(std::uint8_t* bufferPtr) {
+  auto right = this->pop();
+  auto left = this->pop();
+  try {
+    return left + right;
+  } catch (const std::exception& e) {
+    throw;
+  }
+}
+
+Value VM::performSub(std::uint8_t* bufferPtr) {
+  auto right = this->pop();
+  auto left = this->pop();
+  try {
+    return left - right;
+  } catch (const std::exception& e) {
+    throw;
+  }
+}
+
+Value VM::performMul(std::uint8_t* bufferPtr) {
+  auto right = this->pop();
+  auto left = this->pop();
+  try {
+    return left * right;
+  } catch (const std::exception& e) {
+    throw;
+  }
+}
+
+Value VM::performDiv(std::uint8_t* bufferPtr) {
+  auto right = this->pop();
+  auto left = this->pop();
+  try {
+    return left / right;
+  } catch (const std::exception& e) {
+    throw;
+  }
+}
+
+Value VM::performMod(std::uint8_t* bufferPtr) {
+  auto right = this->pop();
+  auto left = this->pop();
+  try {
+    return left % right;
+  } catch (const std::exception& e) {
+    throw;
+  }
+}
+
+Value VM::performEq(std::uint8_t* bufferPtr) {
+  auto right = this->pop();
+  auto left = this->pop();
+  try {
+    return left == right;
+  } catch (const std::exception& e) {
+    throw;
+  }
+}
+
+Value VM::performNEq(std::uint8_t* bufferPtr) {
+  auto right = this->pop();
+  auto left = this->pop();
+  try {
+    return left != right;
+  } catch (const std::exception& e) {
+    throw;
+  }
+}
+
+Value VM::performLT(std::uint8_t* bufferPtr) {
+  auto right = this->pop();
+  auto left = this->pop();
+  try {
+    return left < right;
+  } catch (const std::exception& e) {
+    throw;
+  }
+}
+
+Value VM::performLTE(std::uint8_t* bufferPtr) {
+  auto right = this->pop();
+  auto left = this->pop();
+  try {
+    return left <= right;
+  } catch (const std::exception& e) {
+    throw;
+  }
+}
+
+Value VM::performGT(std::uint8_t* bufferPtr) {
+  auto right = this->pop();
+  auto left = this->pop();
+  try {
+    return left > right;
+  } catch (const std::exception& e) {
+    throw;
+  }
+}
+
+Value VM::performGTE(std::uint8_t* bufferPtr) {
+  auto right = this->pop();
+  auto left = this->pop();
+  try {
+    return left >= right;
+  } catch (const std::exception& e) {
+    throw;
+  }
+}
+
+Value VM::performAnd(std::uint8_t* bufferPtr) {
+  auto right = this->pop();
+  auto left = this->pop();
+  try {
+    return left.truty() && right.truty();
+  } catch (const std::exception& e) {
+    throw;
+  }
+}
+
+Value VM::performOr(std::uint8_t* bufferPtr) {
+  auto right = this->pop();
+  auto left = this->pop();
+  try {
+    return left.truty() || right.truty();
+  } catch (const std::exception& e) {
+    throw;
+  }
+}
+
+bool VM::checkMagicNumber(std::uint8_t* bufferPtr) {
   return (this->readUInt8(bufferPtr) == MAGIC_NUMBER[0]) &&
          (this->readUInt8(bufferPtr) == MAGIC_NUMBER[1]) &&
          (this->readUInt8(bufferPtr) == MAGIC_NUMBER[2]) &&
          (this->readUInt8(bufferPtr) == MAGIC_NUMBER[3]);
 }
 
-bool VM::checkVersion(std::uint8_t *bufferPtr) {
+bool VM::checkVersion(std::uint8_t* bufferPtr) {
   return (this->readUInt8(bufferPtr) == VERSION[0]) &&
          (this->readUInt8(bufferPtr) == VERSION[1]) &&
          (this->readUInt8(bufferPtr) <= VERSION[2]);
 }
 
-std::uint8_t VM::readUInt8(std::uint8_t *bufferPtr) {
+std::uint8_t VM::readUInt8(std::uint8_t* bufferPtr) {
   std::uint8_t value = *bufferPtr;
   bufferPtr++;
   return value;
 }
 
-std::uint16_t VM::readUInt16(std::uint8_t *bufferPtr) {
+std::uint16_t VM::readUInt16(std::uint8_t* bufferPtr) {
   auto low_byte = this->readUInt8(bufferPtr);
   auto high_byte = this->readUInt8(bufferPtr);
   return (std::uint16_t)low_byte | ((std::uint16_t)high_byte << 8);
 }
 
-std::uint32_t VM::readUInt32(std::uint8_t *bufferPtr) {
+std::uint32_t VM::readUInt32(std::uint8_t* bufferPtr) {
   auto byte1 = this->readUInt8(bufferPtr);
   auto byte2 = this->readUInt8(bufferPtr);
   auto byte3 = this->readUInt8(bufferPtr);
@@ -137,7 +328,7 @@ Value VM::pop() {
   return popped;
 }
 
-Value VM::readValue(std::uint8_t *bufferPtr) {
+Value VM::readValue(std::uint8_t* bufferPtr) {
   auto type = this->readUInt8(bufferPtr);
   bufferPtr++;
 
@@ -165,7 +356,7 @@ Value VM::readValue(std::uint8_t *bufferPtr) {
   }
 }
 
-Value VM::readInteger(std::uint8_t *bufferPtr) {
+Value VM::readInteger(std::uint8_t* bufferPtr) {
   std::uint8_t bytes[4];
   for (auto i = 0; i < 4; i++) bytes[i] = this->readUInt8(bufferPtr);
 
@@ -176,7 +367,7 @@ Value VM::readInteger(std::uint8_t *bufferPtr) {
   return result;
 }
 
-Value VM::readFloat(std::uint8_t *bufferPtr) {
+Value VM::readFloat(std::uint8_t* bufferPtr) {
   std::uint8_t bytes[4];
   for (auto i = 0; i < 4; i++) bytes[i] = this->readUInt8(bufferPtr);
 
@@ -186,7 +377,7 @@ Value VM::readFloat(std::uint8_t *bufferPtr) {
   return result;
 }
 
-Value VM::readBool(std::uint8_t *bufferPtr) {
+Value VM::readBool(std::uint8_t* bufferPtr) {
   return this->readUInt8(bufferPtr) == 1;
 }
 
@@ -202,7 +393,7 @@ Value VM::readEmpty() {
   return v;
 }
 
-String *VM::readString(std::uint8_t *bufferPtr) {
+String* VM::readString(std::uint8_t* bufferPtr) {
   auto length = this->readUInt16(bufferPtr);
   std::string s;
   s.reserve(length);
@@ -210,7 +401,7 @@ String *VM::readString(std::uint8_t *bufferPtr) {
   return new String{s};
 }
 
-Atom *VM::readAtom(std::uint8_t *bufferPtr) {
+Atom* VM::readAtom(std::uint8_t* bufferPtr) {
   auto length = this->readUInt8(bufferPtr);
   std::string s;
   s.reserve(length);

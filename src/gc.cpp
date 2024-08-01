@@ -36,3 +36,21 @@ void GC::perform() {
 void GC::addObject(Object *object) {
   this->objects.push_back(object);
 }
+
+bool Value::truty() {
+  if (std::holds_alternative<char>(this->value)) {
+    auto v = std::get<char>(this->value);
+    return v == 0;
+  } else if (std::holds_alternative<std::int64_t>(this->value)) {
+    auto v = std::get<std::int64_t>(this->value);
+    return v != 0;
+  } else if (std::holds_alternative<double>(this->value)) {
+    auto v = std::get<double>(this->value);
+    return v != 0.0;
+  } else if (std::holds_alternative<bool>(this->value)) {
+    auto v = std::get<bool>(this->value);
+    return v;
+  } else {
+    return true;
+  }
+}

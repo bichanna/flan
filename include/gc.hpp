@@ -11,14 +11,15 @@ namespace impala {
 struct Object {
   bool marked{false};
   void mark();
+  virtual ~Object();
 };
 
-struct String {
+struct String : public Object {
   std::string value;
   String(std::string value) : value{value} {};
 };
 
-struct Atom {
+struct Atom : public Object {
   std::string value;
   Atom(std::string value) : value{value} {};
 };
@@ -33,6 +34,10 @@ struct Value {
   Value(double value) : value{value} {};
   Value(bool value) : value{value} {};
   Value(Object* obj) : value{obj} {};
+
+  std::string toString();
+  std::string toDbgString();
+  bool truty();
 };
 
 class GC {

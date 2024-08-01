@@ -16,6 +16,9 @@ const std::uint8_t VERSION[3] = {0, 0, 0};
 const std::uint8_t MAGIC_NUMBER[4] = {0x49, 0x4D, 0x50, 0x41};
 
 class VM {
+ public:
+  VM(fs::path fileName);
+
  private:
   std::ifstream inputStream;
   std::vector<Value> stack;
@@ -41,8 +44,19 @@ class VM {
   String *readString(std::uint8_t *bufferPtr);
   Atom *readAtom(std::uint8_t *bufferPtr);
 
- public:
-  VM(fs::path fileName);
+  Value performAdd(std::uint8_t *bufferPtr);
+  Value performSub(std::uint8_t *bufferPtr);
+  Value performMul(std::uint8_t *bufferPtr);
+  Value performDiv(std::uint8_t *bufferPtr);
+  Value performMod(std::uint8_t *bufferPtr);
+  Value performEq(std::uint8_t *bufferPtr);
+  Value performNEq(std::uint8_t *bufferPtr);
+  Value performLT(std::uint8_t *bufferPtr);
+  Value performLTE(std::uint8_t *bufferPtr);
+  Value performGT(std::uint8_t *bufferPtr);
+  Value performGTE(std::uint8_t *bufferPtr);
+  Value performAnd(std::uint8_t *bufferPtr);
+  Value performOr(std::uint8_t *bufferPtr);
 };
 
 enum class InstructionType : std::uint8_t {
