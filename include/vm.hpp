@@ -1,7 +1,6 @@
 #pragma once
 
 #include <filesystem>
-#include <fstream>
 #include <vector>
 
 #include "gc.hpp"
@@ -18,9 +17,10 @@ const std::uint8_t MAGIC_NUMBER[4] = {0x49, 0x4D, 0x50, 0x41};
 class VM {
  public:
   VM(fs::path fileName);
+  ~VM();
 
  private:
-  std::ifstream inputStream;
+  char *buffer;
   std::vector<Value> stack;
   fs::path fileName;
   GC gc;
@@ -44,19 +44,19 @@ class VM {
   String *readString(std::uint8_t *bufferPtr);
   Atom *readAtom(std::uint8_t *bufferPtr);
 
-  Value performAdd(std::uint8_t *bufferPtr);
-  Value performSub(std::uint8_t *bufferPtr);
-  Value performMul(std::uint8_t *bufferPtr);
-  Value performDiv(std::uint8_t *bufferPtr);
-  Value performMod(std::uint8_t *bufferPtr);
-  Value performEq(std::uint8_t *bufferPtr);
-  Value performNEq(std::uint8_t *bufferPtr);
-  Value performLT(std::uint8_t *bufferPtr);
-  Value performLTE(std::uint8_t *bufferPtr);
-  Value performGT(std::uint8_t *bufferPtr);
-  Value performGTE(std::uint8_t *bufferPtr);
-  Value performAnd(std::uint8_t *bufferPtr);
-  Value performOr(std::uint8_t *bufferPtr);
+  Value performAdd();
+  Value performSub();
+  Value performMul();
+  Value performDiv();
+  Value performMod();
+  Value performEq();
+  Value performNEq();
+  Value performLT();
+  Value performLTE();
+  Value performGT();
+  Value performGTE();
+  Value performAnd();
+  Value performOr();
 };
 
 enum class InstructionType : std::uint8_t {

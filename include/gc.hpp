@@ -11,7 +11,6 @@ namespace impala {
 struct Object {
   bool marked{false};
   void mark();
-  virtual ~Object();
 };
 
 struct String : public Object {
@@ -37,7 +36,7 @@ struct Value {
 
   std::string toString();
   std::string toDbgString();
-  bool truty();
+  bool truthy();
 };
 
 class GC {

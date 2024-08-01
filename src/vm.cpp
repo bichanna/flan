@@ -1,41 +1,45 @@
 #include "vm.hpp"
 
+#include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <fstream>
 #include <iomanip>
 #include <ios>
+#include <sstream>
 #include <stdexcept>
+#include <variant>
 
 #include "gc.hpp"
 
 using namespace impala;
 
 VM::VM(fs::path fileName) : gc{GC(&this->stack)} {
-  this->inputStream = std::ifstream(fileName);
+  auto inputStream = std::ifstream(fileName);
   this->fileName = fileName;
-  if (!this->inputStream.is_open()) {
-    std::stringstream ss;
-    ss << "Failed to open file" << fileName;
-    throw std::runtime_error(ss.str());
+
+  if (!inputStream.is_open()) {
+    // TODO: Throw error
   }
-}
 
-void VM::run() {
-  std::streamsize size = this->inputStream.tellg();
-  this->inputStream.seekg(0, std::ios::beg);
+  std::streamsize size = inputStream.tellg();
+  inputStream.seekg(0, std::ios::beg);
 
-  char* buffer = new char[size];
-  if (!this->inputStream.read(buffer, size)) {
-    delete[] buffer;
-    std::stringstream ss;
-    ss << "Failed to read file" << this->fileName;
-    throw std::runtime_error(ss.str());
+  this->buffer = new char[size];
+
+  if (!inputStream.read(buffer, size)) {
+    // TODO: Throw error
   }
 
   inputStream.close();
+}
 
-  std::uint8_t* bufferPtr = (std::uint8_t*)buffer;
+VM::~VM() {
+  delete[] this->buffer;
+}
+
+void VM::run() {
+  std::uint8_t* bufferPtr = (std::uint8_t*)this->buffer;
 
   if (this->checkMagicNumber(bufferPtr)) {
     // TODO: Throw error
@@ -81,207 +85,504 @@ void VM::run() {
         break;
       }
 
-      case InstructionType::Add: {
-        this->push(this->performAdd(bufferPtr));
+      case InstructionType::Add:
+        this->push(this->performAdd());
         break;
-      }
 
-      case InstructionType::Sub: {
-        this->push(this->performSub(bufferPtr));
+      case InstructionType::Sub:
+        this->push(this->performSub());
         break;
-      }
 
-      case InstructionType::Mul: {
-        this->push(this->performMul(bufferPtr));
+      case InstructionType::Mul:
+        this->push(this->performMul());
         break;
-      }
 
-      case InstructionType::Div: {
-        this->push(this->performDiv(bufferPtr));
+      case InstructionType::Div:
+        this->push(this->performDiv());
         break;
-      }
 
-      case InstructionType::Mod: {
-        this->push(this->performMod(bufferPtr));
+      case InstructionType::Mod:
+        this->push(this->performMod());
         break;
-      }
 
-      case InstructionType::Eq: {
-        this->push(this->performEq(bufferPtr));
+      case InstructionType::Eq:
+        this->push(this->performEq());
         break;
-      }
 
-      case InstructionType::NEq: {
-        this->push(this->performNEq(bufferPtr));
+      case InstructionType::NEq:
+        this->push(this->performNEq());
         break;
-      }
 
-      case InstructionType::LT: {
-        this->push(this->performLT(bufferPtr));
+      case InstructionType::LT:
+        this->push(this->performLT());
         break;
-      }
 
-      case InstructionType::LTE: {
-        this->push(this->performLTE(bufferPtr));
+      case InstructionType::LTE:
+        this->push(this->performLTE());
         break;
-      }
 
-      case InstructionType::GT: {
-        this->push(this->performLTE(bufferPtr));
+      case InstructionType::GT:
+        this->push(this->performLTE());
         break;
-      }
 
-      case InstructionType::GTE: {
-        this->push(this->performGTE(bufferPtr));
+      case InstructionType::GTE:
+        this->push(this->performGTE());
         break;
-      }
 
-      case InstructionType::And: {
-        this->push(this->performAnd(bufferPtr));
+      case InstructionType::And:
+        this->push(this->performAnd());
         break;
-      }
 
-      case InstructionType::Or: {
-        this->push(this->performOr(bufferPtr));
+      case InstructionType::Or:
+        this->push(this->performOr());
         break;
-      }
 
       default:
         break;
     }
   } while (bufferPtr++);
-
-  delete[] buffer;
 }
 
-Value VM::performAdd(std::uint8_t* bufferPtr) {
+Value VM::performAdd() {
   auto right = this->pop();
   auto left = this->pop();
-  try {
-    return left + right;
-  } catch (const std::exception& e) {
-    throw;
+
+  if (std::holds_alternative<Object*>(left.value)) {
+    auto leftObj = std::get<Object*>(left.value);
+    if (typeid(leftObj) == typeid(String)) {
+      auto l = static_cast<String*>(leftObj);
+      if (std::holds_alternative<Object*>(right.value)) {
+        auto rightObj = std::get<Object*>(right.value);
+        if (typeid(rightObj) == typeid(String)) {
+          auto r = static_cast<String*>(rightObj);
+          return new String(l->value + r->value);
+        }
+      }
+    }
+  } else if (std::holds_alternative<std::int64_t>(left.value)) {
+    auto l = std::get<std::int64_t>(left.value);
+    if (std::holds_alternative<std::int64_t>(right.value)) {
+      auto r = std::get<std::int64_t>(right.value);
+      return l + r;
+    } else if (std::holds_alternative<double>(right.value)) {
+      auto r = std::get<double>(right.value);
+      return (double)l + r;
+    }
+  } else if (std::holds_alternative<double>(left.value)) {
+    auto l = std::get<double>(left.value);
+    if (std::holds_alternative<std::int64_t>(right.value)) {
+      auto r = std::get<std::int64_t>(right.value);
+      return l + (double)r;
+    } else if (std::holds_alternative<double>(right.value)) {
+      auto r = std::get<double>(right.value);
+      return l + r;
+    }
   }
+
+  // TODO: Throw error
+
+  return left;
 }
 
-Value VM::performSub(std::uint8_t* bufferPtr) {
+Value VM::performSub() {
   auto right = this->pop();
   auto left = this->pop();
-  try {
-    return left - right;
-  } catch (const std::exception& e) {
-    throw;
+
+  if (std::holds_alternative<std::int64_t>(left.value)) {
+    auto l = std::get<std::int64_t>(left.value);
+    if (std::holds_alternative<std::int64_t>(right.value)) {
+      auto r = std::get<std::int64_t>(right.value);
+      return l - r;
+    } else if (std::holds_alternative<double>(right.value)) {
+      auto r = std::get<double>(right.value);
+      return (double)l - r;
+    }
+  } else if (std::holds_alternative<double>(left.value)) {
+    auto l = std::get<double>(left.value);
+    if (std::holds_alternative<std::int64_t>(right.value)) {
+      auto r = std::get<std::int64_t>(right.value);
+      return l - (double)r;
+    } else if (std::holds_alternative<double>(right.value)) {
+      auto r = std::get<double>(right.value);
+      return l - r;
+    }
   }
+
+  // TODO: Throw error
+
+  return left;
 }
 
-Value VM::performMul(std::uint8_t* bufferPtr) {
+Value VM::performMul() {
   auto right = this->pop();
   auto left = this->pop();
-  try {
-    return left * right;
-  } catch (const std::exception& e) {
-    throw;
+
+  if (std::holds_alternative<std::int64_t>(left.value)) {
+    auto l = std::get<std::int64_t>(left.value);
+    if (std::holds_alternative<std::int64_t>(right.value)) {
+      auto r = std::get<std::int64_t>(right.value);
+      return l * r;
+    } else if (std::holds_alternative<double>(right.value)) {
+      auto r = std::get<double>(right.value);
+      return (double)l * r;
+    }
+  } else if (std::holds_alternative<double>(left.value)) {
+    auto l = std::get<double>(left.value);
+    if (std::holds_alternative<std::int64_t>(right.value)) {
+      auto r = std::get<std::int64_t>(right.value);
+      return l * (double)r;
+    } else if (std::holds_alternative<double>(right.value)) {
+      auto r = std::get<double>(right.value);
+      return l * r;
+    }
   }
+
+  // TODO: Throw error
+
+  return left;
 }
 
-Value VM::performDiv(std::uint8_t* bufferPtr) {
+Value VM::performDiv() {
   auto right = this->pop();
   auto left = this->pop();
-  try {
-    return left / right;
-  } catch (const std::exception& e) {
-    throw;
+
+  if (std::holds_alternative<std::int64_t>(left.value)) {
+    auto l = std::get<std::int64_t>(left.value);
+    if (std::holds_alternative<std::int64_t>(right.value)) {
+      auto r = std::get<std::int64_t>(right.value);
+      if (r == 0) {
+        // TODO: Throw error
+      }
+      return l / r;
+    } else if (std::holds_alternative<double>(right.value)) {
+      auto r = std::get<double>(right.value);
+      if (r == 0.0) {
+        // TODO: Throw error
+      }
+      return (double)l / r;
+    }
+  } else if (std::holds_alternative<double>(left.value)) {
+    auto l = std::get<double>(left.value);
+    if (std::holds_alternative<std::int64_t>(right.value)) {
+      auto r = std::get<std::int64_t>(right.value);
+      if (r == 0) {
+        // TODO: Throw error
+      }
+      return l / (double)r;
+    } else if (std::holds_alternative<double>(right.value)) {
+      auto r = std::get<double>(right.value);
+      if (r == 0.0) {
+        // TODO: Throw error
+      }
+      return l / r;
+    }
   }
+
+  // TODO: Throw error
+
+  return left;
 }
 
-Value VM::performMod(std::uint8_t* bufferPtr) {
+Value VM::performMod() {
   auto right = this->pop();
   auto left = this->pop();
-  try {
-    return left % right;
-  } catch (const std::exception& e) {
-    throw;
+
+  if (std::holds_alternative<std::int64_t>(left.value)) {
+    auto l = std::get<std::int64_t>(left.value);
+    if (std::holds_alternative<std::int64_t>(right.value)) {
+      auto r = std::get<std::int64_t>(right.value);
+      if (r == 0) {
+        // TODO: Throw error
+      }
+      return l % r;
+    } else if (std::holds_alternative<double>(right.value)) {
+      auto r = std::get<double>(right.value);
+      if (r == 0.0) {
+        // TODO: Throw error
+      }
+      return fmod((double)l, r);
+    }
+  } else if (std::holds_alternative<double>(left.value)) {
+    auto l = std::get<double>(left.value);
+    if (std::holds_alternative<std::int64_t>(right.value)) {
+      auto r = std::get<std::int64_t>(right.value);
+      if (r == 0) {
+        // TODO: Throw error
+      }
+      return fmod(l, (double)r);
+    } else if (std::holds_alternative<double>(right.value)) {
+      auto r = std::get<double>(right.value);
+      if (r == 0.0) {
+        // TODO: Throw error
+      }
+      return fmod(l, r);
+    }
   }
+
+  // TODO: Throw error
+
+  return left;
 }
 
-Value VM::performEq(std::uint8_t* bufferPtr) {
+Value VM::performEq() {
   auto right = this->pop();
   auto left = this->pop();
-  try {
-    return left == right;
-  } catch (const std::exception& e) {
-    throw;
+
+  if (std::holds_alternative<char>(left.value)) {
+    auto l = std::get<char>(left.value);
+    if (l == 0) {
+      return true;
+    } else if (l == 1) {
+      return std::holds_alternative<char>(right.value);
+    }
+  } else if (std::holds_alternative<std::int64_t>(left.value)) {
+    auto l = std::get<std::int64_t>(left.value);
+    if (std::holds_alternative<std::int64_t>(right.value)) {
+      auto r = std::get<std::int64_t>(right.value);
+      return l == r;
+    }
+  } else if (std::holds_alternative<double>(left.value)) {
+    auto l = std::get<double>(left.value);
+    if (std::holds_alternative<double>(right.value)) {
+      auto r = std::get<double>(right.value);
+      return l == r;
+    }
+  } else if (std::holds_alternative<bool>(left.value)) {
+    auto l = std::get<bool>(left.value);
+    if (std::holds_alternative<bool>(right.value)) {
+      auto r = std::get<bool>(right.value);
+      return l == r;
+    }
+  } else if (std::holds_alternative<Object*>(left.value)) {
+    auto leftObj = std::get<Object*>(left.value);
+    if (typeid(leftObj) == typeid(String)) {
+      auto l = static_cast<String*>(leftObj);
+      if (std::holds_alternative<Object*>(right.value)) {
+        auto rightObj = std::get<Object*>(right.value);
+        if (typeid(rightObj) == typeid(String)) {
+          auto r = static_cast<String*>(rightObj);
+          return l->value == r->value;
+        }
+      }
+    } else if (typeid(leftObj) == typeid(Atom)) {
+      auto l = static_cast<Atom*>(leftObj);
+      if (std::holds_alternative<Object*>(right.value)) {
+        auto rightObj = std::get<Object*>(right.value);
+        if (typeid(rightObj) == typeid(Atom)) {
+          auto r = static_cast<Atom*>(rightObj);
+          return l->value == r->value;
+        }
+      }
+    }
   }
+
+  // TODO: Throw error
+
+  return left;
 }
 
-Value VM::performNEq(std::uint8_t* bufferPtr) {
-  auto right = this->pop();
-  auto left = this->pop();
-  try {
-    return left != right;
-  } catch (const std::exception& e) {
-    throw;
-  }
+Value VM::performNEq() {
+  return !std::get<bool>(this->performEq().value);
 }
 
-Value VM::performLT(std::uint8_t* bufferPtr) {
+Value VM::performLT() {
   auto right = this->pop();
   auto left = this->pop();
-  try {
-    return left < right;
-  } catch (const std::exception& e) {
-    throw;
+
+  if (std::holds_alternative<char>(left.value)) {
+    auto l = std::get<char>(left.value);
+    return l == 0;
+  } else if (std::holds_alternative<char>(right.value)) {
+    auto r = std::get<char>(right.value);
+    return r == 0;
+  } else if (std::holds_alternative<std::int64_t>(left.value)) {
+    auto l = std::get<std::int64_t>(left.value);
+    if (std::holds_alternative<std::int64_t>(right.value)) {
+      auto r = std::get<std::int64_t>(right.value);
+      return l < r;
+    } else if (std::holds_alternative<double>(right.value)) {
+      auto r = std::get<double>(right.value);
+      return (double)l < r;
+    }
+  } else if (std::holds_alternative<double>(left.value)) {
+    auto l = std::get<double>(left.value);
+    if (std::holds_alternative<std::int64_t>(right.value)) {
+      auto r = std::get<std::int64_t>(right.value);
+      return l < (double)r;
+    } else if (std::holds_alternative<double>(right.value)) {
+      auto r = std::get<double>(right.value);
+      return l < r;
+    }
+  } else if (std::holds_alternative<Object*>(left.value)) {
+    auto leftObj = std::get<Object*>(left.value);
+    if (typeid(leftObj) == typeid(String)) {
+      auto l = static_cast<String*>(leftObj);
+      if (std::holds_alternative<Object*>(right.value)) {
+        auto rightObj = std::get<Object*>(right.value);
+        if (typeid(rightObj) == typeid(String)) {
+          auto r = static_cast<String*>(rightObj);
+          return l->value < r->value;
+        }
+      }
+    }
   }
+
+  // TODO: Throw error
+
+  return left;
 }
 
-Value VM::performLTE(std::uint8_t* bufferPtr) {
+Value VM::performLTE() {
   auto right = this->pop();
   auto left = this->pop();
-  try {
-    return left <= right;
-  } catch (const std::exception& e) {
-    throw;
+
+  if (std::holds_alternative<char>(left.value)) {
+    auto l = std::get<char>(left.value);
+    return l == 0;
+  } else if (std::holds_alternative<char>(right.value)) {
+    auto r = std::get<char>(right.value);
+    return r == 0;
+  } else if (std::holds_alternative<std::int64_t>(left.value)) {
+    auto l = std::get<std::int64_t>(left.value);
+    if (std::holds_alternative<std::int64_t>(right.value)) {
+      auto r = std::get<std::int64_t>(right.value);
+      return l <= r;
+    } else if (std::holds_alternative<double>(right.value)) {
+      auto r = std::get<double>(right.value);
+      return (double)l <= r;
+    }
+  } else if (std::holds_alternative<double>(left.value)) {
+    auto l = std::get<double>(left.value);
+    if (std::holds_alternative<std::int64_t>(right.value)) {
+      auto r = std::get<std::int64_t>(right.value);
+      return l <= (double)r;
+    } else if (std::holds_alternative<double>(right.value)) {
+      auto r = std::get<double>(right.value);
+      return l <= r;
+    }
+  } else if (std::holds_alternative<Object*>(left.value)) {
+    auto leftObj = std::get<Object*>(left.value);
+    if (typeid(leftObj) == typeid(String)) {
+      auto l = static_cast<String*>(leftObj);
+      if (std::holds_alternative<Object*>(right.value)) {
+        auto rightObj = std::get<Object*>(right.value);
+        if (typeid(rightObj) == typeid(String)) {
+          auto r = static_cast<String*>(rightObj);
+          return l->value <= r->value;
+        }
+      }
+    }
   }
+
+  // TODO: Throw error
+
+  return left;
 }
 
-Value VM::performGT(std::uint8_t* bufferPtr) {
+Value VM::performGT() {
   auto right = this->pop();
   auto left = this->pop();
-  try {
-    return left > right;
-  } catch (const std::exception& e) {
-    throw;
+
+  if (std::holds_alternative<char>(left.value)) {
+    auto l = std::get<char>(left.value);
+    return l == 0;
+  } else if (std::holds_alternative<char>(right.value)) {
+    auto r = std::get<char>(right.value);
+    return r == 0;
+  } else if (std::holds_alternative<std::int64_t>(left.value)) {
+    auto l = std::get<std::int64_t>(left.value);
+    if (std::holds_alternative<std::int64_t>(right.value)) {
+      auto r = std::get<std::int64_t>(right.value);
+      return l > r;
+    } else if (std::holds_alternative<double>(right.value)) {
+      auto r = std::get<double>(right.value);
+      return (double)l > r;
+    }
+  } else if (std::holds_alternative<double>(left.value)) {
+    auto l = std::get<double>(left.value);
+    if (std::holds_alternative<std::int64_t>(right.value)) {
+      auto r = std::get<std::int64_t>(right.value);
+      return l > (double)r;
+    } else if (std::holds_alternative<double>(right.value)) {
+      auto r = std::get<double>(right.value);
+      return l > r;
+    }
+  } else if (std::holds_alternative<Object*>(left.value)) {
+    auto leftObj = std::get<Object*>(left.value);
+    if (typeid(leftObj) == typeid(String)) {
+      auto l = static_cast<String*>(leftObj);
+      if (std::holds_alternative<Object*>(right.value)) {
+        auto rightObj = std::get<Object*>(right.value);
+        if (typeid(rightObj) == typeid(String)) {
+          auto r = static_cast<String*>(rightObj);
+          return l->value > r->value;
+        }
+      }
+    }
   }
+
+  // TODO: Throw error
+
+  return left;
 }
 
-Value VM::performGTE(std::uint8_t* bufferPtr) {
+Value VM::performGTE() {
   auto right = this->pop();
   auto left = this->pop();
-  try {
-    return left >= right;
-  } catch (const std::exception& e) {
-    throw;
+
+  if (std::holds_alternative<char>(left.value)) {
+    auto l = std::get<char>(left.value);
+    return l == 0;
+  } else if (std::holds_alternative<char>(right.value)) {
+    auto r = std::get<char>(right.value);
+    return r == 0;
+  } else if (std::holds_alternative<std::int64_t>(left.value)) {
+    auto l = std::get<std::int64_t>(left.value);
+    if (std::holds_alternative<std::int64_t>(right.value)) {
+      auto r = std::get<std::int64_t>(right.value);
+      return l >= r;
+    } else if (std::holds_alternative<double>(right.value)) {
+      auto r = std::get<double>(right.value);
+      return (double)l >= r;
+    }
+  } else if (std::holds_alternative<double>(left.value)) {
+    auto l = std::get<double>(left.value);
+    if (std::holds_alternative<std::int64_t>(right.value)) {
+      auto r = std::get<std::int64_t>(right.value);
+      return l >= (double)r;
+    } else if (std::holds_alternative<double>(right.value)) {
+      auto r = std::get<double>(right.value);
+      return l >= r;
+    }
+  } else if (std::holds_alternative<Object*>(left.value)) {
+    auto leftObj = std::get<Object*>(left.value);
+    if (typeid(leftObj) == typeid(String)) {
+      auto l = static_cast<String*>(leftObj);
+      if (std::holds_alternative<Object*>(right.value)) {
+        auto rightObj = std::get<Object*>(right.value);
+        if (typeid(rightObj) == typeid(String)) {
+          auto r = static_cast<String*>(rightObj);
+          return l->value >= r->value;
+        }
+      }
+    }
   }
+
+  // TODO: Throw error
+
+  return left;
 }
 
-Value VM::performAnd(std::uint8_t* bufferPtr) {
+Value VM::performAnd() {
   auto right = this->pop();
   auto left = this->pop();
-  try {
-    return left.truty() && right.truty();
-  } catch (const std::exception& e) {
-    throw;
-  }
+  return left.truthy() && right.truthy();
 }
 
-Value VM::performOr(std::uint8_t* bufferPtr) {
+Value VM::performOr() {
   auto right = this->pop();
   auto left = this->pop();
-  try {
-    return left.truty() || right.truty();
-  } catch (const std::exception& e) {
-    throw;
-  }
+  return left.truthy() || right.truthy();
 }
 
 bool VM::checkMagicNumber(std::uint8_t* bufferPtr) {
@@ -348,6 +649,7 @@ Value VM::readValue(std::uint8_t* bufferPtr) {
     case 6:
       return Value(readAtom(bufferPtr));
     default: {
+      // TODO: Update to call runtime_error func
       std::stringstream ss;
       ss << "Invalid value type " << std::hex << std::setw(2)
          << std::setfill('0') << type;

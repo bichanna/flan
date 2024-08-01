@@ -37,7 +37,7 @@ void GC::addObject(Object *object) {
   this->objects.push_back(object);
 }
 
-bool Value::truty() {
+bool Value::truthy() {
   if (std::holds_alternative<char>(this->value)) {
     auto v = std::get<char>(this->value);
     return v == 0;
