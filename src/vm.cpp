@@ -32,6 +32,24 @@ VM::VM(fs::path fileName) : gc{GC(&this->stack)} {
   }
 
   inputStream.close();
+
+  auto bufferPtr = (std::uint8_t*)this->buffer;
+  auto errorInfoListLength = this->readUInt16(bufferPtr);
+  this->errorInfoList.reserve(errorInfoListLength);
+
+  for (auto i = 0; i < errorInfoListLength; i++) {
+    ErrorInfo errInfo;
+    errInfo.line = this->readUInt16(bufferPtr);
+
+    auto length = this->readUInt16(bufferPtr);
+    std::string lineText;
+    lineText.reserve(length);
+    for (auto i = 0; i < length; i++)
+      lineText += (char)this->readUInt8(bufferPtr);
+    errInfo.lineText = lineText;
+
+    this->errorInfoList.push_back(errInfo);
+  }
 }
 
 VM::~VM() {
@@ -40,6 +58,8 @@ VM::~VM() {
 
 void VM::run() {
   std::uint8_t* bufferPtr = (std::uint8_t*)this->buffer;
+
+  bool quit = false;
 
   if (this->checkMagicNumber(bufferPtr)) {
     // TODO: Throw error
@@ -137,10 +157,17 @@ void VM::run() {
         this->push(this->performOr());
         break;
 
+      case InstructionType::Quit:
+        quit = true;
+        break;
+
       default:
+        // TODO: Throw error
         break;
     }
-  } while (bufferPtr++);
+
+    bufferPtr++;
+  } while (!quit);
 }
 
 Value VM::performAdd(std::uint16_t errInfoIdx) {
@@ -719,4 +746,10 @@ Atom* VM::readAtom(std::uint8_t* bufferPtr) {
   s.reserve(length);
   for (auto i = 0; i < length; i++) s += (char)this->readUInt8(bufferPtr);
   return new Atom{s};
+}
+
+void throwError(std::uint16_t errInfoIdx, std::string msg) {
+}
+
+void throwError(std::string msg) {
 }

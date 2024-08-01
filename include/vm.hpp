@@ -14,6 +14,11 @@ const std::uint8_t VERSION[3] = {0, 0, 0};
 
 const std::uint8_t MAGIC_NUMBER[4] = {0x46, 0x4C, 0x41, 0x4E};
 
+struct ErrorInfo {
+  std::uint16_t line;
+  std::string lineText;
+};
+
 class VM {
  public:
   VM(fs::path fileName);
@@ -24,6 +29,7 @@ class VM {
   std::vector<Value> stack;
   fs::path fileName;
   GC gc;
+  std::vector<ErrorInfo> errorInfoList;
 
   void run();
   bool checkMagicNumber(std::uint8_t *bufferPtr);
@@ -34,6 +40,9 @@ class VM {
 
   void push(Value value);
   Value pop();
+
+  void throwError(std::uint16_t errInfoIdx, std::string msg);
+  void throwError(std::string msg);
 
   Value readValue(std::uint8_t *bufferPtr);
   Value readInteger(std::uint8_t *bufferPtr);
@@ -83,5 +92,6 @@ enum class InstructionType : std::uint8_t {
   Jnz,
   InitList,
   InitObj,
+  Quit = 255,
 };
 }  // namespace flan
