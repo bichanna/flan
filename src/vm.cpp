@@ -86,47 +86,47 @@ void VM::run() {
       }
 
       case InstructionType::Add:
-        this->push(this->performAdd());
+        this->push(this->performAdd(this->readUInt16(bufferPtr)));
         break;
 
       case InstructionType::Sub:
-        this->push(this->performSub());
+        this->push(this->performSub(this->readUInt16(bufferPtr)));
         break;
 
       case InstructionType::Mul:
-        this->push(this->performMul());
+        this->push(this->performMul(this->readUInt16(bufferPtr)));
         break;
 
       case InstructionType::Div:
-        this->push(this->performDiv());
+        this->push(this->performDiv(this->readUInt16(bufferPtr)));
         break;
 
       case InstructionType::Mod:
-        this->push(this->performMod());
+        this->push(this->performMod(this->readUInt16(bufferPtr)));
         break;
 
       case InstructionType::Eq:
-        this->push(this->performEq());
+        this->push(this->performEq(this->readUInt16(bufferPtr)));
         break;
 
       case InstructionType::NEq:
-        this->push(this->performNEq());
+        this->push(this->performNEq(this->readUInt16(bufferPtr)));
         break;
 
       case InstructionType::LT:
-        this->push(this->performLT());
+        this->push(this->performLT(this->readUInt16(bufferPtr)));
         break;
 
       case InstructionType::LTE:
-        this->push(this->performLTE());
+        this->push(this->performLTE(this->readUInt16(bufferPtr)));
         break;
 
       case InstructionType::GT:
-        this->push(this->performLTE());
+        this->push(this->performLTE(this->readUInt16(bufferPtr)));
         break;
 
       case InstructionType::GTE:
-        this->push(this->performGTE());
+        this->push(this->performGTE(this->readUInt16(bufferPtr)));
         break;
 
       case InstructionType::And:
@@ -143,7 +143,7 @@ void VM::run() {
   } while (bufferPtr++);
 }
 
-Value VM::performAdd() {
+Value VM::performAdd(std::uint16_t errInfoIdx) {
   auto right = this->pop();
   auto left = this->pop();
 
@@ -179,12 +179,13 @@ Value VM::performAdd() {
     }
   }
 
+  (void)errInfoIdx;
   // TODO: Throw error
 
   return left;
 }
 
-Value VM::performSub() {
+Value VM::performSub(std::uint16_t errInfoIdx) {
   auto right = this->pop();
   auto left = this->pop();
 
@@ -208,12 +209,13 @@ Value VM::performSub() {
     }
   }
 
+  (void)errInfoIdx;
   // TODO: Throw error
 
   return left;
 }
 
-Value VM::performMul() {
+Value VM::performMul(std::uint16_t errInfoIdx) {
   auto right = this->pop();
   auto left = this->pop();
 
@@ -237,12 +239,13 @@ Value VM::performMul() {
     }
   }
 
+  (void)errInfoIdx;
   // TODO: Throw error
 
   return left;
 }
 
-Value VM::performDiv() {
+Value VM::performDiv(std::uint16_t errInfoIdx) {
   auto right = this->pop();
   auto left = this->pop();
 
@@ -278,12 +281,13 @@ Value VM::performDiv() {
     }
   }
 
+  (void)errInfoIdx;
   // TODO: Throw error
 
   return left;
 }
 
-Value VM::performMod() {
+Value VM::performMod(std::uint16_t errInfoIdx) {
   auto right = this->pop();
   auto left = this->pop();
 
@@ -319,12 +323,13 @@ Value VM::performMod() {
     }
   }
 
+  (void)errInfoIdx;
   // TODO: Throw error
 
   return left;
 }
 
-Value VM::performEq() {
+Value VM::performEq(std::uint16_t errInfoIdx) {
   auto right = this->pop();
   auto left = this->pop();
 
@@ -376,16 +381,17 @@ Value VM::performEq() {
     }
   }
 
+  (void)errInfoIdx;
   // TODO: Throw error
 
   return left;
 }
 
-Value VM::performNEq() {
-  return !std::get<bool>(this->performEq().value);
+Value VM::performNEq(std::uint16_t errInfoIdx) {
+  return !std::get<bool>(this->performEq(errInfoIdx).value);
 }
 
-Value VM::performLT() {
+Value VM::performLT(std::uint16_t errInfoIdx) {
   auto right = this->pop();
   auto left = this->pop();
 
@@ -427,12 +433,13 @@ Value VM::performLT() {
     }
   }
 
+  (void)errInfoIdx;
   // TODO: Throw error
 
   return left;
 }
 
-Value VM::performLTE() {
+Value VM::performLTE(std::uint16_t errInfoIdx) {
   auto right = this->pop();
   auto left = this->pop();
 
@@ -474,12 +481,13 @@ Value VM::performLTE() {
     }
   }
 
+  (void)errInfoIdx;
   // TODO: Throw error
 
   return left;
 }
 
-Value VM::performGT() {
+Value VM::performGT(std::uint16_t errInfoIdx) {
   auto right = this->pop();
   auto left = this->pop();
 
@@ -521,12 +529,13 @@ Value VM::performGT() {
     }
   }
 
+  (void)errInfoIdx;
   // TODO: Throw error
 
   return left;
 }
 
-Value VM::performGTE() {
+Value VM::performGTE(std::uint16_t errInfoIdx) {
   auto right = this->pop();
   auto left = this->pop();
 
@@ -568,6 +577,7 @@ Value VM::performGTE() {
     }
   }
 
+  (void)errInfoIdx;
   // TODO: Throw error
 
   return left;

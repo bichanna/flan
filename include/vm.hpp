@@ -44,17 +44,17 @@ class VM {
   String *readString(std::uint8_t *bufferPtr);
   Atom *readAtom(std::uint8_t *bufferPtr);
 
-  Value performAdd();
-  Value performSub();
-  Value performMul();
-  Value performDiv();
-  Value performMod();
-  Value performEq();
-  Value performNEq();
-  Value performLT();
-  Value performLTE();
-  Value performGT();
-  Value performGTE();
+  Value performAdd(std::uint16_t errInfoIdx);
+  Value performSub(std::uint16_t errInfoIdx);
+  Value performMul(std::uint16_t errInfoIdx);
+  Value performDiv(std::uint16_t errInfoIdx);
+  Value performMod(std::uint16_t errInfoIdx);
+  Value performEq(std::uint16_t errInfoIdx);
+  Value performNEq(std::uint16_t errInfoIdx);
+  Value performLT(std::uint16_t errInfoIdx);
+  Value performLTE(std::uint16_t errInfoIdx);
+  Value performGT(std::uint16_t errInfoIdx);
+  Value performGTE(std::uint16_t errInfoIdx);
   Value performAnd();
   Value performOr();
 };
