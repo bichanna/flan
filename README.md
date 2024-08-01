@@ -25,7 +25,7 @@ std::for(names) ::: (name)
 ```
 
 ```js
-std := import(Std);
+std := import(Std)
 
 fn fib(n)
   if (n < 2)
