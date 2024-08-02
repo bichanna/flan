@@ -23,6 +23,7 @@ class VM {
  public:
   VM(fs::path fileName);
   ~VM();
+  void run();
 
  private:
   char *buffer;
@@ -31,7 +32,7 @@ class VM {
   GC gc;
   std::vector<ErrorInfo> errorInfoList;
 
-  void run();
+  void readErrorInfoSection();
   bool checkMagicNumber(std::uint8_t *bufferPtr);
   bool checkVersion(std::uint8_t *bufferPtr);
   std::uint8_t readUInt8(std::uint8_t *bufferPtr);

@@ -38,6 +38,14 @@ VM::VM(fs::path fileName) : gc{GC(&this->stack)} {
 
   inputStream.close();
 
+  this->readErrorInfoSection();
+}
+
+VM::~VM() {
+  delete[] this->buffer;
+}
+
+void VM::readErrorInfoSection() {
   auto bufferPtr = reinterpret_cast<std::uint8_t*>(this->buffer);
   auto errorInfoListLength = this->readUInt16(bufferPtr);
   this->errorInfoList.reserve(errorInfoListLength);
@@ -55,10 +63,6 @@ VM::VM(fs::path fileName) : gc{GC(&this->stack)} {
 
     this->errorInfoList.push_back(errInfo);
   }
-}
-
-VM::~VM() {
-  delete[] this->buffer;
 }
 
 void VM::run() {
