@@ -1,10 +1,11 @@
 #pragma once
-
 #include <cstdint>
 #include <list>
 #include <string>
 #include <variant>
 #include <vector>
+
+#include "utf8.hpp"
 
 namespace flan {
 
@@ -15,12 +16,14 @@ struct Object {
 
 struct String : public Object {
   std::string value;
-  String(std::string value) : value{value} {};
+  std::size_t length;
+  String(std::string value) : value{value}, length{utf8len(value.c_str())} {};
 };
 
 struct Atom : public Object {
   std::string value;
-  Atom(std::string value) : value{value} {};
+  std::size_t length;
+  Atom(std::string value) : value{value}, length{utf8len(value.c_str())} {};
 };
 
 struct Value {
