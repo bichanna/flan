@@ -83,10 +83,9 @@ std::string Value::toString() {
 }
 
 std::string Value::toDbgString() {
-  if (std::holds_alternative<std::int64_t>(this->value) ||
-      std::holds_alternative<double>(this->value) ||
-      std::holds_alternative<bool>(this->value)) {
+  if (!std::holds_alternative<Object *>(this->value)) {
     return this->toString();
+  } else {
+    return "'" + this->toString() + "'";
   }
-  return "'" + this->toString() + "'";
 }
