@@ -29,9 +29,10 @@ struct Atom : public Object {
 struct Value {
   // Empty -> (char)0
   // None  -> (char)1
-  std::variant<char, std::int64_t, double, bool, Object*> value{(char)0};
+  std::variant<char, std::int64_t, double, bool, Object*> value{
+      static_cast<char>(0)};
 
-  Value() : value{(char)0} {};
+  Value() : value{static_cast<char>(0)} {};
   Value(std::int64_t value) : value{value} {};
   Value(double value) : value{value} {};
   Value(bool value) : value{value} {};

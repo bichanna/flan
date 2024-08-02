@@ -26,7 +26,7 @@ void GC::perform() {
   for (auto obj : this->objects) {
     if (!obj->marked) {
       this->objects.remove(obj);
-      delete obj;
+      delete obj;  // Clear memory :)
     } else {
       obj->marked = false;
     }

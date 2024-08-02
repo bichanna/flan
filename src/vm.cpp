@@ -38,7 +38,7 @@ VM::VM(fs::path fileName) : gc{GC(&this->stack)} {
 
   inputStream.close();
 
-  auto bufferPtr = (std::uint8_t*)this->buffer;
+  auto bufferPtr = reinterpret_cast<std::uint8_t*>(this->buffer);
   auto errorInfoListLength = this->readUInt16(bufferPtr);
   this->errorInfoList.reserve(errorInfoListLength);
 
@@ -50,7 +50,7 @@ VM::VM(fs::path fileName) : gc{GC(&this->stack)} {
     std::string lineText;
     lineText.reserve(length);
     for (auto i = 0; i < length; i++)
-      lineText += (char)this->readUInt8(bufferPtr);
+      lineText += static_cast<char>(this->readUInt8(bufferPtr));
     errInfo.lineText = lineText;
 
     this->errorInfoList.push_back(errInfo);
@@ -62,7 +62,7 @@ VM::~VM() {
 }
 
 void VM::run() {
-  std::uint8_t* bufferPtr = (std::uint8_t*)this->buffer;
+  auto bufferPtr = reinterpret_cast<std::uint8_t*>(this->buffer);
 
   bool quit = false;
 
@@ -197,13 +197,13 @@ Value VM::performAdd(std::uint16_t errInfoIdx) {
       return l + r;
     } else if (std::holds_alternative<double>(right.value)) {
       auto r = std::get<double>(right.value);
-      return (double)l + r;
+      return static_cast<double>(l) + r;
     }
   } else if (std::holds_alternative<double>(left.value)) {
     auto l = std::get<double>(left.value);
     if (std::holds_alternative<std::int64_t>(right.value)) {
       auto r = std::get<std::int64_t>(right.value);
-      return l + (double)r;
+      return l + static_cast<double>(r);
     } else if (std::holds_alternative<double>(right.value)) {
       auto r = std::get<double>(right.value);
       return l + r;
@@ -229,13 +229,13 @@ Value VM::performSub(std::uint16_t errInfoIdx) {
       return l - r;
     } else if (std::holds_alternative<double>(right.value)) {
       auto r = std::get<double>(right.value);
-      return (double)l - r;
+      return static_cast<double>(l) - r;
     }
   } else if (std::holds_alternative<double>(left.value)) {
     auto l = std::get<double>(left.value);
     if (std::holds_alternative<std::int64_t>(right.value)) {
       auto r = std::get<std::int64_t>(right.value);
-      return l - (double)r;
+      return l - static_cast<double>(r);
     } else if (std::holds_alternative<double>(right.value)) {
       auto r = std::get<double>(right.value);
       return l - r;
@@ -262,13 +262,13 @@ Value VM::performMul(std::uint16_t errInfoIdx) {
       return l * r;
     } else if (std::holds_alternative<double>(right.value)) {
       auto r = std::get<double>(right.value);
-      return (double)l * r;
+      return static_cast<double>(l) * r;
     }
   } else if (std::holds_alternative<double>(left.value)) {
     auto l = std::get<double>(left.value);
     if (std::holds_alternative<std::int64_t>(right.value)) {
       auto r = std::get<std::int64_t>(right.value);
-      return l * (double)r;
+      return l * static_cast<double>(r);
     } else if (std::holds_alternative<double>(right.value)) {
       auto r = std::get<double>(right.value);
       return l * r;
@@ -297,14 +297,14 @@ Value VM::performDiv(std::uint16_t errInfoIdx) {
     } else if (std::holds_alternative<double>(right.value)) {
       auto r = std::get<double>(right.value);
       if (r == 0.0) this->throwError(errInfoIdx, "Cannot divide by zero");
-      return (double)l / r;
+      return static_cast<double>(l) / r;
     }
   } else if (std::holds_alternative<double>(left.value)) {
     auto l = std::get<double>(left.value);
     if (std::holds_alternative<std::int64_t>(right.value)) {
       auto r = std::get<std::int64_t>(right.value);
       if (r == 0) this->throwError(errInfoIdx, "Cannot divide by zero");
-      return l / (double)r;
+      return l / static_cast<double>(r);
     } else if (std::holds_alternative<double>(right.value)) {
       auto r = std::get<double>(right.value);
       if (r == 0.0) this->throwError(errInfoIdx, "Cannot divide by zero");
@@ -333,14 +333,14 @@ Value VM::performMod(std::uint16_t errInfoIdx) {
     } else if (std::holds_alternative<double>(right.value)) {
       auto r = std::get<double>(right.value);
       if (r == 0.0) this->throwError(errInfoIdx, "Cannot mod by 0");
-      return fmod((double)l, r);
+      return fmod(static_cast<double>(l), r);
     }
   } else if (std::holds_alternative<double>(left.value)) {
     auto l = std::get<double>(left.value);
     if (std::holds_alternative<std::int64_t>(right.value)) {
       auto r = std::get<std::int64_t>(right.value);
       if (r == 0) this->throwError(errInfoIdx, "Cannot mod by 0");
-      return fmod(l, (double)r);
+      return fmod(l, static_cast<double>(r));
     } else if (std::holds_alternative<double>(right.value)) {
       auto r = std::get<double>(right.value);
       if (r == 0.0) this->throwError(errInfoIdx, "Cannot mod by 0");
@@ -373,12 +373,18 @@ Value VM::performEq(std::uint16_t errInfoIdx) {
     if (std::holds_alternative<std::int64_t>(right.value)) {
       auto r = std::get<std::int64_t>(right.value);
       return l == r;
+    } else if (std::holds_alternative<double>(right.value)) {
+      auto r = std::get<double>(right.value);
+      return static_cast<double>(l) == r;
     }
   } else if (std::holds_alternative<double>(left.value)) {
     auto l = std::get<double>(left.value);
     if (std::holds_alternative<double>(right.value)) {
       auto r = std::get<double>(right.value);
       return l == r;
+    } else if (std::holds_alternative<std::int64_t>(right.value)) {
+      auto r = std::get<std::int64_t>(right.value);
+      return l == static_cast<double>(r);
     }
   } else if (std::holds_alternative<bool>(left.value)) {
     auto l = std::get<bool>(left.value);
@@ -427,10 +433,10 @@ Value VM::performLT(std::uint16_t errInfoIdx) {
 
   if (std::holds_alternative<char>(left.value)) {
     auto l = std::get<char>(left.value);
-    return l == 0;
+    if (l == 0) return true;
   } else if (std::holds_alternative<char>(right.value)) {
     auto r = std::get<char>(right.value);
-    return r == 0;
+    if (r == 0) return true;
   } else if (std::holds_alternative<std::int64_t>(left.value)) {
     auto l = std::get<std::int64_t>(left.value);
     if (std::holds_alternative<std::int64_t>(right.value)) {
@@ -438,13 +444,13 @@ Value VM::performLT(std::uint16_t errInfoIdx) {
       return l < r;
     } else if (std::holds_alternative<double>(right.value)) {
       auto r = std::get<double>(right.value);
-      return (double)l < r;
+      return static_cast<double>(l) < r;
     }
   } else if (std::holds_alternative<double>(left.value)) {
     auto l = std::get<double>(left.value);
     if (std::holds_alternative<std::int64_t>(right.value)) {
       auto r = std::get<std::int64_t>(right.value);
-      return l < (double)r;
+      return l < static_cast<double>(r);
     } else if (std::holds_alternative<double>(right.value)) {
       auto r = std::get<double>(right.value);
       return l < r;
@@ -488,13 +494,13 @@ Value VM::performLTE(std::uint16_t errInfoIdx) {
       return l <= r;
     } else if (std::holds_alternative<double>(right.value)) {
       auto r = std::get<double>(right.value);
-      return (double)l <= r;
+      return static_cast<double>(l) <= r;
     }
   } else if (std::holds_alternative<double>(left.value)) {
     auto l = std::get<double>(left.value);
     if (std::holds_alternative<std::int64_t>(right.value)) {
       auto r = std::get<std::int64_t>(right.value);
-      return l <= (double)r;
+      return l <= static_cast<double>(r);
     } else if (std::holds_alternative<double>(right.value)) {
       auto r = std::get<double>(right.value);
       return l <= r;
@@ -538,13 +544,13 @@ Value VM::performGT(std::uint16_t errInfoIdx) {
       return l > r;
     } else if (std::holds_alternative<double>(right.value)) {
       auto r = std::get<double>(right.value);
-      return (double)l > r;
+      return static_cast<double>(l) > r;
     }
   } else if (std::holds_alternative<double>(left.value)) {
     auto l = std::get<double>(left.value);
     if (std::holds_alternative<std::int64_t>(right.value)) {
       auto r = std::get<std::int64_t>(right.value);
-      return l > (double)r;
+      return l > static_cast<double>(r);
     } else if (std::holds_alternative<double>(right.value)) {
       auto r = std::get<double>(right.value);
       return l > r;
@@ -577,10 +583,10 @@ Value VM::performGTE(std::uint16_t errInfoIdx) {
 
   if (std::holds_alternative<char>(left.value)) {
     auto l = std::get<char>(left.value);
-    return l == 0;
+    if (l == 0) return true;
   } else if (std::holds_alternative<char>(right.value)) {
     auto r = std::get<char>(right.value);
-    return r == 0;
+    if (r == 0) return true;
   } else if (std::holds_alternative<std::int64_t>(left.value)) {
     auto l = std::get<std::int64_t>(left.value);
     if (std::holds_alternative<std::int64_t>(right.value)) {
@@ -588,13 +594,13 @@ Value VM::performGTE(std::uint16_t errInfoIdx) {
       return l >= r;
     } else if (std::holds_alternative<double>(right.value)) {
       auto r = std::get<double>(right.value);
-      return (double)l >= r;
+      return static_cast<double>(l) >= r;
     }
   } else if (std::holds_alternative<double>(left.value)) {
     auto l = std::get<double>(left.value);
     if (std::holds_alternative<std::int64_t>(right.value)) {
       auto r = std::get<std::int64_t>(right.value);
-      return l >= (double)r;
+      return l >= static_cast<double>(r);
     } else if (std::holds_alternative<double>(right.value)) {
       auto r = std::get<double>(right.value);
       return l >= r;
@@ -655,7 +661,8 @@ std::uint8_t VM::readUInt8(std::uint8_t* bufferPtr) {
 std::uint16_t VM::readUInt16(std::uint8_t* bufferPtr) {
   auto low_byte = this->readUInt8(bufferPtr);
   auto high_byte = this->readUInt8(bufferPtr);
-  return (std::uint16_t)low_byte | ((std::uint16_t)high_byte << 8);
+  return static_cast<std::uint16_t>(low_byte) |
+         (static_cast<std::uint16_t>(high_byte) << 8);
 }
 
 std::uint32_t VM::readUInt32(std::uint8_t* bufferPtr) {
@@ -663,8 +670,10 @@ std::uint32_t VM::readUInt32(std::uint8_t* bufferPtr) {
   auto byte2 = this->readUInt8(bufferPtr);
   auto byte3 = this->readUInt8(bufferPtr);
   auto byte4 = this->readUInt8(bufferPtr);
-  return (std::uint32_t)byte1 | ((std::uint32_t)byte2) |
-         ((std::uint32_t)byte3) | ((std::uint32_t)byte4);
+  return static_cast<std::uint32_t>(byte1) |
+         (static_cast<std::uint32_t>(byte2)) |
+         (static_cast<std::uint32_t>(byte3)) |
+         (static_cast<std::uint32_t>(byte4));
 }
 
 void VM::push(Value value) {
