@@ -52,6 +52,7 @@ class VM {
   Value readEmpty();
   String *readString(std::uint8_t *bufferPtr);
   Atom *readAtom(std::uint8_t *bufferPtr);
+  Either *readEither(std::uint8_t *bufferPtr);
 
   Value performAdd(std::uint16_t errInfoIdx);
   Value performSub(std::uint16_t errInfoIdx);
@@ -66,6 +67,8 @@ class VM {
   Value performGTE(std::uint16_t errInfoIdx);
   Value performAnd();
   Value performOr();
+
+  void jumpForward(std::size_t offset);
 };
 
 enum class InstructionType : std::uint8_t {
@@ -92,6 +95,7 @@ enum class InstructionType : std::uint8_t {
   Jnz,
   InitList,
   InitObj,
+  GetLeft,
   Quit = 255,
 };
 }  // namespace flan

@@ -9,6 +9,22 @@
 
 namespace flan {
 
+struct Object;
+
+struct Value {
+  std::variant<char, std::int64_t, double, bool, Object*> value;
+
+  Value() : value{static_cast<char>(0)} {};
+  Value(std::int64_t value) : value{value} {};
+  Value(double value) : value{value} {};
+  Value(bool value) : value{value} {};
+  Value(Object* obj) : value{obj} {};
+
+  std::string toString();
+  std::string toDbgString();
+  bool truthy();
+};
+
 struct Object {
   bool marked{false};
   void mark();
@@ -26,19 +42,13 @@ struct Atom : public Object {
   Atom(std::string value) : value{value}, length{utf8len(value.c_str())} {};
 };
 
-struct Value {
-  std::variant<char, std::int64_t, double, bool, Object*> value{
-      static_cast<char>(0)};
+enum class EitherFlag : char { Left, Right };
 
-  Value() : value{static_cast<char>(0)} {};
-  Value(std::int64_t value) : value{value} {};
-  Value(double value) : value{value} {};
-  Value(bool value) : value{value} {};
-  Value(Object* obj) : value{obj} {};
-
-  std::string toString();
-  std::string toDbgString();
-  bool truthy();
+struct Either : public Object {
+  Value value;
+  EitherFlag flag;
+  Either(Value value, EitherFlag flag) : value{value}, flag{flag} {};
+  bool isLeft();
 };
 
 class GC {

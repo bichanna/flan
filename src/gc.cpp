@@ -69,15 +69,27 @@ std::string Value::toString() {
       return static_cast<String *>(obj)->value;
     else if (typeid(obj) == typeid(Atom))
       return static_cast<Atom *>(obj)->value;
+    else if (typeid(obj) == typeid(Either)) {
+      auto either = static_cast<Either *>(obj);
+      std::string s{"Either "};
+      s += ((either->flag == EitherFlag::Left) ? "Left:" : "Right:") +
+           either->value.toString();
+      return s;
+    }
   }
 
-  return ":UNKNOWN:";
+  return "::UNKNOWN VALUE::";
 }
 
 std::string Value::toDbgString() {
   if (!std::holds_alternative<Object *>(this->value)) {
-    return this->toString();
-  } else {
-    return "'" + this->toString() + "'";
+    auto obj = std::get<Object *>(this->value);
+    if (typeid(obj) != typeid(String)) return this->toString();
   }
+
+  return "'" + this->toString() + "'";
+}
+
+bool Either::isLeft() {
+  return this->flag == EitherFlag::Left;
 }

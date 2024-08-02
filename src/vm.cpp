@@ -16,6 +16,8 @@
 using namespace flan;
 
 VM::VM(fs::path fileName) : gc{GC(&this->stack)} {
+  this->stack.reserve(UINT8_MAX);
+
   auto inputStream = std::ifstream(fileName);
   this->fileName = fileName;
 
@@ -159,6 +161,29 @@ void VM::run() {
       case InstructionType::Or:
         this->push(this->performOr());
         break;
+
+      case InstructionType::Not: {
+        Value& last = this->stack.back();
+        last.value = !last.truthy();
+        break;
+      }
+
+      case InstructionType::Jmp: {
+        this->jumpForward(this->readUInt32(bufferPtr));
+        break;
+      }
+
+      case InstructionType::Jz: {
+        auto offset = this->readUInt32(bufferPtr);
+        if (!this->pop().truthy()) this->jumpForward(offset);
+        break;
+      }
+
+      case InstructionType::Jnz: {
+        auto offset = this->readUInt32(bufferPtr);
+        if (this->pop().truthy()) this->jumpForward(offset);
+        break;
+      }
 
       case InstructionType::Quit:
         quit = true;
@@ -685,6 +710,8 @@ Value VM::readValue(std::uint8_t* bufferPtr) {
       return Value(readString(bufferPtr));
     case 5:
       return Value(readAtom(bufferPtr));
+    case 6:
+      return Value(readEither(bufferPtr));
     default: {
       std::stringstream ss;
       ss << "Invalid value type " << std::hex << std::setw(2)
@@ -742,6 +769,12 @@ Atom* VM::readAtom(std::uint8_t* bufferPtr) {
   for (auto i = 0; i < length; i++)
     s += static_cast<char>(this->readUInt8(bufferPtr));
   return new Atom{s};
+}
+
+Either* VM::readEither(std::uint8_t* bufferPtr) {
+  auto flag = this->readUInt8(bufferPtr);
+  auto value = this->readValue(bufferPtr);
+  return new Either(value, static_cast<EitherFlag>(flag));
 }
 
 void VM::throwError(std::uint16_t errInfoIdx, std::string msg) {
