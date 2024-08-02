@@ -70,10 +70,10 @@ void VM::run() {
 
   bool quit = false;
 
-  if (this->checkMagicNumber(bufferPtr)) {
+  if (!this->checkMagicNumber(bufferPtr)) {
     this->throwError("Invalid Magic number");
   }
-  if (this->checkVersion(bufferPtr)) {
+  if (!this->checkVersion(bufferPtr)) {
     this->throwError("Please update the Flan runtime");
   }
 
@@ -148,7 +148,6 @@ void VM::run() {
       case InstructionType::GT:
         this->push(this->performLTE(this->readUInt16(bufferPtr)));
         break;
-
       case InstructionType::GTE:
         this->push(this->performGTE(this->readUInt16(bufferPtr)));
         break;
@@ -366,12 +365,7 @@ Value VM::performEq(std::uint16_t errInfoIdx) {
   auto left = this->pop();
 
   if (std::holds_alternative<char>(left.value)) {
-    auto l = std::get<char>(left.value);
-    if (l == 0) {
-      return true;
-    } else if (l == 1) {
-      return std::holds_alternative<char>(right.value);
-    }
+    return true;
   } else if (std::holds_alternative<std::int64_t>(left.value)) {
     auto l = std::get<std::int64_t>(left.value);
     if (std::holds_alternative<std::int64_t>(right.value)) {
@@ -436,11 +430,7 @@ Value VM::performLT(std::uint16_t errInfoIdx) {
   auto left = this->pop();
 
   if (std::holds_alternative<char>(left.value)) {
-    auto l = std::get<char>(left.value);
-    if (l == 0) return true;
-  } else if (std::holds_alternative<char>(right.value)) {
-    auto r = std::get<char>(right.value);
-    if (r == 0) return true;
+    return true;
   } else if (std::holds_alternative<std::int64_t>(left.value)) {
     auto l = std::get<std::int64_t>(left.value);
     if (std::holds_alternative<std::int64_t>(right.value)) {
@@ -486,11 +476,7 @@ Value VM::performLTE(std::uint16_t errInfoIdx) {
   auto left = this->pop();
 
   if (std::holds_alternative<char>(left.value)) {
-    auto l = std::get<char>(left.value);
-    return l == 0;
-  } else if (std::holds_alternative<char>(right.value)) {
-    auto r = std::get<char>(right.value);
-    return r == 0;
+    return true;
   } else if (std::holds_alternative<std::int64_t>(left.value)) {
     auto l = std::get<std::int64_t>(left.value);
     if (std::holds_alternative<std::int64_t>(right.value)) {
@@ -536,11 +522,7 @@ Value VM::performGT(std::uint16_t errInfoIdx) {
   auto left = this->pop();
 
   if (std::holds_alternative<char>(left.value)) {
-    auto l = std::get<char>(left.value);
-    return l == 0;
-  } else if (std::holds_alternative<char>(right.value)) {
-    auto r = std::get<char>(right.value);
-    return r == 0;
+    return true;
   } else if (std::holds_alternative<std::int64_t>(left.value)) {
     auto l = std::get<std::int64_t>(left.value);
     if (std::holds_alternative<std::int64_t>(right.value)) {
@@ -586,11 +568,7 @@ Value VM::performGTE(std::uint16_t errInfoIdx) {
   auto left = this->pop();
 
   if (std::holds_alternative<char>(left.value)) {
-    auto l = std::get<char>(left.value);
-    if (l == 0) return true;
-  } else if (std::holds_alternative<char>(right.value)) {
-    auto r = std::get<char>(right.value);
-    if (r == 0) return true;
+    return true;
   } else if (std::holds_alternative<std::int64_t>(left.value)) {
     auto l = std::get<std::int64_t>(left.value);
     if (std::holds_alternative<std::int64_t>(right.value)) {
@@ -652,7 +630,7 @@ bool VM::checkMagicNumber(std::uint8_t* bufferPtr) {
 
 bool VM::checkVersion(std::uint8_t* bufferPtr) {
   return (this->readUInt8(bufferPtr) == VERSION[0]) &&
-         (this->readUInt8(bufferPtr) == VERSION[1]) &&
+         (this->readUInt8(bufferPtr) <= VERSION[1]) &&
          (this->readUInt8(bufferPtr) <= VERSION[2]);
 }
 
@@ -702,12 +680,10 @@ Value VM::readValue(std::uint8_t* bufferPtr) {
     case 2:
       return this->readBool(bufferPtr);
     case 3:
-      return this->readNone();
-    case 4:
       return this->readEmpty();
-    case 5:
+    case 4:
       return Value(readString(bufferPtr));
-    case 6:
+    case 5:
       return Value(readAtom(bufferPtr));
     default: {
       std::stringstream ss;
@@ -746,23 +722,16 @@ Value VM::readBool(std::uint8_t* bufferPtr) {
   return this->readUInt8(bufferPtr) == 1;
 }
 
-Value VM::readNone() {
-  Value v;
-  v.value = 1;
-  return v;
-}
-
 Value VM::readEmpty() {
-  Value v;
-  v.value = 0;
-  return v;
+  return Value();
 }
 
 String* VM::readString(std::uint8_t* bufferPtr) {
   auto length = this->readUInt16(bufferPtr);
   std::string s;
   s.reserve(length);
-  for (auto i = 0; i < length; i++) s += (char)this->readUInt8(bufferPtr);
+  for (auto i = 0; i < length; i++)
+    s += static_cast<char>(this->readUInt8(bufferPtr));
   return new String{s};
 }
 
@@ -770,7 +739,8 @@ Atom* VM::readAtom(std::uint8_t* bufferPtr) {
   auto length = this->readUInt8(bufferPtr);
   std::string s;
   s.reserve(length);
-  for (auto i = 0; i < length; i++) s += (char)this->readUInt8(bufferPtr);
+  for (auto i = 0; i < length; i++)
+    s += static_cast<char>(this->readUInt8(bufferPtr));
   return new Atom{s};
 }
 

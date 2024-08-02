@@ -49,7 +49,6 @@ class VM {
   Value readInteger(std::uint8_t *bufferPtr);
   Value readFloat(std::uint8_t *bufferPtr);
   Value readBool(std::uint8_t *bufferPtr);
-  Value readNone();
   Value readEmpty();
   String *readString(std::uint8_t *bufferPtr);
   Atom *readAtom(std::uint8_t *bufferPtr);

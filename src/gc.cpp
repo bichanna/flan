@@ -40,10 +40,7 @@ void GC::addObject(Object *object) {
 }
 
 bool Value::truthy() {
-  if (std::holds_alternative<char>(this->value)) {
-    auto v = std::get<char>(this->value);
-    return v == 0;
-  } else if (std::holds_alternative<std::int64_t>(this->value)) {
+  if (std::holds_alternative<std::int64_t>(this->value)) {
     auto v = std::get<std::int64_t>(this->value);
     return v != 0;
   } else if (std::holds_alternative<double>(this->value)) {
@@ -59,12 +56,7 @@ bool Value::truthy() {
 
 std::string Value::toString() {
   if (std::holds_alternative<char>(this->value)) {
-    auto c = std::get<char>(this->value);
-    if (c == 0)
-      return "_";
-    else {
-      return "none";
-    }
+    return "_";
   } else if (std::holds_alternative<std::int64_t>(this->value)) {
     return std::to_string(std::get<std::int64_t>(this->value));
   } else if (std::holds_alternative<double>(this->value)) {

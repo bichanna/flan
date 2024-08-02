@@ -27,8 +27,6 @@ struct Atom : public Object {
 };
 
 struct Value {
-  // Empty -> (char)0
-  // None  -> (char)1
   std::variant<char, std::int64_t, double, bool, Object*> value{
       static_cast<char>(0)};
 
