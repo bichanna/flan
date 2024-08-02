@@ -2,12 +2,13 @@
 
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <iomanip>
 #include <ios>
+#include <iostream>
 #include <sstream>
-#include <stdexcept>
 #include <variant>
 
 #include "gc.hpp"
@@ -19,7 +20,9 @@ VM::VM(fs::path fileName) : gc{GC(&this->stack)} {
   this->fileName = fileName;
 
   if (!inputStream.is_open()) {
-    // TODO: Throw error
+    std::stringstream ss;
+    ss << "Failed to open file" << this->fileName;
+    this->throwError(ss.str());
   }
 
   std::streamsize size = inputStream.tellg();
@@ -28,7 +31,9 @@ VM::VM(fs::path fileName) : gc{GC(&this->stack)} {
   this->buffer = new char[size];
 
   if (!inputStream.read(buffer, size)) {
-    // TODO: Throw error
+    std::stringstream ss;
+    ss << "Failed to read file " << this->fileName;
+    this->throwError(ss.str());
   }
 
   inputStream.close();
@@ -62,10 +67,10 @@ void VM::run() {
   bool quit = false;
 
   if (this->checkMagicNumber(bufferPtr)) {
-    // TODO: Throw error
+    this->throwError("Invalid Magic number");
   }
   if (this->checkVersion(bufferPtr)) {
-    // TODO: Throw error
+    this->throwError("Please update the Flan runtime");
   }
 
   do {
@@ -75,13 +80,8 @@ void VM::run() {
       case InstructionType::Push: {
         bufferPtr++;
         auto length = this->readUInt8(bufferPtr);
-        for (auto i = 0; i < length; i++) {
-          try {
-            this->push(this->readValue(bufferPtr));
-          } catch (const std::exception& e) {
-            // TODO: Throw error
-          }
-        }
+        for (auto i = 0; i < length; i++)
+          this->push(this->readValue(bufferPtr));
         break;
       }
 
@@ -161,9 +161,13 @@ void VM::run() {
         quit = true;
         break;
 
-      default:
-        // TODO: Throw error
+      default: {
+        std::stringstream ss;
+        ss << "Invalid instruction " << std::hex << std::setw(2)
+           << std::setfill('0') << static_cast<std::uint8_t>(instType);
+        this->throwError(ss.str());
         break;
+      }
     }
 
     bufferPtr++;
@@ -206,9 +210,11 @@ Value VM::performAdd(std::uint16_t errInfoIdx) {
     }
   }
 
-  (void)errInfoIdx;
-  // TODO: Throw error
+  std::stringstream ss;
+  ss << "Cannot add " << left.toDbgString() << " and " << right.toDbgString();
+  this->throwError(errInfoIdx, ss.str());
 
+  // Won't run
   return left;
 }
 
@@ -236,9 +242,12 @@ Value VM::performSub(std::uint16_t errInfoIdx) {
     }
   }
 
-  (void)errInfoIdx;
-  // TODO: Throw error
+  std::stringstream ss;
+  ss << "Cannot subtract " << right.toDbgString() << " from "
+     << left.toDbgString();
+  this->throwError(errInfoIdx, ss.str());
 
+  // Won't run
   return left;
 }
 
@@ -266,9 +275,12 @@ Value VM::performMul(std::uint16_t errInfoIdx) {
     }
   }
 
-  (void)errInfoIdx;
-  // TODO: Throw error
+  std::stringstream ss;
+  ss << "Cannot multipy " << left.toDbgString() << " by "
+     << right.toDbgString();
+  this->throwError(errInfoIdx, ss.str());
 
+  // Won't run
   return left;
 }
 
@@ -280,37 +292,31 @@ Value VM::performDiv(std::uint16_t errInfoIdx) {
     auto l = std::get<std::int64_t>(left.value);
     if (std::holds_alternative<std::int64_t>(right.value)) {
       auto r = std::get<std::int64_t>(right.value);
-      if (r == 0) {
-        // TODO: Throw error
-      }
+      if (r == 0) this->throwError(errInfoIdx, "Cannot divide by zero");
       return l / r;
     } else if (std::holds_alternative<double>(right.value)) {
       auto r = std::get<double>(right.value);
-      if (r == 0.0) {
-        // TODO: Throw error
-      }
+      if (r == 0.0) this->throwError(errInfoIdx, "Cannot divide by zero");
       return (double)l / r;
     }
   } else if (std::holds_alternative<double>(left.value)) {
     auto l = std::get<double>(left.value);
     if (std::holds_alternative<std::int64_t>(right.value)) {
       auto r = std::get<std::int64_t>(right.value);
-      if (r == 0) {
-        // TODO: Throw error
-      }
+      if (r == 0) this->throwError(errInfoIdx, "Cannot divide by zero");
       return l / (double)r;
     } else if (std::holds_alternative<double>(right.value)) {
       auto r = std::get<double>(right.value);
-      if (r == 0.0) {
-        // TODO: Throw error
-      }
+      if (r == 0.0) this->throwError(errInfoIdx, "Cannot divide by zero");
       return l / r;
     }
   }
 
-  (void)errInfoIdx;
-  // TODO: Throw error
+  std::stringstream ss;
+  ss << "Cannot divide " << left.toDbgString() << " by " << right.toDbgString();
+  this->throwError(errInfoIdx, ss.str());
 
+  // Won't run
   return left;
 }
 
@@ -322,37 +328,32 @@ Value VM::performMod(std::uint16_t errInfoIdx) {
     auto l = std::get<std::int64_t>(left.value);
     if (std::holds_alternative<std::int64_t>(right.value)) {
       auto r = std::get<std::int64_t>(right.value);
-      if (r == 0) {
-        // TODO: Throw error
-      }
+      if (r == 0) this->throwError(errInfoIdx, "Cannot mod by 0");
       return l % r;
     } else if (std::holds_alternative<double>(right.value)) {
       auto r = std::get<double>(right.value);
-      if (r == 0.0) {
-        // TODO: Throw error
-      }
+      if (r == 0.0) this->throwError(errInfoIdx, "Cannot mod by 0");
       return fmod((double)l, r);
     }
   } else if (std::holds_alternative<double>(left.value)) {
     auto l = std::get<double>(left.value);
     if (std::holds_alternative<std::int64_t>(right.value)) {
       auto r = std::get<std::int64_t>(right.value);
-      if (r == 0) {
-        // TODO: Throw error
-      }
+      if (r == 0) this->throwError(errInfoIdx, "Cannot mod by 0");
       return fmod(l, (double)r);
     } else if (std::holds_alternative<double>(right.value)) {
       auto r = std::get<double>(right.value);
-      if (r == 0.0) {
-        // TODO: Throw error
-      }
+      if (r == 0.0) this->throwError(errInfoIdx, "Cannot mod by 0");
       return fmod(l, r);
     }
   }
 
-  (void)errInfoIdx;
-  // TODO: Throw error
+  std::stringstream ss;
+  ss << "Cannot mod with " << left.toDbgString() << " and "
+     << right.toDbgString();
+  this->throwError(errInfoIdx, ss.str());
 
+  // Won't run
   return left;
 }
 
@@ -408,8 +409,10 @@ Value VM::performEq(std::uint16_t errInfoIdx) {
     }
   }
 
-  (void)errInfoIdx;
-  // TODO: Throw error
+  std::stringstream ss;
+  ss << "Cannot compare " << left.toDbgString() << " and "
+     << right.toDbgString();
+  this->throwError(errInfoIdx, ss.str());
 
   return left;
 }
@@ -460,8 +463,10 @@ Value VM::performLT(std::uint16_t errInfoIdx) {
     }
   }
 
-  (void)errInfoIdx;
-  // TODO: Throw error
+  std::stringstream ss;
+  ss << "Cannot compare " << left.toDbgString() << " and "
+     << right.toDbgString();
+  this->throwError(errInfoIdx, ss.str());
 
   return left;
 }
@@ -508,8 +513,10 @@ Value VM::performLTE(std::uint16_t errInfoIdx) {
     }
   }
 
-  (void)errInfoIdx;
-  // TODO: Throw error
+  std::stringstream ss;
+  ss << "Cannot compare " << left.toDbgString() << " and "
+     << right.toDbgString();
+  this->throwError(errInfoIdx, ss.str());
 
   return left;
 }
@@ -556,8 +563,10 @@ Value VM::performGT(std::uint16_t errInfoIdx) {
     }
   }
 
-  (void)errInfoIdx;
-  // TODO: Throw error
+  std::stringstream ss;
+  ss << "Cannot compare " << left.toDbgString() << " and "
+     << right.toDbgString();
+  this->throwError(errInfoIdx, ss.str());
 
   return left;
 }
@@ -604,8 +613,10 @@ Value VM::performGTE(std::uint16_t errInfoIdx) {
     }
   }
 
-  (void)errInfoIdx;
-  // TODO: Throw error
+  std::stringstream ss;
+  ss << "Cannot compare " << left.toDbgString() << " and "
+     << right.toDbgString();
+  this->throwError(errInfoIdx, ss.str());
 
   return left;
 }
@@ -686,13 +697,15 @@ Value VM::readValue(std::uint8_t* bufferPtr) {
     case 6:
       return Value(readAtom(bufferPtr));
     default: {
-      // TODO: Update to call runtime_error func
       std::stringstream ss;
       ss << "Invalid value type " << std::hex << std::setw(2)
          << std::setfill('0') << type;
-      throw std::runtime_error(ss.str());
+      this->throwError(ss.str());
     }
   }
+
+  // Won't run
+  return Value();
 }
 
 Value VM::readInteger(std::uint8_t* bufferPtr) {
@@ -748,8 +761,18 @@ Atom* VM::readAtom(std::uint8_t* bufferPtr) {
   return new Atom{s};
 }
 
-void throwError(std::uint16_t errInfoIdx, std::string msg) {
+void VM::throwError(std::uint16_t errInfoIdx, std::string msg) {
+  delete[] this->buffer;
+
+  ErrorInfo errInfo = this->errorInfoList.at(errInfoIdx);
+  std::cerr << errInfo.lineText << "\n";
+  std::cerr << "Error at line " << errInfo.line << ":" << msg << std::endl;
+  std::exit(1);
 }
 
-void throwError(std::string msg) {
+void VM::throwError(std::string msg) {
+  delete[] this->buffer;
+
+  std::cerr << "Error: " << msg << std::endl;
+  std::exit(1);
 }

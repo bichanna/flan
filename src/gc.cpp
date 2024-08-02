@@ -1,5 +1,7 @@
 #include "gc.hpp"
 
+#include <string>
+#include <typeinfo>
 #include <variant>
 
 using namespace flan;
@@ -53,4 +55,38 @@ bool Value::truthy() {
   } else {
     return true;
   }
+}
+
+std::string Value::toString() {
+  if (std::holds_alternative<char>(this->value)) {
+    auto c = std::get<char>(this->value);
+    if (c == 0)
+      return "_";
+    else {
+      return "none";
+    }
+  } else if (std::holds_alternative<std::int64_t>(this->value)) {
+    return std::to_string(std::get<std::int64_t>(this->value));
+  } else if (std::holds_alternative<double>(this->value)) {
+    return std::to_string(std::get<double>(this->value));
+  } else if (std::holds_alternative<bool>(this->value)) {
+    return std::to_string(std::get<bool>(this->value));
+  } else if (std::holds_alternative<Object *>(this->value)) {
+    auto obj = std::get<Object *>(this->value);
+    if (typeid(obj) == typeid(String))
+      return static_cast<String *>(obj)->value;
+    else if (typeid(obj) == typeid(Atom))
+      return static_cast<Atom *>(obj)->value;
+  }
+
+  return ":UNKNOWN:";
+}
+
+std::string Value::toDbgString() {
+  if (std::holds_alternative<std::int64_t>(this->value) ||
+      std::holds_alternative<double>(this->value) ||
+      std::holds_alternative<bool>(this->value)) {
+    return this->toString();
+  }
+  return "'" + this->toString() + "'";
 }
