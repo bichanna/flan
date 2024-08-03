@@ -214,6 +214,25 @@ void VM::run() {
         break;
       }
 
+      case InstructionType::GetLeft: {
+        auto errInfoIdx = this->readUInt16(bufferPtr);
+        auto value = this->pop();
+        if (std::holds_alternative<Object*>(value.value)) {
+          auto obj = std::get<Object*>(value.value);
+          if (typeid(obj) == typeid(Either)) {
+            auto either = static_cast<Either*>(obj);
+            if (either->isLeft())
+              this->push(either->value);
+            else
+              throwError(errInfoIdx, "Cannot get left value");
+          }
+        }
+
+        this->push(value);
+
+        break;
+      }
+
       case InstructionType::Quit:
         quit = true;
         break;
