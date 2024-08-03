@@ -76,7 +76,7 @@ std::string Value::toString() {
            either->value.toString();
       return s;
     } else if (typeid(obj) == typeid(List)) {
-      auto list = static_cast<List*>(obj);
+      auto list = static_cast<List *>(obj);
       std::string s{"["};
       for (std::uint32_t i = 0; i < list->elements.size(); i++) {
         s += list->elements.at(i).toString();
@@ -88,12 +88,21 @@ std::string Value::toString() {
       auto table = static_cast<Table *>(obj);
       std::string s{"{"};
       std::size_t count = 0;
-      for (auto& pair : table->hashMap) {
+      for (auto &pair : table->hashMap) {
         count++;
         s += pair.first + ": " + pair.second.toString();
         if (count + 1 != table->hashMap.size()) s += ", ";
       }
       s += "}";
+      return s;
+    } else if (typeid(obj) == typeid(Tuple)) {
+      auto tuple = static_cast<Tuple *>(obj);
+      std::string s{"<"};
+      for (std::uint32_t i = 0; i < tuple->values.size(); i++) {
+        s += tuple->values.at(i).toString();
+        if (i + 1 != tuple->values.size()) s += ", ";
+      }
+      s += ">";
       return s;
     }
   }
@@ -105,7 +114,7 @@ std::string Value::toDbgString() {
   if (!std::holds_alternative<Object *>(this->value)) {
     auto obj = std::get<Object *>(this->value);
     if (typeid(obj) == typeid(List)) {
-      auto list = static_cast<List*>(obj);
+      auto list = static_cast<List *>(obj);
       std::string s{"["};
       for (std::uint32_t i = 0; i < list->elements.size(); i++) {
         s += list->elements.at(i).toDbgString();
@@ -117,12 +126,21 @@ std::string Value::toDbgString() {
       auto table = static_cast<Table *>(obj);
       std::string s{"{"};
       std::size_t count = 0;
-      for (auto& pair : table->hashMap) {
+      for (auto &pair : table->hashMap) {
         count++;
         s += pair.first + ": " + pair.second.toDbgString();
         if (count + 1 != table->hashMap.size()) s += ", ";
       }
       s += "}";
+      return s;
+    } else if (typeid(obj) == typeid(Tuple)) {
+      auto tuple = static_cast<Tuple *>(obj);
+      std::string s{"<"};
+      for (std::uint32_t i = 0; i < tuple->values.size(); i++) {
+        s += tuple->values.at(i).toDbgString();
+        if (i + 1 != tuple->values.size()) s += ", ";
+      }
+      s += ">";
       return s;
     } else if (typeid(obj) != typeid(String))
       return this->toString();

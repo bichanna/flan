@@ -63,6 +63,11 @@ struct Table : public Object {
   Table(std::unordered_map<std::string, Value> hashMap) : hashMap{hashMap} {};
 };
 
+struct Tuple : public Object {
+  std::vector<Value> values;
+  Tuple(std::vector<Value> values) : values{values} {};
+};
+
 class GC {
  private:
   std::size_t maxObjNum = 126;

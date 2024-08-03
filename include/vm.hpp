@@ -95,6 +95,7 @@ enum class InstructionType : std::uint8_t {
   Jnz,
   InitList,
   InitObj,
+  InitTup,
   GetLeft,
   Quit = 255,
 };

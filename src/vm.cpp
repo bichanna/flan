@@ -214,6 +214,16 @@ void VM::run() {
         break;
       }
 
+      case InstructionType::InitTup: {
+        auto length = this->readUInt32(bufferPtr);
+        std::vector<Value> values;
+        values.reserve(length);
+        for (std::uint32_t i = 0; i < length; i++)
+          values.push_back(this->pop());
+        this->push(new Tuple(std::move(values)));
+        break;
+      }
+
       case InstructionType::GetLeft: {
         auto errInfoIdx = this->readUInt16(bufferPtr);
         auto value = this->pop();
