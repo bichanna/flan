@@ -169,19 +169,48 @@ void VM::run() {
       }
 
       case InstructionType::Jmp: {
-        this->jumpForward(this->readUInt32(bufferPtr));
+        this->jumpForward(bufferPtr, this->readUInt32(bufferPtr));
         break;
       }
 
       case InstructionType::Jz: {
         auto offset = this->readUInt32(bufferPtr);
-        if (!this->pop().truthy()) this->jumpForward(offset);
+        if (!this->pop().truthy()) this->jumpForward(bufferPtr, offset);
         break;
       }
 
       case InstructionType::Jnz: {
         auto offset = this->readUInt32(bufferPtr);
-        if (this->pop().truthy()) this->jumpForward(offset);
+        if (this->pop().truthy()) this->jumpForward(bufferPtr, offset);
+        break;
+      }
+
+      case InstructionType::InitList: {
+        auto length = this->readUInt32(bufferPtr);
+        std::vector<Value> elements;
+        elements.reserve(length);
+        for (std::uint32_t i = 0; i < length; i++)
+          elements.push_back(this->pop());
+        this->push(new List(std::move(elements)));
+        break;
+      }
+
+      case InstructionType::InitObj: {
+        auto length = this->readUInt32(bufferPtr);
+        std::unordered_map<std::string, Value> hashMap;
+        hashMap.reserve(length);
+
+        for (std::uint32_t i = 0; i < length; i++) {
+          auto keyLen = this->readUInt8(bufferPtr);
+          std::string key;
+          key.reserve(keyLen);
+          for (std::uint32_t j = 0; j < keyLen; j++)
+            key += static_cast<char>(this->readUInt8(bufferPtr));
+          hashMap[key] = this->pop();
+        }
+
+        this->push(new Table(hashMap));
+
         break;
       }
 
@@ -691,6 +720,10 @@ Value VM::pop() {
   auto popped = this->stack.back();
   this->stack.pop_back();
   return popped;
+}
+
+void VM::jumpForward(std::uint8_t* bufferPtr, std::size_t offset) {
+  bufferPtr += offset;
 }
 
 Value VM::readValue(std::uint8_t* bufferPtr) {

@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <list>
 #include <string>
+#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -32,14 +33,15 @@ struct Object {
 
 struct String : public Object {
   std::string value;
-  std::size_t length;
-  String(std::string value) : value{value}, length{utf8len(value.c_str())} {};
+  std::size_t utf8length;
+  String(std::string value)
+      : value{value}, utf8length{utf8len(value.c_str())} {};
 };
 
 struct Atom : public Object {
   std::string value;
-  std::size_t length;
-  Atom(std::string value) : value{value}, length{utf8len(value.c_str())} {};
+  std::size_t utf8length;
+  Atom(std::string value) : value{value}, utf8length{utf8len(value.c_str())} {};
 };
 
 enum class EitherFlag : char { Left, Right };
@@ -49,6 +51,16 @@ struct Either : public Object {
   EitherFlag flag;
   Either(Value value, EitherFlag flag) : value{value}, flag{flag} {};
   bool isLeft();
+};
+
+struct List : public Object {
+  std::vector<Value> elements;
+  List(std::vector<Value> elements) : elements{elements} {};
+};
+
+struct Table : public Object {
+  std::unordered_map<std::string, Value> hashMap;
+  Table(std::unordered_map<std::string, Value> hashMap) : hashMap{hashMap} {};
 };
 
 class GC {

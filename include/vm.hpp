@@ -68,7 +68,7 @@ class VM {
   Value performAnd();
   Value performOr();
 
-  void jumpForward(std::size_t offset);
+  void jumpForward(std::uint8_t *bufferPtr, std::size_t offset);
 };
 
 enum class InstructionType : std::uint8_t {
