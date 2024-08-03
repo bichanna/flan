@@ -75,6 +75,26 @@ std::string Value::toString() {
       s += ((either->flag == EitherFlag::Left) ? "Left:" : "Right:") +
            either->value.toString();
       return s;
+    } else if (typeid(obj) == typeid(List)) {
+      auto list = static_cast<List*>(obj);
+      std::string s{"["};
+      for (std::uint32_t i = 0; i < list->elements.size(); i++) {
+        s += list->elements.at(i).toString();
+        if (i + 1 != list->elements.size()) s += ", ";
+      }
+      s += "]";
+      return s;
+    } else if (typeid(obj) == typeid(Table)) {
+      auto table = static_cast<Table *>(obj);
+      std::string s{"{"};
+      std::size_t count = 0;
+      for (auto& pair : table->hashMap) {
+        count++;
+        s += pair.first + ": " + pair.second.toString();
+        if (count + 1 != table->hashMap.size()) s += ", ";
+      }
+      s += "}";
+      return s;
     }
   }
 
@@ -84,7 +104,28 @@ std::string Value::toString() {
 std::string Value::toDbgString() {
   if (!std::holds_alternative<Object *>(this->value)) {
     auto obj = std::get<Object *>(this->value);
-    if (typeid(obj) != typeid(String)) return this->toString();
+    if (typeid(obj) == typeid(List)) {
+      auto list = static_cast<List*>(obj);
+      std::string s{"["};
+      for (std::uint32_t i = 0; i < list->elements.size(); i++) {
+        s += list->elements.at(i).toDbgString();
+        if (i + 1 != list->elements.size()) s += ", ";
+      }
+      s += "]";
+      return s;
+    } else if (typeid(obj) == typeid(Table)) {
+      auto table = static_cast<Table *>(obj);
+      std::string s{"{"};
+      std::size_t count = 0;
+      for (auto& pair : table->hashMap) {
+        count++;
+        s += pair.first + ": " + pair.second.toDbgString();
+        if (count + 1 != table->hashMap.size()) s += ", ";
+      }
+      s += "}";
+      return s;
+    } else if (typeid(obj) != typeid(String))
+      return this->toString();
   }
 
   return "'" + this->toString() + "'";
