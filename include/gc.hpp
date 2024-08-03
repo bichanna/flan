@@ -44,15 +44,6 @@ struct Atom : public Object {
   Atom(std::string value) : value{value}, utf8length{utf8len(value.c_str())} {};
 };
 
-enum class EitherFlag : char { Left, Right };
-
-struct Either : public Object {
-  Value value;
-  EitherFlag flag;
-  Either(Value value, EitherFlag flag) : value{value}, flag{flag} {};
-  bool isLeft();
-};
-
 struct List : public Object {
   std::vector<Value> elements;
   List(std::vector<Value> elements) : elements{elements} {};
@@ -80,5 +71,10 @@ class GC {
  public:
   GC(std::vector<Value>* stack) : stack{stack} {};
   void addObject(Object* object);
+  Value createString(std::string value);
+  Value createAtom(std::string value);
+  Value createList(std::vector<Value> elements);
+  Value createTable(std::unordered_map<std::string, Value> hashMap);
+  Value createTuple(std::vector<Value> values);
 };
 }  // namespace flan

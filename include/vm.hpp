@@ -50,9 +50,8 @@ class VM {
   Value readFloat(std::uint8_t *bufferPtr);
   Value readBool(std::uint8_t *bufferPtr);
   Value readEmpty();
-  String *readString(std::uint8_t *bufferPtr);
-  Atom *readAtom(std::uint8_t *bufferPtr);
-  Either *readEither(std::uint8_t *bufferPtr);
+  Value readString(std::uint8_t *bufferPtr);
+  Value readAtom(std::uint8_t *bufferPtr);
 
   Value performAdd(std::uint16_t errInfoIdx);
   Value performSub(std::uint16_t errInfoIdx);
@@ -96,7 +95,6 @@ enum class InstructionType : std::uint8_t {
   InitList,
   InitObj,
   InitTup,
-  GetLeft,
   Quit = 255,
 };
 }  // namespace flan

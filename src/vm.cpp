@@ -224,25 +224,6 @@ void VM::run() {
         break;
       }
 
-      case InstructionType::GetLeft: {
-        auto errInfoIdx = this->readUInt16(bufferPtr);
-        auto value = this->pop();
-        if (std::holds_alternative<Object*>(value.value)) {
-          auto obj = std::get<Object*>(value.value);
-          if (typeid(obj) == typeid(Either)) {
-            auto either = static_cast<Either*>(obj);
-            if (either->isLeft())
-              this->push(either->value);
-            else
-              throwError(errInfoIdx, "Cannot get left value");
-          }
-        }
-
-        this->push(value);
-
-        break;
-      }
-
       case InstructionType::Quit:
         quit = true;
         break;
@@ -769,11 +750,9 @@ Value VM::readValue(std::uint8_t* bufferPtr) {
     case 3:
       return this->readEmpty();
     case 4:
-      return Value(readString(bufferPtr));
+      return readString(bufferPtr);
     case 5:
-      return Value(readAtom(bufferPtr));
-    case 6:
-      return Value(readEither(bufferPtr));
+      return readAtom(bufferPtr);
     default: {
       std::stringstream ss;
       ss << "Invalid value type " << std::hex << std::setw(2)
@@ -815,28 +794,22 @@ Value VM::readEmpty() {
   return Value();
 }
 
-String* VM::readString(std::uint8_t* bufferPtr) {
+Value VM::readString(std::uint8_t* bufferPtr) {
   auto length = this->readUInt16(bufferPtr);
   std::string s;
   s.reserve(length);
   for (auto i = 0; i < length; i++)
     s += static_cast<char>(this->readUInt8(bufferPtr));
-  return new String{s};
+  return this->gc.createString(s);
 }
 
-Atom* VM::readAtom(std::uint8_t* bufferPtr) {
+Value VM::readAtom(std::uint8_t* bufferPtr) {
   auto length = this->readUInt8(bufferPtr);
   std::string s;
   s.reserve(length);
   for (auto i = 0; i < length; i++)
     s += static_cast<char>(this->readUInt8(bufferPtr));
-  return new Atom{s};
-}
-
-Either* VM::readEither(std::uint8_t* bufferPtr) {
-  auto flag = this->readUInt8(bufferPtr);
-  auto value = this->readValue(bufferPtr);
-  return new Either(value, static_cast<EitherFlag>(flag));
+  return this->gc.createAtom(s);
 }
 
 void VM::throwError(std::uint16_t errInfoIdx, std::string msg) {

@@ -39,6 +39,36 @@ void GC::addObject(Object *object) {
   this->objects.push_back(object);
 }
 
+Value GC::createString(std::string value) {
+  auto str = new String(value);
+  this->addObject(str);
+  return str;
+}
+
+Value GC::createAtom(std::string value) {
+  auto atom = new Atom(value);
+  this->addObject(atom);
+  return atom;
+}
+
+Value GC::createList(std::vector<Value> elements) {
+  auto list = new List(elements);
+  this->addObject(list);
+  return list;
+}
+  
+Value GC::createTable(std::unordered_map<std::string, Value> hashMap) {
+  auto table = new Table(hashMap);
+  this->addObject(table);
+  return table;
+}
+
+Value GC::createTuple(std::vector<Value> values) {
+  auto tuple = new Tuple(values);
+  this->addObject(tuple);
+  return tuple;
+}
+
 bool Value::truthy() {
   if (std::holds_alternative<std::int64_t>(this->value)) {
     auto v = std::get<std::int64_t>(this->value);
@@ -69,13 +99,7 @@ std::string Value::toString() {
       return static_cast<String *>(obj)->value;
     else if (typeid(obj) == typeid(Atom))
       return static_cast<Atom *>(obj)->value;
-    else if (typeid(obj) == typeid(Either)) {
-      auto either = static_cast<Either *>(obj);
-      std::string s{"Either "};
-      s += ((either->flag == EitherFlag::Left) ? "Left:" : "Right:") +
-           either->value.toString();
-      return s;
-    } else if (typeid(obj) == typeid(List)) {
+    else if (typeid(obj) == typeid(List)) {
       auto list = static_cast<List *>(obj);
       std::string s{"["};
       for (std::uint32_t i = 0; i < list->elements.size(); i++) {
@@ -147,8 +171,4 @@ std::string Value::toDbgString() {
   }
 
   return "'" + this->toString() + "'";
-}
-
-bool Either::isLeft() {
-  return this->flag == EitherFlag::Left;
 }
