@@ -345,6 +345,56 @@ void VM::run() {
         break;
       }
 
+      case InstructionType::DefGlobal: {
+        bufferPtr++;
+        auto errInfoIdx = this->readUInt16(bufferPtr);
+        auto varName = this->readShortString(bufferPtr);
+        auto value = this->pop();
+
+        if (this->globals.count(varName)) {
+          std::stringstream ss;
+          ss << "Global variable '" << varName << "' is already defined";
+          this->throwError(errInfoIdx, ss.str());
+        } else {
+          this->globals.insert({varName, value});
+        }
+
+        break;
+      }
+
+      case InstructionType::GetGlobal: {
+        bufferPtr++;
+        auto errInfoIdx = this->readUInt16(bufferPtr);
+        auto varName = this->readShortString(bufferPtr);
+
+        if (!this->globals.count(varName)) {
+          std::stringstream ss;
+          ss << "Global variable '" << varName << "' is not defined";
+          this->throwError(errInfoIdx, ss.str());
+        } else {
+          this->push(this->globals[varName]);
+        }
+
+        break;
+      }
+
+      case InstructionType::SetGlobal: {
+        bufferPtr++;
+        auto errInfoIdx = this->readUInt16(bufferPtr);
+        auto varName = this->readShortString(bufferPtr);
+        auto value = this->pop();
+
+        if (!this->globals.count(varName)) {
+          std::stringstream ss;
+          ss << "Global variable '" << varName << "' is not defined";
+          this->throwError(errInfoIdx, ss.str());
+        } else {
+          this->globals.insert_or_assign(varName, value);
+        }
+
+        break;
+      }
+
       case InstructionType::Quit:
         bufferPtr++;
         quit = true;

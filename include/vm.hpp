@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <unordered_map>
 #include <vector>
 
 #include "gc.hpp"
@@ -31,6 +32,7 @@ class VM {
   fs::path fileName;
   GC gc;
   std::vector<ErrorInfo> errorInfoList;
+  std::unordered_map<std::string, Value> globals;
 
   void readErrorInfoSection();
   bool checkMagicNumber(std::uint8_t *bufferPtr);
@@ -104,6 +106,9 @@ enum class InstructionType : std::uint8_t {
   InitTup,
   IdxListOrTup,
   GetTable,
+  DefGlobal,
+  GetGlobal,
+  SetGlobal,
   Quit = 255,
 };
 }  // namespace flan
