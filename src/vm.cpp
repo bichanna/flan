@@ -191,7 +191,7 @@ void VM::run() {
         elements.reserve(length);
         for (std::uint32_t i = 0; i < length; i++)
           elements.push_back(this->pop());
-        this->push(new List(std::move(elements)));
+        this->push(this->gc.createList(std::move(elements)));
         break;
       }
 
@@ -209,7 +209,7 @@ void VM::run() {
           hashMap[key] = this->pop();
         }
 
-        this->push(new Table(hashMap));
+        this->push(this->gc.createTable(hashMap));
 
         break;
       }
@@ -220,7 +220,7 @@ void VM::run() {
         values.reserve(length);
         for (std::uint32_t i = 0; i < length; i++)
           values.push_back(this->pop());
-        this->push(new Tuple(std::move(values)));
+        this->push(this->gc.createTuple(std::move(values)));
         break;
       }
 
@@ -253,7 +253,7 @@ Value VM::performAdd(std::uint16_t errInfoIdx) {
         auto rightObj = std::get<Object*>(right.value);
         if (typeid(rightObj) == typeid(String)) {
           auto r = static_cast<String*>(rightObj);
-          return new String(l->value + r->value);
+          return this->gc.createString(l->value + r->value);
         }
       }
     }
