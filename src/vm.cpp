@@ -314,6 +314,39 @@ void VM::run() {
         break;
       }
 
+      case InstructionType::SetList: {
+        bufferPtr++;
+        auto errInfoIdx = this->readUInt16(bufferPtr);
+        auto idx = std::get<std::int64_t>(this->readInteger(bufferPtr).value);
+        auto newValue = this->pop();
+        auto couldBeList = this->pop();
+
+        if (!std::holds_alternative<Object*>(couldBeList.value)) {
+          std::stringstream ss;
+          ss << "Expected a list but got " << couldBeList.toDbgString();
+          this->throwError(errInfoIdx, ss.str());
+        }
+
+        auto obj = std::get<Object*>(couldBeList.value);
+        if (typeid(obj) != typeid(List)) {
+          std::stringstream ss;
+          ss << "Expected a list but got " << couldBeList.toDbgString();
+          this->throwError(errInfoIdx, ss.str());
+        }
+
+        auto elements = static_cast<List*>(obj)->elements;
+        if (elements.size() <= static_cast<std::int64_t>(idx))
+          this->throwError(errInfoIdx, "Index out of range");
+
+        if ((idx < 0) &&
+            (0 <= static_cast<std::int64_t>(elements.size() - idx)))
+          elements[elements.size() - idx] = newValue;
+        else
+          elements[idx] = newValue;
+
+        break;
+      }
+
       case InstructionType::GetTable: {
         bufferPtr++;
         auto errInfoIdx = this->readUInt16(bufferPtr);
@@ -341,6 +374,32 @@ void VM::run() {
         }
 
         this->push(table->hashMap[key]);
+
+        break;
+      }
+
+      case InstructionType::SetTable: {
+        bufferPtr++;
+        auto errInfoIdx = this->readUInt16(bufferPtr);
+        auto key = this->readShortString(bufferPtr);
+        auto newValue = this->pop();
+        auto couldBeTable = this->pop();
+
+        if (!std::holds_alternative<Object*>(couldBeTable.value)) {
+          std::stringstream ss;
+          ss << "Expected a table but got " << couldBeTable.toDbgString();
+          this->throwError(errInfoIdx, ss.str());
+        }
+
+        auto obj = std::get<Object*>(couldBeTable.value);
+        if (typeid(obj) != typeid(Table)) {
+          std::stringstream ss;
+          ss << "Expected a table but got " << couldBeTable.toDbgString();
+          this->throwError(errInfoIdx, ss.str());
+        }
+
+        auto table = static_cast<Table*>(obj);
+        table->hashMap.insert_or_assign(key, newValue);
 
         break;
       }
