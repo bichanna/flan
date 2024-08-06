@@ -83,6 +83,8 @@ enum class InstructionType : std::uint8_t {
   Push,
   Pop,
   PopN,
+  Nip,
+  NipN,
   Dup,
   Add,
   Sub,
@@ -98,6 +100,7 @@ enum class InstructionType : std::uint8_t {
   And,
   Or,
   Not,
+  Negate,
   Jmp,
   Jz,
   Jnz,
@@ -111,6 +114,6 @@ enum class InstructionType : std::uint8_t {
   DefGlobal,
   GetGlobal,
   SetGlobal,
-  Quit = 255,
+  Halt = 255,
 };
 }  // namespace flan

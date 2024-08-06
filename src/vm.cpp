@@ -141,6 +141,23 @@ void VM::run() {
         break;
       }
 
+      case InstructionType::Nip: {
+        bufferPtr++;
+        auto last = this->pop();
+        this->pop();
+        this->push(last);
+        break;
+      }
+
+      case InstructionType::NipN: {
+        bufferPtr++;
+        auto length = this->readUInt8(bufferPtr);
+        auto last = this->pop();
+        for (auto i = 0; i < length; i++) this->pop();
+        this->push(last);
+        break;
+      }
+
       case InstructionType::Dup: {
         bufferPtr++;
         auto value = this->stack.back();
@@ -217,6 +234,19 @@ void VM::run() {
         bufferPtr++;
         Value& last = this->stack.back();
         last.value = !last.truthy();
+        break;
+      }
+
+      case InstructionType::Negate: {
+        bufferPtr++;
+        auto value = this->pop();
+        if (std::holds_alternative<std::int64_t>(value.value)) {
+          auto integer = std::get<std::int64_t>(value.value);
+          this->push(-integer);
+        } else if (std::holds_alternative<double>(value.value)) {
+          auto floatNum = std::get<double>(value.value);
+          this->push(-floatNum);
+        }
         break;
       }
 
@@ -335,7 +365,7 @@ void VM::run() {
         }
 
         auto elements = static_cast<List*>(obj)->elements;
-        if (elements.size() <= static_cast<std::int64_t>(idx))
+        if (elements.size() <= static_cast<std::uint64_t>(idx))
           this->throwError(errInfoIdx, "Index out of range");
 
         if ((idx < 0) &&
@@ -454,7 +484,7 @@ void VM::run() {
         break;
       }
 
-      case InstructionType::Quit:
+      case InstructionType::Halt:
         bufferPtr++;
         quit = true;
         break;
