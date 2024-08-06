@@ -72,6 +72,12 @@ class VM {
 };
 
 enum class InstructionType : std::uint8_t {
+  Load0,
+  Load1,
+  Load2,
+  Load3,
+  Load4,
+  Load5,
   Push,
   Pop,
   PopN,

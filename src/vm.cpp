@@ -84,6 +84,42 @@ void VM::run() {
     auto instType = static_cast<InstructionType>(*bufferPtr);
 
     switch (instType) {
+      case InstructionType::Load0: {
+        bufferPtr++;
+        this->push(Value(static_cast<std::int64_t>(0)));
+        break;
+      }
+
+      case InstructionType::Load1: {
+        bufferPtr++;
+        this->push(Value(static_cast<std::int64_t>(1)));
+        break;
+      }
+
+      case InstructionType::Load2: {
+        bufferPtr++;
+        this->push(Value(static_cast<std::int64_t>(2)));
+        break;
+      }
+
+      case InstructionType::Load3: {
+        bufferPtr++;
+        this->push(Value(static_cast<std::int64_t>(3)));
+        break;
+      }
+
+      case InstructionType::Load4: {
+        bufferPtr++;
+        this->push(Value(static_cast<std::int64_t>(4)));
+        break;
+      }
+
+      case InstructionType::Load5: {
+        bufferPtr++;
+        this->push(Value(static_cast<std::int64_t>(5)));
+        break;
+      }
+
       case InstructionType::Push: {
         bufferPtr++;
         auto length = this->readUInt8(bufferPtr);
@@ -113,80 +149,99 @@ void VM::run() {
       }
 
       case InstructionType::Add:
+        bufferPtr++;
         this->push(this->performAdd(this->readUInt16(bufferPtr)));
         break;
 
       case InstructionType::Sub:
+        bufferPtr++;
         this->push(this->performSub(this->readUInt16(bufferPtr)));
         break;
 
       case InstructionType::Mul:
+        bufferPtr++;
         this->push(this->performMul(this->readUInt16(bufferPtr)));
         break;
 
       case InstructionType::Div:
+        bufferPtr++;
         this->push(this->performDiv(this->readUInt16(bufferPtr)));
         break;
 
       case InstructionType::Mod:
+        bufferPtr++;
         this->push(this->performMod(this->readUInt16(bufferPtr)));
         break;
 
       case InstructionType::Eq:
+        bufferPtr++;
         this->push(this->performEq(this->readUInt16(bufferPtr)));
         break;
 
       case InstructionType::NEq:
+        bufferPtr++;
         this->push(this->performNEq(this->readUInt16(bufferPtr)));
         break;
 
       case InstructionType::LT:
+        bufferPtr++;
         this->push(this->performLT(this->readUInt16(bufferPtr)));
         break;
 
       case InstructionType::LTE:
+        bufferPtr++;
         this->push(this->performLTE(this->readUInt16(bufferPtr)));
         break;
 
       case InstructionType::GT:
+        bufferPtr++;
         this->push(this->performLTE(this->readUInt16(bufferPtr)));
         break;
+
       case InstructionType::GTE:
+        bufferPtr++;
         this->push(this->performGTE(this->readUInt16(bufferPtr)));
         break;
 
       case InstructionType::And:
+        bufferPtr++;
         this->push(this->performAnd());
         break;
 
       case InstructionType::Or:
+        bufferPtr++;
         this->push(this->performOr());
         break;
 
       case InstructionType::Not: {
+        bufferPtr++;
         Value& last = this->stack.back();
         last.value = !last.truthy();
         break;
       }
 
       case InstructionType::Jmp: {
+        bufferPtr++;
         this->jumpForward(bufferPtr, this->readUInt32(bufferPtr));
         break;
       }
 
       case InstructionType::Jz: {
+        bufferPtr++;
         auto offset = this->readUInt32(bufferPtr);
         if (!this->pop().truthy()) this->jumpForward(bufferPtr, offset);
         break;
       }
 
       case InstructionType::Jnz: {
+        bufferPtr++;
         auto offset = this->readUInt32(bufferPtr);
         if (this->pop().truthy()) this->jumpForward(bufferPtr, offset);
         break;
       }
 
       case InstructionType::InitList: {
+        bufferPtr++;
         auto length = this->readUInt32(bufferPtr);
         std::vector<Value> elements;
         elements.reserve(length);
@@ -197,6 +252,7 @@ void VM::run() {
       }
 
       case InstructionType::InitTable: {
+        bufferPtr++;
         auto length = this->readUInt32(bufferPtr);
         std::unordered_map<std::string, Value> hashMap;
         hashMap.reserve(length);
@@ -212,6 +268,7 @@ void VM::run() {
       }
 
       case InstructionType::InitTup: {
+        bufferPtr++;
         auto length = this->readUInt32(bufferPtr);
         std::vector<Value> values;
         values.reserve(length);
@@ -222,6 +279,7 @@ void VM::run() {
       }
 
       case InstructionType::IdxListOrTup: {
+        bufferPtr++;
         auto errInfoIdx = this->readUInt16(bufferPtr);
         auto idx = std::get<std::int64_t>(this->readInteger(bufferPtr).value);
         auto value = this->pop();
@@ -257,6 +315,7 @@ void VM::run() {
       }
 
       case InstructionType::GetTable: {
+        bufferPtr++;
         auto errInfoIdx = this->readUInt16(bufferPtr);
         auto key = this->readShortString(bufferPtr);
         auto value = this->pop();
@@ -287,6 +346,7 @@ void VM::run() {
       }
 
       case InstructionType::Quit:
+        bufferPtr++;
         quit = true;
         break;
 
