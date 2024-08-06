@@ -45,6 +45,7 @@ class VM {
   void throwError(std::uint16_t errInfoIdx, std::string msg);
   void throwError(std::string msg);
 
+  std::string readShortString(std::uint8_t *bufferPtr);
   Value readValue(std::uint8_t *bufferPtr);
   Value readInteger(std::uint8_t *bufferPtr);
   Value readFloat(std::uint8_t *bufferPtr);
@@ -93,8 +94,10 @@ enum class InstructionType : std::uint8_t {
   Jz,
   Jnz,
   InitList,
-  InitObj,
+  InitTable,
   InitTup,
+  IdxListOrTup,
+  GetTable,
   Quit = 255,
 };
 }  // namespace flan

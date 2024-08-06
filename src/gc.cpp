@@ -56,7 +56,7 @@ Value GC::createList(std::vector<Value> elements) {
   this->addObject(list);
   return list;
 }
-  
+
 Value GC::createTable(std::unordered_map<std::string, Value> hashMap) {
   auto table = new Table(hashMap);
   this->addObject(table);

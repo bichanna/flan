@@ -9,6 +9,7 @@
 #include <ios>
 #include <iostream>
 #include <sstream>
+#include <string>
 #include <variant>
 
 #include "gc.hpp"
@@ -195,17 +196,13 @@ void VM::run() {
         break;
       }
 
-      case InstructionType::InitObj: {
+      case InstructionType::InitTable: {
         auto length = this->readUInt32(bufferPtr);
         std::unordered_map<std::string, Value> hashMap;
         hashMap.reserve(length);
 
         for (std::uint32_t i = 0; i < length; i++) {
-          auto keyLen = this->readUInt8(bufferPtr);
-          std::string key;
-          key.reserve(keyLen);
-          for (std::uint32_t j = 0; j < keyLen; j++)
-            key += static_cast<char>(this->readUInt8(bufferPtr));
+          auto key = this->readShortString(bufferPtr);
           hashMap[key] = this->pop();
         }
 
@@ -221,6 +218,71 @@ void VM::run() {
         for (std::uint32_t i = 0; i < length; i++)
           values.push_back(this->pop());
         this->push(this->gc.createTuple(std::move(values)));
+        break;
+      }
+
+      case InstructionType::IdxListOrTup: {
+        auto errInfoIdx = this->readUInt16(bufferPtr);
+        auto idx = std::get<std::int64_t>(this->readInteger(bufferPtr).value);
+        auto value = this->pop();
+
+        if (!std::holds_alternative<Object*>(value.value)) {
+          std::stringstream ss;
+          ss << "Expected a list or tuple but got " << value.toDbgString();
+          this->throwError(errInfoIdx, ss.str());
+        }
+
+        auto obj = std::get<Object*>(value.value);
+
+        std::vector<Value> values;
+        if (typeid(obj) == typeid(List)) {
+          values = static_cast<List*>(obj)->elements;
+        } else if (typeid(obj) == typeid(Tuple)) {
+          values = static_cast<Tuple*>(obj)->values;
+        } else {
+          std::stringstream ss;
+          ss << "Expected a list or tuple but got " << value.toDbgString();
+          this->throwError(errInfoIdx, ss.str());
+        }
+
+        if (values.size() <= static_cast<std::uint64_t>(idx))
+          this->throwError(errInfoIdx, "Index out of range");
+
+        if ((idx < 0) && (0 <= static_cast<std::int64_t>(values.size() - idx)))
+          this->push(values.at(values.size() - idx));
+        else
+          this->push(values.at(idx));
+
+        break;
+      }
+
+      case InstructionType::GetTable: {
+        auto errInfoIdx = this->readUInt16(bufferPtr);
+        auto key = this->readShortString(bufferPtr);
+        auto value = this->pop();
+
+        if (!std::holds_alternative<Object*>(value.value)) {
+          std::stringstream ss;
+          ss << "Expected a table but got " << value.toDbgString();
+          this->throwError(errInfoIdx, ss.str());
+        }
+
+        auto obj = std::get<Object*>(value.value);
+        if (typeid(obj) != typeid(Table)) {
+          std::stringstream ss;
+          ss << "Expected a table but got " << value.toDbgString();
+          this->throwError(errInfoIdx, ss.str());
+        }
+
+        auto table = static_cast<Table*>(obj);
+        if (!table->hashMap.count(key)) {
+          std::stringstream ss;
+          ss << "Table does not have key " << value.toDbgString();
+          this->throwError(ss.str());
+        }
+
+        this->push(table->hashMap[key]);
+
         break;
       }
 
@@ -734,6 +796,15 @@ Value VM::pop() {
 
 void VM::jumpForward(std::uint8_t* bufferPtr, std::size_t offset) {
   bufferPtr += offset;
+}
+
+std::string VM::readShortString(std::uint8_t* bufferPtr) {
+  auto length = this->readUInt8(bufferPtr);
+  std::string str;
+  str.reserve(length);
+  for (std::uint32_t i = 0; i < length; i++)
+    str += static_cast<char>(this->readUInt8(bufferPtr));
+  return str;
 }
 
 Value VM::readValue(std::uint8_t* bufferPtr) {
