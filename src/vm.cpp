@@ -84,41 +84,35 @@ void VM::run() {
     auto instType = static_cast<InstructionType>(*bufferPtr);
 
     switch (instType) {
-      case InstructionType::Load0: {
+      case InstructionType::Load0:
         bufferPtr++;
         this->push(Value(static_cast<std::int64_t>(0)));
         break;
-      }
 
-      case InstructionType::Load1: {
+      case InstructionType::Load1:
         bufferPtr++;
         this->push(Value(static_cast<std::int64_t>(1)));
         break;
-      }
 
-      case InstructionType::Load2: {
+      case InstructionType::Load2:
         bufferPtr++;
         this->push(Value(static_cast<std::int64_t>(2)));
         break;
-      }
 
-      case InstructionType::Load3: {
+      case InstructionType::Load3:
         bufferPtr++;
         this->push(Value(static_cast<std::int64_t>(3)));
         break;
-      }
 
-      case InstructionType::Load4: {
+      case InstructionType::Load4:
         bufferPtr++;
         this->push(Value(static_cast<std::int64_t>(4)));
         break;
-      }
 
-      case InstructionType::Load5: {
+      case InstructionType::Load5:
         bufferPtr++;
         this->push(Value(static_cast<std::int64_t>(5)));
         break;
-      }
 
       case InstructionType::Push: {
         bufferPtr++;
@@ -377,7 +371,7 @@ void VM::run() {
         break;
       }
 
-      case InstructionType::GetTable: {
+      case InstructionType::GetMember: {
         bufferPtr++;
         auto errInfoIdx = this->readUInt16(bufferPtr);
         auto key = this->readShortString(bufferPtr);
@@ -408,7 +402,7 @@ void VM::run() {
         break;
       }
 
-      case InstructionType::SetTable: {
+      case InstructionType::SetMember: {
         bufferPtr++;
         auto errInfoIdx = this->readUInt16(bufferPtr);
         auto key = this->readShortString(bufferPtr);
