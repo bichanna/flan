@@ -114,6 +114,8 @@ enum class InstructionType : std::uint8_t {
   DefGlobal,
   GetGlobal,
   SetGlobal,
+  GetLocal,
+  SetLocal,
   Halt = 255,
 };
 }  // namespace flan

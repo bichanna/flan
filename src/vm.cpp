@@ -478,6 +478,20 @@ void VM::run() {
         break;
       }
 
+      case InstructionType::GetLocal: {
+        bufferPtr++;
+        auto idx = this->readUInt16(bufferPtr);
+        push(this->stack.at(idx));
+        break;
+      }
+
+      case InstructionType::SetLocal: {
+        bufferPtr++;
+        auto idx = this->readUInt16(bufferPtr);
+        this->stack.at(idx) = this->stack.back();
+        break;
+      }
+
       case InstructionType::Halt:
         bufferPtr++;
         quit = true;
