@@ -16,9 +16,7 @@
 
 using namespace flan;
 
-VM::VM(fs::path fileName) : gc{GC(&this->stack)} {
-  this->stack.reserve(UINT8_MAX);
-
+VM::VM(fs::path fileName) : stack{}, gc{GC(this->stack.actualStack())} {
   auto inputStream = std::ifstream(fileName);
   this->fileName = fileName;
 
@@ -77,7 +75,7 @@ void VM::run() {
     this->throwError("Invalid Magic number");
   }
   if (!this->checkVersion(bufferPtr)) {
-    this->throwError("Please update the Flan runtime");
+    this->throwError("Update the Flan runtime");
   }
 
   do {
@@ -159,7 +157,7 @@ void VM::run() {
 
       case InstructionType::Dup: {
         bufferPtr++;
-        auto value = this->stack.back();
+        auto value = this->stack.last();
         this->push(value);
         break;
       }
@@ -231,7 +229,7 @@ void VM::run() {
 
       case InstructionType::Not: {
         bufferPtr++;
-        Value& last = this->stack.back();
+        Value& last = this->stack.last();
         last.value = !last.truthy();
         break;
       }
@@ -486,14 +484,14 @@ void VM::run() {
       case InstructionType::GetLocal: {
         bufferPtr++;
         auto idx = this->readUInt16(bufferPtr);
-        push(this->stack.at(idx));
+        push(this->stack[idx]);
         break;
       }
 
       case InstructionType::SetLocal: {
         bufferPtr++;
         auto idx = this->readUInt16(bufferPtr);
-        this->stack.at(idx) = this->stack.back();
+        this->stack[idx] = this->stack.last();
         break;
       }
 
@@ -997,13 +995,11 @@ std::uint32_t VM::readUInt32(std::uint8_t* bufferPtr) {
 }
 
 void VM::push(Value value) {
-  this->stack.push_back(value);
+  this->stack.push(value);
 }
 
 Value VM::pop() {
-  auto popped = this->stack.back();
-  this->stack.pop_back();
-  return popped;
+  return this->stack.pop();
 }
 
 void VM::jumpForward(std::uint8_t* bufferPtr, std::size_t offset) {
@@ -1109,4 +1105,35 @@ void VM::throwError(std::string msg) {
 
   std::cerr << "Error: " << msg << std::endl;
   std::exit(1);
+}
+
+Stack::Stack() {
+  this->stack.reserve(64 * UINT8_MAX);
+  this->from = 0;
+}
+
+Value& Stack::last() {
+  return this->stack.back();
+}
+
+void Stack::push(Value value) {
+  this->stack.push_back(value);
+}
+
+Value Stack::pop() {
+  auto popped = this->stack.back();
+  this->stack.pop_back();
+  return popped;
+}
+
+Value& Stack::operator[](std::uint64_t index) {
+  return this->stack[this->from + index];
+}
+
+void Stack::setFrom(std::uint16_t newFrom) {
+  this->from = newFrom;
+}
+
+std::vector<Value>* Stack::actualStack() {
+  return &this->stack;
 }

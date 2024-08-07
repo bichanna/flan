@@ -61,7 +61,7 @@ struct Tuple : public Object {
 
 class GC {
  private:
-  std::size_t maxObjNum = 126;
+  std::size_t maxObjNum = 128;
   std::list<Object*> objects;
   std::vector<Value>* stack;
 

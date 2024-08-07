@@ -20,6 +20,19 @@ struct ErrorInfo {
   std::string lineText;
 };
 
+struct Stack {
+  std::vector<Value> stack;
+  std::uint16_t from;
+
+  Stack();
+  Value &last();
+  void push(Value value);
+  Value pop();
+  Value &operator[](std::uint64_t index);
+  void setFrom(std::uint16_t newFrom);
+  std::vector<Value> *actualStack();
+};
+
 class VM {
  public:
   VM(fs::path fileName);
@@ -28,7 +41,7 @@ class VM {
 
  private:
   char *buffer;
-  std::vector<Value> stack;
+  Stack stack;
   fs::path fileName;
   GC gc;
   std::vector<ErrorInfo> errorInfoList;
