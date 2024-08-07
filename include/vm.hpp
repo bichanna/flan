@@ -80,6 +80,7 @@ enum class InstructionType : std::uint8_t {
   Load3,
   Load4,
   Load5,
+  Load,
   Push,
   Pop,
   PopN,

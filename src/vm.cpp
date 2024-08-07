@@ -114,6 +114,11 @@ void VM::run() {
         this->push(Value(static_cast<std::int64_t>(5)));
         break;
 
+      case InstructionType::Load:
+        bufferPtr++;
+        this->push(this->readValue(bufferPtr));
+        break;
+
       case InstructionType::Push: {
         bufferPtr++;
         auto length = this->readUInt8(bufferPtr);
