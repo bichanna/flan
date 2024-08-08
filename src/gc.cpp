@@ -143,6 +143,9 @@ std::string Value::toString() {
       }
       s += ">";
       return s;
+    } else if (typeid(obj) == typeid(Function)) {
+      auto func = static_cast<Function *>(obj);
+      return "<function " + func->name + ">";
     }
   }
 
