@@ -29,6 +29,7 @@ struct Value {
 struct Object {
   bool marked{false};
   void mark();
+  virtual ~Object() {};
 };
 
 struct String : public Object {
@@ -36,27 +37,43 @@ struct String : public Object {
   std::size_t utf8length;
   String(std::string value)
       : value{value}, utf8length{utf8len(value.c_str())} {};
+  ~String() override {};
 };
 
 struct Atom : public Object {
   std::string value;
   std::size_t utf8length;
   Atom(std::string value) : value{value}, utf8length{utf8len(value.c_str())} {};
+  ~Atom() override {};
 };
 
 struct List : public Object {
   std::vector<Value> elements;
   List(std::vector<Value> elements) : elements{elements} {};
+  ~List() override {};
 };
 
 struct Table : public Object {
   std::unordered_map<std::string, Value> hashMap;
   Table(std::unordered_map<std::string, Value> hashMap) : hashMap{hashMap} {};
+  ~Table() override {};
 };
 
 struct Tuple : public Object {
   std::vector<Value> values;
   Tuple(std::vector<Value> values) : values{values} {};
+  ~Tuple() override {};
+};
+
+struct Function : public Object {
+  std::string name;
+  std::uint16_t arity;
+  std::uint8_t* buffers;
+  Function(std::string name, std::uint16_t arity, std::uint8_t* buffers)
+      : name{name}, arity{arity}, buffers{buffers} {};
+  ~Function() override {
+    delete[] this->buffers;
+  };
 };
 
 class GC {
@@ -76,5 +93,8 @@ class GC {
   Value createList(std::vector<Value> elements);
   Value createTable(std::unordered_map<std::string, Value> hashMap);
   Value createTuple(std::vector<Value> values);
+  Value createFunction(std::string name,
+                       std::uint16_t arity,
+                       std::uint8_t* buffers);
 };
 }  // namespace flan

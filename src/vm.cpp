@@ -17,6 +17,8 @@
 using namespace flan;
 
 VM::VM(fs::path fileName) : stack{}, gc{GC(this->stack.actualStack())} {
+  this->callframes.reserve(CALL_FRAMES_MAX);
+
   auto inputStream = std::ifstream(fileName);
   this->fileName = fileName;
 
@@ -69,8 +71,6 @@ void VM::readErrorInfoSection() {
 void VM::run() {
   auto bufferPtr = reinterpret_cast<std::uint8_t*>(this->buffer);
 
-  bool quit = false;
-
   if (!this->checkMagicNumber(bufferPtr)) {
     this->throwError("Invalid Magic number");
   }
@@ -78,7 +78,7 @@ void VM::run() {
     this->throwError("Update the Flan runtime");
   }
 
-  do {
+  for (;;) {
     auto instType = static_cast<InstructionType>(*bufferPtr);
 
     switch (instType) {
@@ -495,9 +495,30 @@ void VM::run() {
         break;
       }
 
+      case InstructionType::CallFn: {
+        bufferPtr++;
+        auto errInfoIdx = this->readUInt16(bufferPtr);
+        auto argCount = this->readUInt16(bufferPtr);
+        auto couldBeFunc = this->stack.fromLast(argCount - 1);
+        this->callFunc(bufferPtr, couldBeFunc, argCount, errInfoIdx);
+        break;
+      }
+
+      case InstructionType::RetFn: {
+        bufferPtr++;
+
+        auto poppedFrame = this->callframes.back();
+        this->callframes.pop_back();
+
+        bufferPtr = poppedFrame.retAddr;
+        this->stack.from = poppedFrame.prevFrom;
+
+        break;
+      }
+
       case InstructionType::Halt:
         bufferPtr++;
-        quit = true;
+        goto quitRun;
         break;
 
       default: {
@@ -510,7 +531,42 @@ void VM::run() {
     }
 
     bufferPtr++;
-  } while (!quit);
+  }
+
+quitRun:
+  return;
+}
+
+void VM::callFunc(std::uint8_t* bufferPtr,
+                  Value couldBeFunc,
+                  std::uint16_t argCount,
+                  std::uint16_t errInfoIdx) {
+  if (!std::holds_alternative<Object*>(couldBeFunc.value)) {
+    std::stringstream ss;
+    ss << couldBeFunc.toDbgString() << " is not callable";
+    this->throwError(errInfoIdx, ss.str());
+  }
+
+  auto obj = std::get<Object*>(couldBeFunc.value);
+  if (typeid(obj) != typeid(Function)) {
+    std::stringstream ss;
+    ss << couldBeFunc.toDbgString() << " is not callable";
+    this->throwError(errInfoIdx, ss.str());
+  }
+
+  auto func = static_cast<Function*>(obj);
+
+  if (func->arity != argCount) {
+    std::stringstream ss;
+    ss << couldBeFunc.toDbgString() << " takes " << func->arity
+       << " arguments but " << argCount << " was given";
+    this->throwError(errInfoIdx, ss.str());
+  }
+
+  auto frame = CallFrame(bufferPtr, this->stack.from);
+  this->callframes.push_back(frame);
+  this->stack.setFrom(argCount);
+  bufferPtr = func->buffers;
 }
 
 Value VM::performAdd(std::uint16_t errInfoIdx) {
@@ -1032,6 +1088,8 @@ Value VM::readValue(std::uint8_t* bufferPtr) {
       return readString(bufferPtr);
     case 5:
       return readAtom(bufferPtr);
+    case 6:
+      return readFunction(bufferPtr);
     default: {
       std::stringstream ss;
       ss << "Invalid value type " << std::hex << std::setw(2)
@@ -1091,6 +1149,30 @@ Value VM::readAtom(std::uint8_t* bufferPtr) {
   return this->gc.createAtom(s);
 }
 
+Value VM::readFunction(std::uint8_t* bufferPtr) {
+  auto funcName = this->readShortString(bufferPtr);
+  auto arity = this->readUInt16(bufferPtr);
+  auto funcBuffers = this->readFunctionBody(bufferPtr);
+  return this->gc.createFunction(funcName, arity, funcBuffers);
+}
+
+std::uint8_t* VM::readFunctionBody(std::uint8_t* bufferPtr) {
+  auto length = std::get<std::int64_t>(this->readInteger(bufferPtr).value);
+  auto buffers = new std::uint8_t[length];
+  for (auto i = 0; i < length; i++) buffers[i] = this->readUInt8(bufferPtr);
+
+  auto endFn = this->readUInt8(bufferPtr);
+  if (InstructionType::EndFn != static_cast<InstructionType>(endFn)) {
+    std::stringstream ss;
+    ss << "Expected " << std::hex << std::setw(2) << std::setfill('0')
+       << static_cast<std::uint8_t>(InstructionType::EndFn) << " but got "
+       << std::hex << std::setw(2) << std::setfill('0') << endFn;
+    this->throwError(ss.str());
+  }
+
+  return buffers;
+}
+
 void VM::throwError(std::uint16_t errInfoIdx, std::string msg) {
   delete[] this->buffer;
 
@@ -1130,8 +1212,12 @@ Value& Stack::operator[](std::uint64_t index) {
   return this->stack[this->from + index];
 }
 
-void Stack::setFrom(std::uint16_t newFrom) {
-  this->from = newFrom;
+Value& Stack::fromLast(std::uint64_t indexFromLast) {
+  return this->stack[this->stack.size() - indexFromLast];
+}
+
+void Stack::setFrom(std::uint16_t argCount) {
+  this->from = this->stack.size() - argCount - 1;
 }
 
 std::vector<Value>* Stack::actualStack() {

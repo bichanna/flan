@@ -15,9 +15,18 @@ const std::uint8_t VERSION[3] = {0, 0, 0};
 
 const std::uint8_t MAGIC_NUMBER[4] = {0x46, 0x4C, 0x41, 0x4E};
 
+const auto CALL_FRAMES_MAX = 64;
+
 struct ErrorInfo {
   std::uint16_t line;
   std::string lineText;
+};
+
+struct CallFrame {
+  std::uint8_t *retAddr;
+  std::uint16_t prevFrom;
+  CallFrame(std::uint8_t *retAddr, std::uint16_t prevFrom)
+      : retAddr{retAddr}, prevFrom{prevFrom} {};
 };
 
 struct Stack {
@@ -29,7 +38,8 @@ struct Stack {
   void push(Value value);
   Value pop();
   Value &operator[](std::uint64_t index);
-  void setFrom(std::uint16_t newFrom);
+  Value &fromLast(std::uint64_t indexFromLast);
+  void setFrom(std::uint16_t argCount);
   std::vector<Value> *actualStack();
 };
 
@@ -42,6 +52,7 @@ class VM {
  private:
   char *buffer;
   Stack stack;
+  std::vector<CallFrame> callframes;
   fs::path fileName;
   GC gc;
   std::vector<ErrorInfo> errorInfoList;
@@ -68,6 +79,8 @@ class VM {
   Value readEmpty();
   Value readString(std::uint8_t *bufferPtr);
   Value readAtom(std::uint8_t *bufferPtr);
+  Value readFunction(std::uint8_t *bufferPtr);
+  std::uint8_t *readFunctionBody(std::uint8_t *bufferPtr);
 
   Value performAdd(std::uint16_t errInfoIdx);
   Value performSub(std::uint16_t errInfoIdx);
@@ -84,6 +97,11 @@ class VM {
   Value performOr();
 
   void jumpForward(std::uint8_t *bufferPtr, std::size_t offset);
+
+  void callFunc(std::uint8_t *bufferPtr,
+                Value couldBeFunc,
+                std::uint16_t argCount,
+                std::uint16_t errInfoIdx);
 };
 
 enum class InstructionType : std::uint8_t {
@@ -130,6 +148,9 @@ enum class InstructionType : std::uint8_t {
   SetGlobal,
   GetLocal,
   SetLocal,
+  CallFn,
+  RetFn,
+  EndFn,
   Halt = 255,
 };
 }  // namespace flan

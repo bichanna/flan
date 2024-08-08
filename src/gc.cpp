@@ -69,6 +69,14 @@ Value GC::createTuple(std::vector<Value> values) {
   return tuple;
 }
 
+Value GC::createFunction(std::string name,
+                         std::uint16_t arity,
+                         std::uint8_t *buffers) {
+  auto func = new Function(name, arity, buffers);
+  this->addObject(func);
+  return func;
+}
+
 bool Value::truthy() {
   if (std::holds_alternative<std::int64_t>(this->value)) {
     auto v = std::get<std::int64_t>(this->value);
