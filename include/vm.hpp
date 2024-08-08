@@ -106,6 +106,7 @@ class VM {
 };
 
 enum class InstructionType : std::uint8_t {
+  LoadNeg1,
   Load0,
   Load1,
   Load2,

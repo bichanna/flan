@@ -82,6 +82,11 @@ void VM::run() {
     auto instType = static_cast<InstructionType>(*bufferPtr);
 
     switch (instType) {
+      case InstructionType::LoadNeg1:
+        bufferPtr++;
+        this->push(Value(static_cast<std::int64_t>(-1)));
+        break;
+
       case InstructionType::Load0:
         bufferPtr++;
         this->push(Value(static_cast<std::int64_t>(0)));
