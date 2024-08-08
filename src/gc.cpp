@@ -12,7 +12,7 @@ void Object::mark() {
 }
 
 void GC::mayPerform() {
-  if (this->objects.size() >= this->maxObjNum) this->perform();
+  if (bytesAllocated >= nextGCPhase) this->perform();
 }
 
 void GC::perform() {
@@ -26,13 +26,14 @@ void GC::perform() {
   for (auto obj : this->objects) {
     if (!obj->marked) {
       this->objects.remove(obj);
+      bytesAllocated -= obj->byteSize();
       delete obj;  // Clear memory :)
     } else {
       obj->marked = false;
     }
   }
 
-  this->maxObjNum = this->objects.size() * 2;
+  // this->nextGCPhase *= 2;
 }
 
 void GC::addObject(Object *object) {
@@ -42,30 +43,35 @@ void GC::addObject(Object *object) {
 Value GC::createString(std::string value) {
   auto str = new String(value);
   this->addObject(str);
+  this->bytesAllocated += sizeof(String);
   return str;
 }
 
 Value GC::createAtom(std::string value) {
   auto atom = new Atom(value);
   this->addObject(atom);
+  this->bytesAllocated += sizeof(Atom);
   return atom;
 }
 
 Value GC::createList(std::vector<Value> elements) {
   auto list = new List(elements);
   this->addObject(list);
+  this->bytesAllocated += sizeof(List);
   return list;
 }
 
 Value GC::createTable(std::unordered_map<std::string, Value> hashMap) {
   auto table = new Table(hashMap);
   this->addObject(table);
+  this->bytesAllocated += sizeof(Table);
   return table;
 }
 
 Value GC::createTuple(std::vector<Value> values) {
   auto tuple = new Tuple(values);
   this->addObject(tuple);
+  this->bytesAllocated += sizeof(Tuple);
   return tuple;
 }
 
@@ -74,6 +80,7 @@ Value GC::createFunction(std::string name,
                          std::uint8_t *buffers) {
   auto func = new Function(name, arity, buffers);
   this->addObject(func);
+  this->bytesAllocated += sizeof(Function);
   return func;
 }
 

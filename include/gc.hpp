@@ -30,6 +30,9 @@ struct Object {
   bool marked{false};
   void mark();
   virtual ~Object() {};
+  virtual std::uint64_t byteSize() {
+    return sizeof(Object);
+  };
 };
 
 struct String : public Object {
@@ -38,6 +41,9 @@ struct String : public Object {
   String(std::string value)
       : value{value}, utf8length{utf8len(value.c_str())} {};
   ~String() override {};
+  std::uint64_t byteSize() override {
+    return sizeof(String);
+  };
 };
 
 struct Atom : public Object {
@@ -45,24 +51,36 @@ struct Atom : public Object {
   std::size_t utf8length;
   Atom(std::string value) : value{value}, utf8length{utf8len(value.c_str())} {};
   ~Atom() override {};
+  std::uint64_t byteSize() override {
+    return sizeof(Atom);
+  };
 };
 
 struct List : public Object {
   std::vector<Value> elements;
   List(std::vector<Value> elements) : elements{elements} {};
   ~List() override {};
+  std::uint64_t byteSize() override {
+    return sizeof(List);
+  };
 };
 
 struct Table : public Object {
   std::unordered_map<std::string, Value> hashMap;
   Table(std::unordered_map<std::string, Value> hashMap) : hashMap{hashMap} {};
   ~Table() override {};
+  std::uint64_t byteSize() override {
+    return sizeof(Table);
+  };
 };
 
 struct Tuple : public Object {
   std::vector<Value> values;
   Tuple(std::vector<Value> values) : values{values} {};
   ~Tuple() override {};
+  std::uint64_t byteSize() override {
+    return sizeof(Tuple);
+  };
 };
 
 struct Function : public Object {
@@ -74,11 +92,15 @@ struct Function : public Object {
   ~Function() override {
     delete[] this->buffers;
   };
+  std::uint64_t byteSize() override {
+    return sizeof(Function);
+  };
 };
 
 class GC {
  private:
-  std::size_t maxObjNum = 128;
+  std::size_t nextGCPhase = 1024 * 1024;
+  std::size_t bytesAllocated = 0;
   std::list<Object*> objects;
   std::vector<Value>* stack;
 
