@@ -563,7 +563,7 @@ void VM::callFunc(std::uint8_t* bufferPtr,
     this->throwError(errInfoIdx, ss.str());
   }
 
-  auto frame = CallFrame(bufferPtr, this->stack.from);
+  auto frame = CallFrame(bufferPtr, func, this->stack.from);
   this->callframes.push_back(frame);
   this->stack.setFrom(argCount);
   bufferPtr = func->buffers;
@@ -1175,6 +1175,16 @@ std::uint8_t* VM::readFunctionBody(std::uint8_t* bufferPtr) {
 
 void VM::throwError(std::uint16_t errInfoIdx, std::string msg) {
   delete[] this->buffer;
+
+  std::cerr << "Stack trace:\n";
+
+  // TODO: Maybe fix this later?
+  for (int i = this->callframes.size() - 1; i >= 0; i--) {
+    auto frame = this->callframes[i];
+    std::cerr << frame.function->name << "\n";
+  }
+
+  std::cerr << "\n";
 
   ErrorInfo errInfo = this->errorInfoList.at(errInfoIdx);
   std::cerr << errInfo.lineText << "\n";

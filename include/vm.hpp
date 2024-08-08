@@ -25,8 +25,9 @@ struct ErrorInfo {
 struct CallFrame {
   std::uint8_t *retAddr;
   std::uint16_t prevFrom;
-  CallFrame(std::uint8_t *retAddr, std::uint16_t prevFrom)
-      : retAddr{retAddr}, prevFrom{prevFrom} {};
+  Function *function;
+  CallFrame(std::uint8_t *retAddr, Function *function, std::uint16_t prevFrom)
+      : retAddr{retAddr}, prevFrom{prevFrom}, function{function} {};
 };
 
 struct Stack {
