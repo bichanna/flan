@@ -1205,7 +1205,7 @@ void VM::throwError(std::string msg) {
 }
 
 Stack::Stack() {
-  this->stack.reserve(64 * UINT8_MAX);
+  this->stack.reserve(CALL_FRAMES_MAX * UINT8_MAX);
   this->from = 0;
 }
 

@@ -11,11 +11,21 @@ void Object::mark() {
   this->marked = true;
 }
 
-void GC::mayPerform() {
-  if (bytesAllocated >= nextGCPhase) this->perform();
+void GC::mayGC() {
+  mayGCNursery();
+  mayGCRetirementHome();
 }
 
-void GC::perform() {
+void GC::mayGCNursery() {
+  if (this->nurseryHeap >= this->maxNurserySize) this->gcNursery();
+}
+
+void GC::mayGCRetirementHome() {
+  if (this->retirementHomeHeap >= this->maxRetirementHomeSize)
+    this->gcRetirementHome();
+}
+
+void GC::gcNursery() {
   // Mark all
   for (auto value : *this->stack) {
     if (std::holds_alternative<Object *>(value.value))
@@ -23,55 +33,76 @@ void GC::perform() {
   }
 
   // Sweep
-  for (auto obj : this->objects) {
+  for (auto it = this->nursery.begin(); it != this->nursery.end(); it++) {
+    auto obj = *it;
+    this->nursery.erase_after(it);
+    this->nurseryHeap -= obj->byteSize();
+
     if (!obj->marked) {
-      this->objects.remove(obj);
-      bytesAllocated -= obj->byteSize();
+      delete obj;  // Clear memory :)
+    } else {
+      obj->marked = false;
+      this->retirementHome.push_front(obj);
+    }
+  }
+}
+
+void GC::gcRetirementHome() {
+  // Mark all
+  for (auto value : *this->stack) {
+    if (std::holds_alternative<Object *>(value.value))
+      std::get<Object *>(value.value)->mark();
+  }
+
+  // Sweep
+  for (auto obj : this->nursery) {
+    if (!obj->marked) {
+      this->retirementHome.remove(obj);
+      this->retirementHomeHeap -= obj->byteSize();
       delete obj;  // Clear memory :)
     } else {
       obj->marked = false;
     }
   }
-
-  // this->nextGCPhase *= 2;
 }
 
 void GC::addObject(Object *object) {
-  this->objects.push_back(object);
+  this->mayGC();
+  this->nursery.push_front(object);
 }
 
 Value GC::createString(std::string value) {
   auto str = new String(value);
   this->addObject(str);
-  this->bytesAllocated += sizeof(String);
+  this->nurseryHeap += sizeof(String);
   return str;
 }
 
 Value GC::createAtom(std::string value) {
   auto atom = new Atom(value);
   this->addObject(atom);
-  this->bytesAllocated += sizeof(Atom);
+  this->nurseryHeap += sizeof(Atom);
   return atom;
 }
 
 Value GC::createList(std::vector<Value> elements) {
   auto list = new List(elements);
   this->addObject(list);
-  this->bytesAllocated += sizeof(List);
+  this->nurseryHeap += sizeof(List);
   return list;
 }
 
 Value GC::createTable(std::unordered_map<std::string, Value> hashMap) {
   auto table = new Table(hashMap);
   this->addObject(table);
-  this->bytesAllocated += sizeof(Table);
+  this->nurseryHeap += sizeof(Table);
   return table;
 }
 
 Value GC::createTuple(std::vector<Value> values) {
   auto tuple = new Tuple(values);
   this->addObject(tuple);
-  this->bytesAllocated += sizeof(Tuple);
+  this->nurseryHeap += sizeof(Tuple);
   return tuple;
 }
 
@@ -80,7 +111,7 @@ Value GC::createFunction(std::string name,
                          std::uint8_t *buffers) {
   auto func = new Function(name, arity, buffers);
   this->addObject(func);
-  this->bytesAllocated += sizeof(Function);
+  this->nurseryHeap += sizeof(Function);
   return func;
 }
 

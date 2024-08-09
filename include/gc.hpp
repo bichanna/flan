@@ -1,6 +1,6 @@
 #pragma once
 #include <cstdint>
-#include <list>
+#include <forward_list>
 #include <string>
 #include <unordered_map>
 #include <variant>
@@ -99,13 +99,23 @@ struct Function : public Object {
 
 class GC {
  private:
-  std::size_t nextGCPhase = 1024 * 1024;
-  std::size_t bytesAllocated = 0;
-  std::list<Object*> objects;
+  const std::size_t maxNurserySize = 1024 * 256;          // ~262KB
+  const std::size_t maxRetirementHomeSize = 1024 * 2048;  // ~2MB
   std::vector<Value>* stack;
 
-  void perform();
-  void mayPerform();
+  std::size_t retirementHomeHeap = 0;
+  std::forward_list<Object*> retirementHome;
+
+  std::size_t nurseryHeap = 0;
+  std::forward_list<Object*> nursery;
+
+  void mayGCNursery();
+  void gcNursery();
+
+  void mayGCRetirementHome();
+  void gcRetirementHome();
+
+  void mayGC();
 
  public:
   GC(std::vector<Value>* stack) : stack{stack} {};
