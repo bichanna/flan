@@ -10,7 +10,7 @@
 
 **WARNING!! THIS LANGUAGE IS IN DEVELOPMENT**
  --------------------------------------------------------------------------------------------------------
-**F** **LAN**guage is a high-level, dynamically- and strongly-typed, functional programming language that runs on a virtual machine.
+**F**unctional **LAN**guage is a high-level, dynamically- and strongly-typed, functional programming language that runs on a virtual machine.
 **Flan** is my high school Computer Science project written in C++.
 
  -------------------------
