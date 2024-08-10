@@ -79,6 +79,7 @@ Value GC::createString(std::string value) {
 }
 
 Value GC::createAtom(std::string value) {
+  value.shrink_to_fit();
   auto atom = new Atom(value);
   this->addObject(atom);
   this->nurseryHeap += sizeof(Atom);

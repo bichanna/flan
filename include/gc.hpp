@@ -36,6 +36,8 @@ struct Object {
 };
 
 struct String : public Object {
+  // TODO: Make this use less memory with SSO stuff?
+  // TODO: Use std::uint32_t instead of std::size_t?
   std::string value;
   std::size_t utf8length;
   String(std::string value)
@@ -47,7 +49,8 @@ struct String : public Object {
 };
 
 struct Atom : public Object {
-  std::string value;
+  // TODO: Use std::uint32_t instead of std::size_t?
+  std::string value;  // TODO: Use const char* instead?
   std::size_t utf8length;
   Atom(std::string value) : value{value}, utf8length{utf8len(value.c_str())} {};
   ~Atom() override {};
@@ -75,6 +78,7 @@ struct Table : public Object {
 };
 
 struct Tuple : public Object {
+  // TODO: Just use a heap-allocated array instead of std::vector
   std::vector<Value> values;
   Tuple(std::vector<Value> values) : values{values} {};
   ~Tuple() override {};
@@ -99,8 +103,8 @@ struct Function : public Object {
 
 class GC {
  private:
-  const std::size_t maxNurserySize = 1024 * 256;          // ~262KB
-  const std::size_t maxRetirementHomeSize = 1024 * 2048;  // ~2MB
+  const std::size_t maxNurserySize = 2048 * 2048;             //  ~4.2 MB
+  const std::size_t maxRetirementHomeSize = 2048 * 2048 * 8;  // ~33.6 MB
   std::vector<Value>* stack;
 
   std::size_t retirementHomeHeap = 0;
