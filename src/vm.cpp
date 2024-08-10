@@ -302,11 +302,9 @@ void VM::run() {
       case InstructionType::InitTup: {
         bufferPtr++;
         auto length = this->readUInt32(bufferPtr);
-        std::vector<Value> values;
-        values.reserve(length);
-        for (std::uint32_t i = 0; i < length; i++)
-          values.push_back(this->pop());
-        this->push(this->gc.createTuple(std::move(values)));
+        auto values = new Value[length];
+        for (std::uint32_t i = 0; i < length; i++) values[i] = this->pop();
+        this->push(this->gc.createTuple(std::move(values), length));
         break;
       }
 
@@ -324,24 +322,29 @@ void VM::run() {
 
         auto obj = std::get<Object*>(value.value);
 
-        std::vector<Value> values;
+        std::uint32_t length;
+        Value* values;
         if (typeid(obj) == typeid(List)) {
-          values = static_cast<List*>(obj)->elements;
+          auto vec = static_cast<List*>(obj)->elements;
+          values = vec.data();
+          length = vec.size();
         } else if (typeid(obj) == typeid(Tuple)) {
-          values = static_cast<Tuple*>(obj)->values;
+          auto tup = static_cast<Tuple*>(obj);
+          values = tup->values;
+          length = tup->length;
         } else {
           std::stringstream ss;
           ss << "Expected a list or tuple but got " << value.toDbgString();
           this->throwError(errInfoIdx, ss.str());
         }
 
-        if (values.size() <= static_cast<std::uint64_t>(idx))
+        if (length <= static_cast<std::uint64_t>(idx))
           this->throwError(errInfoIdx, "Index out of range");
 
-        if ((idx < 0) && (0 <= static_cast<std::int64_t>(values.size() - idx)))
-          this->push(values.at(values.size() - idx));
+        if ((idx < 0) && (0 <= static_cast<std::int64_t>(length - idx)))
+          this->push(values[length - idx]);
         else
-          this->push(values.at(idx));
+          this->push(values[idx]);
 
         break;
       }
@@ -1147,11 +1150,11 @@ Value VM::readString(std::uint8_t* bufferPtr) {
 
 Value VM::readAtom(std::uint8_t* bufferPtr) {
   auto length = this->readUInt8(bufferPtr);
-  std::string s;
-  s.reserve(length);
+  auto s = new char[length + 1];
+  s[length] = '\0';
   for (auto i = 0; i < length; i++)
-    s += static_cast<char>(this->readUInt8(bufferPtr));
-  return this->gc.createAtom(s);
+    s[i] = static_cast<char>(this->readUInt8(bufferPtr));
+  return this->gc.createAtom(s, length);
 }
 
 Value VM::readFunction(std::uint8_t* bufferPtr) {

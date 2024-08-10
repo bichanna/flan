@@ -6,8 +6,6 @@
 #include <variant>
 #include <vector>
 
-#include "utf8.hpp"
-
 namespace flan {
 
 struct Object;
@@ -39,10 +37,9 @@ struct String : public Object {
   // TODO: Make this use less memory with SSO stuff?
   // TODO: Use std::uint32_t instead of std::size_t?
   std::string value;
-  std::size_t utf8length;
-  String(std::string value)
-      : value{value}, utf8length{utf8len(value.c_str())} {};
+  String(std::string value) : value{value} {};
   ~String() override {};
+  std::size_t utf8length();
   std::uint64_t byteSize() override {
     return sizeof(String);
   };
@@ -50,10 +47,14 @@ struct String : public Object {
 
 struct Atom : public Object {
   // TODO: Use std::uint32_t instead of std::size_t?
-  std::string value;  // TODO: Use const char* instead?
-  std::size_t utf8length;
-  Atom(std::string value) : value{value}, utf8length{utf8len(value.c_str())} {};
-  ~Atom() override {};
+  const char* value;
+  const std::size_t byte_length;
+  Atom(const char* value, const std::size_t byte_length)
+      : value{value}, byte_length{byte_length} {};
+  ~Atom() override {
+    delete[] value;
+  };
+  std::size_t utf8length();
   std::uint64_t byteSize() override {
     return sizeof(Atom);
   };
@@ -78,10 +79,12 @@ struct Table : public Object {
 };
 
 struct Tuple : public Object {
-  // TODO: Just use a heap-allocated array instead of std::vector
-  std::vector<Value> values;
-  Tuple(std::vector<Value> values) : values{values} {};
-  ~Tuple() override {};
+  std::uint8_t length;
+  Value* values;
+  Tuple(Value* values, std::uint8_t length) : length{length}, values{values} {};
+  ~Tuple() override {
+    delete[] this->values;
+  };
   std::uint64_t byteSize() override {
     return sizeof(Tuple);
   };
@@ -125,10 +128,10 @@ class GC {
   GC(std::vector<Value>* stack) : stack{stack} {};
   void addObject(Object* object);
   Value createString(std::string value);
-  Value createAtom(std::string value);
+  Value createAtom(const char* value, const std::size_t byte_length);
   Value createList(std::vector<Value> elements);
   Value createTable(std::unordered_map<std::string, Value> hashMap);
-  Value createTuple(std::vector<Value> values);
+  Value createTuple(Value* values, std::uint8_t length);
   Value createFunction(std::string name,
                        std::uint16_t arity,
                        std::uint8_t* buffers);

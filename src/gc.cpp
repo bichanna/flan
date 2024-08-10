@@ -4,6 +4,8 @@
 #include <typeinfo>
 #include <variant>
 
+#include "utf8.hpp"
+
 using namespace flan;
 
 void Object::mark() {
@@ -66,6 +68,14 @@ void GC::gcRetirementHome() {
   }
 }
 
+std::size_t String::utf8length() {
+  return utf8len(this->value.c_str());
+}
+
+std::size_t Atom::utf8length() {
+  return utf8len(this->value);
+}
+
 void GC::addObject(Object *object) {
   this->mayGC();
   this->nursery.push_front(object);
@@ -78,9 +88,8 @@ Value GC::createString(std::string value) {
   return str;
 }
 
-Value GC::createAtom(std::string value) {
-  value.shrink_to_fit();
-  auto atom = new Atom(value);
+Value GC::createAtom(const char *value, const std::size_t byte_length) {
+  auto atom = new Atom(value, byte_length);
   this->addObject(atom);
   this->nurseryHeap += sizeof(Atom);
   return atom;
@@ -100,8 +109,8 @@ Value GC::createTable(std::unordered_map<std::string, Value> hashMap) {
   return table;
 }
 
-Value GC::createTuple(std::vector<Value> values) {
-  auto tuple = new Tuple(values);
+Value GC::createTuple(Value *values, std::uint8_t length) {
+  auto tuple = new Tuple(values, length);
   this->addObject(tuple);
   this->nurseryHeap += sizeof(Tuple);
   return tuple;
@@ -169,9 +178,9 @@ std::string Value::toString() {
     } else if (typeid(obj) == typeid(Tuple)) {
       auto tuple = static_cast<Tuple *>(obj);
       std::string s{"<"};
-      for (std::uint32_t i = 0; i < tuple->values.size(); i++) {
-        s += tuple->values.at(i).toString();
-        if (i + 1 != tuple->values.size()) s += ", ";
+      for (std::uint32_t i = 0; i < tuple->length; i++) {
+        s += tuple->values[i].toString();
+        if (i + 1 != tuple->length) s += ", ";
       }
       s += ">";
       return s;
@@ -210,9 +219,9 @@ std::string Value::toDbgString() {
     } else if (typeid(obj) == typeid(Tuple)) {
       auto tuple = static_cast<Tuple *>(obj);
       std::string s{"<"};
-      for (std::uint32_t i = 0; i < tuple->values.size(); i++) {
-        s += tuple->values.at(i).toDbgString();
-        if (i + 1 != tuple->values.size()) s += ", ";
+      for (std::uint32_t i = 0; i < tuple->length; i++) {
+        s += tuple->values[i].toDbgString();
+        if (i + 1 != tuple->length) s += ", ";
       }
       s += ">";
       return s;
