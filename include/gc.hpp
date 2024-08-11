@@ -52,7 +52,7 @@ struct Atom : public Object {
   Atom(const char* value, const std::size_t byte_length)
       : value{value}, byte_length{byte_length} {};
   ~Atom() override {
-    delete[] value;
+    delete[] this->value;
   };
   std::size_t utf8length();
   std::uint64_t byteSize() override {
@@ -91,12 +91,13 @@ struct Tuple : public Object {
 };
 
 struct RawFunction : public Object {
-  std::string name;
   std::uint16_t arity;
+  const char* name;
   std::uint8_t* buffers;
-  RawFunction(std::string name, std::uint16_t arity, std::uint8_t* buffers)
-      : name{name}, arity{arity}, buffers{buffers} {};
+  RawFunction(const char* name, std::uint16_t arity, std::uint8_t* buffers)
+      : arity{arity}, name{name}, buffers{buffers} {};
   ~RawFunction() override {
+    delete[] this->name;
     delete[] this->buffers;
   };
   std::uint64_t byteSize() override {
@@ -132,7 +133,7 @@ class GC {
   Value createList(std::vector<Value> elements);
   Value createTable(std::unordered_map<std::string, Value> hashMap);
   Value createTuple(Value* values, std::uint8_t length);
-  Value createRawFunction(std::string name,
+  Value createRawFunction(const char* name,
                           std::uint16_t arity,
                           std::uint8_t* buffers);
 };

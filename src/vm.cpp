@@ -1161,7 +1161,7 @@ Value VM::readRawFunction(std::uint8_t* bufferPtr) {
   auto funcName = this->readShortString(bufferPtr);
   auto arity = this->readUInt16(bufferPtr);
   auto funcBuffers = this->readRawFunctionBody(bufferPtr);
-  return this->gc.createRawFunction(funcName, arity, funcBuffers);
+  return this->gc.createRawFunction(funcName.data(), arity, funcBuffers);
 }
 
 std::uint8_t* VM::readRawFunctionBody(std::uint8_t* bufferPtr) {

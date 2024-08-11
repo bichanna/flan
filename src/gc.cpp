@@ -1,5 +1,6 @@
 #include "gc.hpp"
 
+#include <sstream>
 #include <string>
 #include <typeinfo>
 #include <variant>
@@ -116,7 +117,7 @@ Value GC::createTuple(Value *values, std::uint8_t length) {
   return tuple;
 }
 
-Value GC::createRawFunction(std::string name,
+Value GC::createRawFunction(const char *name,
                             std::uint16_t arity,
                             std::uint8_t *buffers) {
   auto func = new RawFunction(name, arity, buffers);
@@ -186,7 +187,11 @@ std::string Value::toString() {
       return s;
     } else if (typeid(obj) == typeid(RawFunction)) {
       auto func = static_cast<RawFunction *>(obj);
-      return "<function " + func->name + ">";
+      std::stringstream res;
+      res << "<function ";
+      if (func->name) res << func->name;
+      res << ">";
+      return res.str();
     }
   }
 
