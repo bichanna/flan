@@ -34,7 +34,6 @@ void GC::gcNursery() {
     if (std::holds_alternative<Object *>(value.value))
       std::get<Object *>(value.value)->mark();
   }
-
   // Sweep
   for (auto it = this->nursery.begin(); it != this->nursery.end(); it++) {
     auto obj = *it;
@@ -124,6 +123,33 @@ Value GC::createRawFunction(const char *name,
   this->addObject(func);
   this->nurseryHeap += sizeof(RawFunction);
   return func;
+}
+
+void List::mark() {
+  if (this->marked) return;
+  this->marked = true;
+
+  for (auto &val : this->elements)
+    if (std::holds_alternative<Object *>(val.value))
+      std::get<Object *>(val.value)->mark();
+}
+
+void Table::mark() {
+  if (this->marked) return;
+  this->marked = true;
+
+  for (auto &p : this->hashMap)
+    if (std::holds_alternative<Object *>(p.second.value))
+      std::get<Object *>(p.second.value)->mark();
+}
+
+void Tuple::mark() {
+  if (this->marked) return;
+  this->marked = true;
+
+  for (auto i = 0; i < length; i++)
+    if (std::holds_alternative<Object *>(this->values[i].value))
+      std::get<Object *>(this->values[i].value)->mark();
 }
 
 bool Value::truthy() {

@@ -26,8 +26,8 @@ struct Value {
 
 struct Object {
   bool marked{false};
-  void mark();
   virtual ~Object() {};
+  virtual void mark();
   virtual std::uint64_t byteSize() {
     return sizeof(Object);
   };
@@ -64,6 +64,7 @@ struct List : public Object {
   std::vector<Value> elements;
   List(std::vector<Value> elements) : elements{elements} {};
   ~List() override {};
+  void mark() override;
   std::uint64_t byteSize() override {
     return sizeof(List);
   };
@@ -73,6 +74,7 @@ struct Table : public Object {
   std::unordered_map<std::string, Value> hashMap;
   Table(std::unordered_map<std::string, Value> hashMap) : hashMap{hashMap} {};
   ~Table() override {};
+  void mark() override;
   std::uint64_t byteSize() override {
     return sizeof(Table);
   };
@@ -85,6 +87,7 @@ struct Tuple : public Object {
   ~Tuple() override {
     delete[] this->values;
   };
+  void mark() override;
   std::uint64_t byteSize() override {
     return sizeof(Tuple);
   };
@@ -136,5 +139,6 @@ class GC {
   Value createRawFunction(const char* name,
                           std::uint16_t arity,
                           std::uint8_t* buffers);
+  Value createClosure(RawFunction* rawFunction);
 };
 }  // namespace flan
