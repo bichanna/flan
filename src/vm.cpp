@@ -556,13 +556,13 @@ void VM::callFunc(std::uint8_t* bufferPtr,
   }
 
   auto obj = std::get<Object*>(couldBeFunc.value);
-  if (typeid(obj) != typeid(Function)) {
+  if (typeid(obj) != typeid(RawFunction)) {
     std::stringstream ss;
     ss << couldBeFunc.toDbgString() << " is not callable";
     this->throwError(errInfoIdx, ss.str());
   }
 
-  auto func = static_cast<Function*>(obj);
+  auto func = static_cast<RawFunction*>(obj);
 
   if (func->arity != argCount) {
     std::stringstream ss;
@@ -1097,7 +1097,7 @@ Value VM::readValue(std::uint8_t* bufferPtr) {
     case 5:
       return readAtom(bufferPtr);
     case 6:
-      return readFunction(bufferPtr);
+      return readRawFunction(bufferPtr);
     default: {
       std::stringstream ss;
       ss << "Invalid value type " << std::hex << std::setw(2)
@@ -1157,14 +1157,14 @@ Value VM::readAtom(std::uint8_t* bufferPtr) {
   return this->gc.createAtom(s, length);
 }
 
-Value VM::readFunction(std::uint8_t* bufferPtr) {
+Value VM::readRawFunction(std::uint8_t* bufferPtr) {
   auto funcName = this->readShortString(bufferPtr);
   auto arity = this->readUInt16(bufferPtr);
-  auto funcBuffers = this->readFunctionBody(bufferPtr);
-  return this->gc.createFunction(funcName, arity, funcBuffers);
+  auto funcBuffers = this->readRawFunctionBody(bufferPtr);
+  return this->gc.createRawFunction(funcName, arity, funcBuffers);
 }
 
-std::uint8_t* VM::readFunctionBody(std::uint8_t* bufferPtr) {
+std::uint8_t* VM::readRawFunctionBody(std::uint8_t* bufferPtr) {
   auto length = std::get<std::int64_t>(this->readInteger(bufferPtr).value);
   auto buffers = new std::uint8_t[length];
   for (auto i = 0; i < length; i++) buffers[i] = this->readUInt8(bufferPtr);

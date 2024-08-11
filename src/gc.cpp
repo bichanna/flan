@@ -116,12 +116,12 @@ Value GC::createTuple(Value *values, std::uint8_t length) {
   return tuple;
 }
 
-Value GC::createFunction(std::string name,
-                         std::uint16_t arity,
-                         std::uint8_t *buffers) {
-  auto func = new Function(name, arity, buffers);
+Value GC::createRawFunction(std::string name,
+                            std::uint16_t arity,
+                            std::uint8_t *buffers) {
+  auto func = new RawFunction(name, arity, buffers);
   this->addObject(func);
-  this->nurseryHeap += sizeof(Function);
+  this->nurseryHeap += sizeof(RawFunction);
   return func;
 }
 
@@ -184,8 +184,8 @@ std::string Value::toString() {
       }
       s += ">";
       return s;
-    } else if (typeid(obj) == typeid(Function)) {
-      auto func = static_cast<Function *>(obj);
+    } else if (typeid(obj) == typeid(RawFunction)) {
+      auto func = static_cast<RawFunction *>(obj);
       return "<function " + func->name + ">";
     }
   }

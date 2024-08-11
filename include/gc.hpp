@@ -90,17 +90,17 @@ struct Tuple : public Object {
   };
 };
 
-struct Function : public Object {
+struct RawFunction : public Object {
   std::string name;
   std::uint16_t arity;
   std::uint8_t* buffers;
-  Function(std::string name, std::uint16_t arity, std::uint8_t* buffers)
+  RawFunction(std::string name, std::uint16_t arity, std::uint8_t* buffers)
       : name{name}, arity{arity}, buffers{buffers} {};
-  ~Function() override {
+  ~RawFunction() override {
     delete[] this->buffers;
   };
   std::uint64_t byteSize() override {
-    return sizeof(Function);
+    return sizeof(RawFunction);
   };
 };
 
@@ -132,8 +132,8 @@ class GC {
   Value createList(std::vector<Value> elements);
   Value createTable(std::unordered_map<std::string, Value> hashMap);
   Value createTuple(Value* values, std::uint8_t length);
-  Value createFunction(std::string name,
-                       std::uint16_t arity,
-                       std::uint8_t* buffers);
+  Value createRawFunction(std::string name,
+                          std::uint16_t arity,
+                          std::uint8_t* buffers);
 };
 }  // namespace flan
