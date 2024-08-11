@@ -20,51 +20,123 @@ void GC::mayGC() {
 }
 
 void GC::mayGCNursery() {
-  if (this->nurseryHeap >= this->maxNurserySize) this->gcNursery();
+  if (this->nurseryHeap >= this->maxNurserySize) this->GCNursery();
 }
 
 void GC::mayGCRetirementHome() {
   if (this->retirementHomeHeap >= this->maxRetirementHomeSize)
-    this->gcRetirementHome();
+    this->GCRetirementHome();
 }
 
-void GC::gcNursery() {
+void GC::GCNursery() {
   // Mark all
-  for (auto value : *this->stack) {
+  for (auto value : *this->stack)
     if (std::holds_alternative<Object *>(value.value))
       std::get<Object *>(value.value)->mark();
-  }
-  // Sweep
-  for (auto it = this->nursery.begin(); it != this->nursery.end(); it++) {
-    auto obj = *it;
-    this->nursery.erase_after(it);
-    this->nurseryHeap -= obj->byteSize();
-
-    if (!obj->marked) {
-      delete obj;  // Clear memory :)
-    } else {
-      obj->marked = false;
-      this->retirementHome.push_front(obj);
-    }
-  }
-}
-
-void GC::gcRetirementHome() {
-  // Mark all
-  for (auto value : *this->stack) {
-    if (std::holds_alternative<Object *>(value.value))
-      std::get<Object *>(value.value)->mark();
-  }
 
   // Sweep
   for (auto obj : this->nursery) {
+    this->removeFromNursery(obj);
     if (!obj->marked) {
-      this->retirementHome.remove(obj);
-      this->retirementHomeHeap -= obj->byteSize();
+      delete obj;  // Clear memory :)
+    } else {
+      obj->marked = false;
+      this->addToRetirementHome(obj);
+    }
+  }
+}
+
+void GC::GCRetirementHome() {
+  // Mark all
+  for (auto value : *this->stack)
+    if (std::holds_alternative<Object *>(value.value))
+      std::get<Object *>(value.value)->mark();
+
+  // Sweep
+  for (auto obj : this->retirementHome) {
+    if (!obj->marked) {
+      this->removeFromRetirementHome(obj);
       delete obj;  // Clear memory :)
     } else {
       obj->marked = false;
     }
+  }
+}
+
+void GC::addToNursery(Object *obj) {
+  this->nursery.push_front(obj);
+  this->nurseryHeap += obj->byteSize();
+  if (typeid(obj) == typeid(List)) {
+    for (auto &val : static_cast<List *>(obj)->elements)
+      if (std::holds_alternative<Object *>(val.value))
+        this->addToNursery(std::get<Object *>(val.value));
+  } else if (typeid(obj) == typeid(Table)) {
+    for (auto &p : static_cast<Table *>(obj)->hashMap)
+      if (std::holds_alternative<Object *>(p.second.value))
+        this->addToNursery(std::get<Object *>(p.second.value));
+  } else if (typeid(obj) == typeid(Tuple)) {
+    auto tup = static_cast<Tuple *>(obj);
+    for (auto i = 0; i < tup->length; i++)
+      if (std::holds_alternative<Object *>(tup->values[i].value))
+        this->addToNursery(std::get<Object *>(tup->values[i].value));
+  }
+}
+
+void GC::addToRetirementHome(Object *obj) {
+  this->retirementHome.push_front(obj);
+  this->retirementHomeHeap += obj->byteSize();
+  if (typeid(obj) == typeid(List)) {
+    for (auto &val : static_cast<List *>(obj)->elements)
+      if (std::holds_alternative<Object *>(val.value))
+        this->addToRetirementHome(std::get<Object *>(val.value));
+  } else if (typeid(obj) == typeid(Table)) {
+    for (auto &p : static_cast<Table *>(obj)->hashMap)
+      if (std::holds_alternative<Object *>(p.second.value))
+        this->addToRetirementHome(std::get<Object *>(p.second.value));
+  } else if (typeid(obj) == typeid(Tuple)) {
+    auto tup = static_cast<Tuple *>(obj);
+    for (auto i = 0; i < tup->length; i++)
+      if (std::holds_alternative<Object *>(tup->values[i].value))
+        this->addToRetirementHome(std::get<Object *>(tup->values[i].value));
+  }
+}
+
+void GC::removeFromNursery(Object *obj) {
+  this->nursery.remove(obj);
+  this->nurseryHeap -= obj->byteSize();
+  if (typeid(obj) == typeid(List)) {
+    for (auto &val : static_cast<List *>(obj)->elements)
+      if (std::holds_alternative<Object *>(val.value))
+        this->removeFromNursery(std::get<Object *>(val.value));
+  } else if (typeid(obj) == typeid(Table)) {
+    for (auto &p : static_cast<Table *>(obj)->hashMap)
+      if (std::holds_alternative<Object *>(p.second.value))
+        this->removeFromNursery(std::get<Object *>(p.second.value));
+  } else if (typeid(obj) == typeid(Tuple)) {
+    auto tup = static_cast<Tuple *>(obj);
+    for (auto i = 0; i < tup->length; i++)
+      if (std::holds_alternative<Object *>(tup->values[i].value))
+        this->removeFromNursery(std::get<Object *>(tup->values[i].value));
+  }
+}
+
+void GC::removeFromRetirementHome(Object *obj) {
+  this->retirementHome.remove(obj);
+  this->retirementHomeHeap -= obj->byteSize();
+  if (typeid(obj) == typeid(List)) {
+    for (auto &val : static_cast<List *>(obj)->elements)
+      if (std::holds_alternative<Object *>(val.value))
+        this->removeFromRetirementHome(std::get<Object *>(val.value));
+  } else if (typeid(obj) == typeid(Table)) {
+    for (auto &p : static_cast<Table *>(obj)->hashMap)
+      if (std::holds_alternative<Object *>(p.second.value))
+        this->removeFromRetirementHome(std::get<Object *>(p.second.value));
+  } else if (typeid(obj) == typeid(Tuple)) {
+    auto tup = static_cast<Tuple *>(obj);
+    for (auto i = 0; i < tup->length; i++)
+      if (std::holds_alternative<Object *>(tup->values[i].value))
+        this->removeFromRetirementHome(
+            std::get<Object *>(tup->values[i].value));
   }
 }
 
@@ -76,42 +148,37 @@ std::size_t Atom::utf8length() {
   return utf8len(this->value);
 }
 
-void GC::addObject(Object *object) {
-  this->mayGC();
-  this->nursery.push_front(object);
-}
-
 Value GC::createString(std::string value) {
   auto str = new String(value);
-  this->addObject(str);
+  this->addToNursery(str);
   this->nurseryHeap += sizeof(String);
   return str;
 }
 
 Value GC::createAtom(const char *value, const std::size_t byte_length) {
   auto atom = new Atom(value, byte_length);
-  this->addObject(atom);
+  this->addToNursery(atom);
   this->nurseryHeap += sizeof(Atom);
   return atom;
 }
 
 Value GC::createList(std::vector<Value> elements) {
   auto list = new List(elements);
-  this->addObject(list);
+  this->addToNursery(list);
   this->nurseryHeap += sizeof(List);
   return list;
 }
 
 Value GC::createTable(std::unordered_map<std::string, Value> hashMap) {
   auto table = new Table(hashMap);
-  this->addObject(table);
+  this->addToNursery(table);
   this->nurseryHeap += sizeof(Table);
   return table;
 }
 
 Value GC::createTuple(Value *values, std::uint8_t length) {
   auto tuple = new Tuple(values, length);
-  this->addObject(tuple);
+  this->addToNursery(tuple);
   this->nurseryHeap += sizeof(Tuple);
   return tuple;
 }
@@ -120,7 +187,7 @@ Value GC::createRawFunction(const char *name,
                             std::uint16_t arity,
                             std::uint8_t *buffers) {
   auto func = new RawFunction(name, arity, buffers);
-  this->addObject(func);
+  this->addToNursery(func);
   this->nurseryHeap += sizeof(RawFunction);
   return func;
 }

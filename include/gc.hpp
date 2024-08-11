@@ -121,16 +121,20 @@ class GC {
   std::forward_list<Object*> nursery;
 
   void mayGCNursery();
-  void gcNursery();
+  void GCNursery();
 
   void mayGCRetirementHome();
-  void gcRetirementHome();
+  void GCRetirementHome();
 
   void mayGC();
 
+  void addToNursery(Object* obj);
+  void addToRetirementHome(Object* obj);
+  void removeFromNursery(Object* obj);
+  void removeFromRetirementHome(Object* obj);
+
  public:
   GC(std::vector<Value>* stack) : stack{stack} {};
-  void addObject(Object* object);
   Value createString(std::string value);
   Value createAtom(const char* value, const std::size_t byte_length);
   Value createList(std::vector<Value> elements);
