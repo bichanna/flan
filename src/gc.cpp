@@ -281,8 +281,13 @@ std::string Value::toString() {
     } else if (typeid(obj) == typeid(RawFunction)) {
       auto func = static_cast<RawFunction *>(obj);
       std::stringstream res;
-      res << "<function ";
-      if (func->name) res << func->name;
+      res << "<function";
+
+      if (func->name)
+        res << " " << func->name;
+      else
+        res << "@" << std::hex << static_cast<void *>(func);
+
       res << ">";
       return res.str();
     }
