@@ -66,78 +66,21 @@ void GC::GCRetirementHome() {
 void GC::addToNursery(Object *obj) {
   this->nursery.push_front(obj);
   this->nurseryHeap += obj->byteSize();
-  if (typeid(obj) == typeid(List)) {
-    for (auto &val : static_cast<List *>(obj)->elements)
-      if (std::holds_alternative<Object *>(val.value))
-        this->addToNursery(std::get<Object *>(val.value));
-  } else if (typeid(obj) == typeid(Table)) {
-    for (auto &p : static_cast<Table *>(obj)->hashMap)
-      if (std::holds_alternative<Object *>(p.second.value))
-        this->addToNursery(std::get<Object *>(p.second.value));
-  } else if (typeid(obj) == typeid(Tuple)) {
-    auto tup = static_cast<Tuple *>(obj);
-    for (auto i = 0; i < tup->length; i++)
-      if (std::holds_alternative<Object *>(tup->values[i].value))
-        this->addToNursery(std::get<Object *>(tup->values[i].value));
-  }
 }
 
 void GC::addToRetirementHome(Object *obj) {
   this->retirementHome.push_front(obj);
   this->retirementHomeHeap += obj->byteSize();
-  if (typeid(obj) == typeid(List)) {
-    for (auto &val : static_cast<List *>(obj)->elements)
-      if (std::holds_alternative<Object *>(val.value))
-        this->addToRetirementHome(std::get<Object *>(val.value));
-  } else if (typeid(obj) == typeid(Table)) {
-    for (auto &p : static_cast<Table *>(obj)->hashMap)
-      if (std::holds_alternative<Object *>(p.second.value))
-        this->addToRetirementHome(std::get<Object *>(p.second.value));
-  } else if (typeid(obj) == typeid(Tuple)) {
-    auto tup = static_cast<Tuple *>(obj);
-    for (auto i = 0; i < tup->length; i++)
-      if (std::holds_alternative<Object *>(tup->values[i].value))
-        this->addToRetirementHome(std::get<Object *>(tup->values[i].value));
-  }
 }
 
 void GC::removeFromNursery(Object *obj) {
   this->nursery.remove(obj);
   this->nurseryHeap -= obj->byteSize();
-  if (typeid(obj) == typeid(List)) {
-    for (auto &val : static_cast<List *>(obj)->elements)
-      if (std::holds_alternative<Object *>(val.value))
-        this->removeFromNursery(std::get<Object *>(val.value));
-  } else if (typeid(obj) == typeid(Table)) {
-    for (auto &p : static_cast<Table *>(obj)->hashMap)
-      if (std::holds_alternative<Object *>(p.second.value))
-        this->removeFromNursery(std::get<Object *>(p.second.value));
-  } else if (typeid(obj) == typeid(Tuple)) {
-    auto tup = static_cast<Tuple *>(obj);
-    for (auto i = 0; i < tup->length; i++)
-      if (std::holds_alternative<Object *>(tup->values[i].value))
-        this->removeFromNursery(std::get<Object *>(tup->values[i].value));
-  }
 }
 
 void GC::removeFromRetirementHome(Object *obj) {
   this->retirementHome.remove(obj);
   this->retirementHomeHeap -= obj->byteSize();
-  if (typeid(obj) == typeid(List)) {
-    for (auto &val : static_cast<List *>(obj)->elements)
-      if (std::holds_alternative<Object *>(val.value))
-        this->removeFromRetirementHome(std::get<Object *>(val.value));
-  } else if (typeid(obj) == typeid(Table)) {
-    for (auto &p : static_cast<Table *>(obj)->hashMap)
-      if (std::holds_alternative<Object *>(p.second.value))
-        this->removeFromRetirementHome(std::get<Object *>(p.second.value));
-  } else if (typeid(obj) == typeid(Tuple)) {
-    auto tup = static_cast<Tuple *>(obj);
-    for (auto i = 0; i < tup->length; i++)
-      if (std::holds_alternative<Object *>(tup->values[i].value))
-        this->removeFromRetirementHome(
-            std::get<Object *>(tup->values[i].value));
-  }
 }
 
 std::size_t String::utf8length() {
@@ -219,6 +162,12 @@ void Tuple::mark() {
       std::get<Object *>(this->values[i].value)->mark();
 }
 
+void Closure::mark() {
+  if (this->marked) return;
+  this->marked = true;
+  this->function->mark();
+}
+
 bool Value::truthy() {
   if (std::holds_alternative<std::int64_t>(this->value)) {
     auto v = std::get<std::int64_t>(this->value);
@@ -280,6 +229,18 @@ std::string Value::toString() {
       return s;
     } else if (typeid(obj) == typeid(RawFunction)) {
       auto func = static_cast<RawFunction *>(obj);
+      std::stringstream res;
+      res << "<function";
+
+      if (func->name)
+        res << " " << func->name;
+      else
+        res << "@" << std::hex << static_cast<void *>(func);
+
+      res << ">";
+      return res.str();
+    } else if (typeid(obj) == typeid(Closure)) {
+      auto func = static_cast<Closure *>(obj)->function;
       std::stringstream res;
       res << "<function";
 

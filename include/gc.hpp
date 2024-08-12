@@ -108,10 +108,22 @@ struct RawFunction : public Object {
   };
 };
 
+struct Closure : public Object {
+  RawFunction* function;
+  Closure(RawFunction* function) : function{function} {};
+  ~Closure() override {
+    delete this->function;
+  };
+  void mark() override;
+  std::uint64_t byteSize() override {
+    return sizeof(Closure);
+  }
+};
+
 class GC {
  private:
-  const std::size_t maxNurserySize = 2048 * 2048;             //  ~4.2 MB
-  const std::size_t maxRetirementHomeSize = 2048 * 2048 * 8;  // ~33.6 MB
+  const std::size_t maxNurserySize = 2048 * 2048 * 2;          //  ~8.4 MB
+  const std::size_t maxRetirementHomeSize = 2048 * 2048 * 16;  // ~67.1 MB
   std::vector<Value>* stack;
 
   std::size_t retirementHomeHeap = 0;
