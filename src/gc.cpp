@@ -94,45 +94,59 @@ std::size_t Atom::utf8length() {
 Value GC::createString(std::string value) {
   auto str = new String(value);
   this->addToNursery(str);
-  this->nurseryHeap += sizeof(String);
   return str;
 }
 
 Value GC::createAtom(const char *value, const std::size_t byte_length) {
   auto atom = new Atom(value, byte_length);
   this->addToNursery(atom);
-  this->nurseryHeap += sizeof(Atom);
   return atom;
 }
 
 Value GC::createList(std::vector<Value> elements) {
   auto list = new List(elements);
   this->addToNursery(list);
-  this->nurseryHeap += sizeof(List);
   return list;
 }
 
 Value GC::createTable(std::unordered_map<std::string, Value> hashMap) {
   auto table = new Table(hashMap);
   this->addToNursery(table);
-  this->nurseryHeap += sizeof(Table);
   return table;
 }
 
 Value GC::createTuple(Value *values, std::uint8_t length) {
   auto tuple = new Tuple(values, length);
   this->addToNursery(tuple);
-  this->nurseryHeap += sizeof(Tuple);
   return tuple;
 }
 
-Value GC::createRawFunction(const char *name,
-                            std::uint16_t arity,
-                            std::uint8_t *buffers) {
-  auto func = new RawFunction(name, arity, buffers);
+Value GC::createFunction(const char *name,
+                         std::uint16_t arity,
+                         std::uint8_t *buffers) {
+  auto func = new Function(name, arity, buffers);
   this->addToNursery(func);
-  this->nurseryHeap += sizeof(RawFunction);
   return func;
+}
+
+Value GC::createUpvalue(Value value) {
+  auto upvalue = new Upvalue(value);
+  this->addToNursery(upvalue);
+  return upvalue;
+}
+
+Upvalue *GC::createUpvaluePtr(Value value) {
+  auto upvalue = new Upvalue(value);
+  this->addToNursery(upvalue);
+  return upvalue;
+}
+
+Value GC::createClosure(Function *Function,
+                        Upvalue **upvalues,
+                        std::uint8_t upvalueCount) {
+  auto clos = new Closure(Function, upvalues, upvalueCount);
+  this->addToNursery(clos);
+  return clos;
 }
 
 void List::mark() {
@@ -162,10 +176,20 @@ void Tuple::mark() {
       std::get<Object *>(this->values[i].value)->mark();
 }
 
+void Upvalue::mark() {
+  if (this->marked) return;
+  this->marked = true;
+
+  if (std::holds_alternative<Object *>(this->value.value))
+    std::get<Object *>(this->value.value)->mark();
+}
+
 void Closure::mark() {
   if (this->marked) return;
   this->marked = true;
+
   this->function->mark();
+  for (auto i = 0; i < this->upvalueCount; i++) this->upvalues[i]->mark();
 }
 
 bool Value::truthy() {
@@ -227,8 +251,8 @@ std::string Value::toString() {
       }
       s += ">";
       return s;
-    } else if (typeid(obj) == typeid(RawFunction)) {
-      auto func = static_cast<RawFunction *>(obj);
+    } else if (typeid(obj) == typeid(Function)) {
+      auto func = static_cast<Function *>(obj);
       std::stringstream res;
       res << "<function";
 

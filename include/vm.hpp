@@ -25,11 +25,11 @@ struct ErrorInfo {
 struct CallFrame {
   std::uint8_t *retAddr;
   std::uint16_t prevFrom;
-  RawFunction *function;
+  std::variant<Function *, Closure *> callable;
   CallFrame(std::uint8_t *retAddr,
-            RawFunction *function,
+            std::variant<Function *, Closure *> callable,
             std::uint16_t prevFrom)
-      : retAddr{retAddr}, prevFrom{prevFrom}, function{function} {};
+      : retAddr{retAddr}, prevFrom{prevFrom}, callable{callable} {};
 };
 
 struct Stack {
@@ -82,8 +82,8 @@ class VM {
   Value readEmpty();
   Value readString(std::uint8_t *bufferPtr);
   Value readAtom(std::uint8_t *bufferPtr);
-  Value readRawFunction(std::uint8_t *bufferPtr);
-  std::uint8_t *readRawFunctionBody(std::uint8_t *bufferPtr);
+  Value readFunction(std::uint8_t *bufferPtr);
+  std::uint8_t *readFunctionBody(std::uint8_t *bufferPtr);
 
   Value performAdd(std::uint16_t errInfoIdx);
   Value performSub(std::uint16_t errInfoIdx);
@@ -155,6 +155,9 @@ enum class InstructionType : std::uint8_t {
   CallFn,
   RetFn,
   EndFn,
+  MakeClosure,
+  GetUpvalue,
+  SetUpvalue,
   Halt = 255,
 };
 }  // namespace flan

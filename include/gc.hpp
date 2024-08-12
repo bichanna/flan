@@ -93,26 +93,40 @@ struct Tuple : public Object {
   };
 };
 
-struct RawFunction : public Object {
+struct Function : public Object {
   std::uint16_t arity;
   const char* name;
   std::uint8_t* buffers;
-  RawFunction(const char* name, std::uint16_t arity, std::uint8_t* buffers)
+  Function(const char* name, std::uint16_t arity, std::uint8_t* buffers)
       : arity{arity}, name{name}, buffers{buffers} {};
-  ~RawFunction() override {
+  ~Function() override {
     delete[] this->name;
     delete[] this->buffers;
   };
   std::uint64_t byteSize() override {
-    return sizeof(RawFunction);
+    return sizeof(Function);
   };
 };
 
+struct Upvalue : public Object {
+  Value value;
+  Upvalue(Value value) : value{value} {};
+  void mark() override;
+  ~Upvalue() override {};
+  std::uint64_t byteSize() override {
+    return sizeof(Upvalue);
+  }
+};
+
 struct Closure : public Object {
-  RawFunction* function;
-  Closure(RawFunction* function) : function{function} {};
+  uint8_t upvalueCount;
+  Upvalue** upvalues;
+  Function* function;
+  Closure(Function* function, Upvalue** upvalues, uint8_t upvalueCount)
+      : upvalueCount{upvalueCount}, upvalues{upvalues}, function{function} {};
   ~Closure() override {
     delete this->function;
+    delete[] this->upvalues;
   };
   void mark() override;
   std::uint64_t byteSize() override {
@@ -152,9 +166,13 @@ class GC {
   Value createList(std::vector<Value> elements);
   Value createTable(std::unordered_map<std::string, Value> hashMap);
   Value createTuple(Value* values, std::uint8_t length);
-  Value createRawFunction(const char* name,
-                          std::uint16_t arity,
-                          std::uint8_t* buffers);
-  Value createClosure(RawFunction* rawFunction);
+  Value createFunction(const char* name,
+                       std::uint16_t arity,
+                       std::uint8_t* buffers);
+  Value createUpvalue(Value vlaue);
+  Upvalue* createUpvaluePtr(Value value);
+  Value createClosure(Function* Function,
+                      Upvalue** upvalues,
+                      std::uint8_t upvalueCount);
 };
 }  // namespace flan

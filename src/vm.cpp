@@ -18,7 +18,6 @@ using namespace flan;
 
 VM::VM(fs::path fileName) : stack{}, gc{GC(this->stack.actualStack())} {
   this->callframes.reserve(CALL_FRAMES_MAX);
-
   auto inputStream = std::ifstream(fileName);
   this->fileName = fileName;
 
@@ -505,10 +504,12 @@ void VM::run() {
 
       case InstructionType::CallFn: {
         bufferPtr++;
+
         auto errInfoIdx = this->readUInt16(bufferPtr);
         auto argCount = this->readUInt16(bufferPtr);
-        auto couldBeFunc = this->stack.fromLast(argCount - 1);
-        this->callFunc(bufferPtr, couldBeFunc, argCount, errInfoIdx);
+        auto couldBeCallable = this->stack.fromLast(argCount - 1);
+        this->callFunc(bufferPtr, couldBeCallable, argCount, errInfoIdx);
+
         break;
       }
 
@@ -520,6 +521,70 @@ void VM::run() {
 
         bufferPtr = poppedFrame.retAddr;
         this->stack.from = poppedFrame.prevFrom;
+
+        break;
+      }
+
+      case InstructionType::MakeClosure: {
+        bufferPtr++;
+
+        // Probably doesn't fail.
+        auto func =
+            static_cast<Function*>(std::get<Object*>(this->pop().value));
+
+        auto upvalueLength = this->readUInt8(bufferPtr);
+        auto upvalues = new Upvalue*[upvalueLength];
+        for (auto i = 0; i < upvalueLength; i++)
+          upvalues[i] = this->gc.createUpvaluePtr(this->pop());
+
+        auto clos = this->gc.createClosure(func, upvalues, upvalueLength);
+        this->push(clos);
+
+        break;
+      }
+
+      case InstructionType::GetUpvalue: {
+        bufferPtr++;
+
+        auto errInfoIdx = this->readUInt16(bufferPtr);
+        auto slot = this->readUInt8(bufferPtr);
+
+        // TODO: Should I check if the frame is empty or in a closure at all?
+        if (this->callframes.empty())
+          this->throwError(errInfoIdx, "Not in a closure");
+
+        auto currentFrame = this->callframes.back();
+        if (!std::holds_alternative<Closure*>(currentFrame.callable)) {
+          auto func = std::get<Function*>(currentFrame.callable);
+          this->throwError(errInfoIdx,
+                           Value(func).toString() + " is not a closure");
+        }
+
+        auto closure = std::get<Closure*>(currentFrame.callable);
+        this->push(closure->upvalues[slot]->value);
+
+        break;
+      }
+
+      case InstructionType::SetUpvalue: {
+        bufferPtr++;
+
+        auto errInfoIdx = this->readUInt16(bufferPtr);
+        auto slot = this->readUInt8(bufferPtr);
+
+        // TODO: Should I check if the frame is empty or in a closure at all?
+        if (this->callframes.empty())
+          this->throwError(errInfoIdx, "Not in a closure");
+
+        auto currentFrame = this->callframes.back();
+        if (!std::holds_alternative<Closure*>(currentFrame.callable)) {
+          auto func = std::get<Function*>(currentFrame.callable);
+          this->throwError(errInfoIdx,
+                           Value(func).toString() + " is not a closure");
+        }
+
+        auto closure = std::get<Closure*>(currentFrame.callable);
+        closure->upvalues[slot]->value = this->pop();
 
         break;
       }
@@ -546,35 +611,48 @@ quitRun:
 }
 
 void VM::callFunc(std::uint8_t* bufferPtr,
-                  Value couldBeFunc,
+                  Value couldBeCallable,
                   std::uint16_t argCount,
                   std::uint16_t errInfoIdx) {
-  if (!std::holds_alternative<Object*>(couldBeFunc.value)) {
+  if (!std::holds_alternative<Object*>(couldBeCallable.value)) {
     std::stringstream ss;
-    ss << couldBeFunc.toDbgString() << " is not callable";
+    ss << couldBeCallable.toDbgString() << " is not callable";
     this->throwError(errInfoIdx, ss.str());
   }
 
-  auto obj = std::get<Object*>(couldBeFunc.value);
-  if (typeid(obj) != typeid(RawFunction)) {
+  auto obj = std::get<Object*>(couldBeCallable.value);
+  if (typeid(obj) != typeid(Function)) {
     std::stringstream ss;
-    ss << couldBeFunc.toDbgString() << " is not callable";
+    ss << couldBeCallable.toDbgString() << " is not callable";
     this->throwError(errInfoIdx, ss.str());
   }
 
-  auto func = static_cast<RawFunction*>(obj);
+  std::variant<Function*, Closure*> callable;
+  std::uint16_t arity;
+  std::uint8_t* newBufferPtr;
+  if (typeid(obj) == typeid(Function)) {
+    auto func = static_cast<Function*>(obj);
+    callable = func;
+    arity = func->arity;
+    newBufferPtr = func->buffers;
+  } else if (typeid(obj) == typeid(Closure)) {
+    auto clos = static_cast<Closure*>(obj);
+    callable = clos;
+    arity = clos->function->arity;
+    newBufferPtr = clos->function->buffers;
+  }
 
-  if (func->arity != argCount) {
+  if (arity != argCount) {
     std::stringstream ss;
-    ss << couldBeFunc.toDbgString() << " takes " << func->arity
+    ss << couldBeCallable.toDbgString() << " takes " << arity
        << " arguments but " << argCount << " was given";
     this->throwError(errInfoIdx, ss.str());
   }
 
-  auto frame = CallFrame(bufferPtr, func, this->stack.from);
+  auto frame = CallFrame(bufferPtr, callable, this->stack.from);
   this->callframes.push_back(frame);
   this->stack.setFrom(argCount);
-  bufferPtr = func->buffers;
+  bufferPtr = newBufferPtr;
 }
 
 Value VM::performAdd(std::uint16_t errInfoIdx) {
@@ -1097,7 +1175,7 @@ Value VM::readValue(std::uint8_t* bufferPtr) {
     case 5:
       return readAtom(bufferPtr);
     case 6:
-      return readRawFunction(bufferPtr);
+      return readFunction(bufferPtr);
     default: {
       std::stringstream ss;
       ss << "Invalid value type " << std::hex << std::setw(2)
@@ -1157,14 +1235,14 @@ Value VM::readAtom(std::uint8_t* bufferPtr) {
   return this->gc.createAtom(s, length);
 }
 
-Value VM::readRawFunction(std::uint8_t* bufferPtr) {
+Value VM::readFunction(std::uint8_t* bufferPtr) {
   auto funcName = this->readShortString(bufferPtr);
   auto arity = this->readUInt16(bufferPtr);
-  auto funcBuffers = this->readRawFunctionBody(bufferPtr);
-  return this->gc.createRawFunction(funcName.data(), arity, funcBuffers);
+  auto funcBuffers = this->readFunctionBody(bufferPtr);
+  return this->gc.createFunction(funcName.data(), arity, funcBuffers);
 }
 
-std::uint8_t* VM::readRawFunctionBody(std::uint8_t* bufferPtr) {
+std::uint8_t* VM::readFunctionBody(std::uint8_t* bufferPtr) {
   auto length = std::get<std::int64_t>(this->readInteger(bufferPtr).value);
   auto buffers = new std::uint8_t[length];
   for (auto i = 0; i < length; i++) buffers[i] = this->readUInt8(bufferPtr);
@@ -1189,7 +1267,13 @@ void VM::throwError(std::uint16_t errInfoIdx, std::string msg) {
   // TODO: Maybe fix this later?
   for (int i = this->callframes.size() - 1; i >= 0; i--) {
     auto frame = this->callframes[i];
-    std::cerr << frame.function->name << "\n";
+
+    if (std::holds_alternative<Function*>(frame.callable))
+      std::cerr << Value(std::get<Function*>(frame.callable)).toString();
+    else
+      std::cerr << Value(std::get<Closure*>(frame.callable)).toString();
+
+    std::cerr << "\n";
   }
 
   std::cerr << "\n";
