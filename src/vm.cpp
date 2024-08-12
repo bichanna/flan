@@ -1119,21 +1119,21 @@ std::uint8_t VM::readUInt8(std::uint8_t* bufferPtr) {
 }
 
 std::uint16_t VM::readUInt16(std::uint8_t* bufferPtr) {
-  auto low_byte = this->readUInt8(bufferPtr);
-  auto high_byte = this->readUInt8(bufferPtr);
-  return static_cast<std::uint16_t>(low_byte) |
-         (static_cast<std::uint16_t>(high_byte) << 8);
+  auto byte2 = this->readUInt8(bufferPtr);
+  auto byte1 = this->readUInt8(bufferPtr);
+  return (static_cast<std::uint16_t>(byte1) << 8) |
+         (static_cast<std::uint16_t>(byte2) & 0xFF);
 }
 
 std::uint32_t VM::readUInt32(std::uint8_t* bufferPtr) {
-  auto byte1 = this->readUInt8(bufferPtr);
-  auto byte2 = this->readUInt8(bufferPtr);
-  auto byte3 = this->readUInt8(bufferPtr);
   auto byte4 = this->readUInt8(bufferPtr);
+  auto byte3 = this->readUInt8(bufferPtr);
+  auto byte2 = this->readUInt8(bufferPtr);
+  auto byte1 = this->readUInt8(bufferPtr);
   return static_cast<std::uint32_t>(byte1) |
-         (static_cast<std::uint32_t>(byte2)) |
-         (static_cast<std::uint32_t>(byte3)) |
-         (static_cast<std::uint32_t>(byte4));
+         (static_cast<std::uint32_t>(byte2) << 8) |
+         (static_cast<std::uint32_t>(byte3) << 16) |
+         (static_cast<std::uint32_t>(byte4) << 24);
 }
 
 void VM::push(Value value) {
