@@ -14,7 +14,7 @@
 **Flan** is my high school Computer Science project written in C++.
 
  -------------------------
-Almost nothing works currently...
+Almost nothing works currently... See the TODO list [here](https://github.com/bichanna/flan/blob/master/TODO.md).
 
 ```js
 std := import(Std)
