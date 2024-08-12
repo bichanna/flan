@@ -1,0 +1,39 @@
+- [x] Basic data types
+   - [x] Integer
+   - [x] Float
+   - [x] String
+   - [x] Atom
+   - [x] Empty
+   - [x] List
+   - [x] Tuple
+   - [x] Table
+   - [x] Function
+- [x] Basic arithmetic
+- [x] Comparison
+- [x] Global & local variables
+- [x] Loops
+- [x] Functions
+   - [x] Closures
+   - [x] First-class data type
+- [ ] Module
+- [ ] Concurrency (fibers)
+- [ ] Error handling (use of fibers)
+- [ ] Standard library
+   - [ ] Built-in functions
+   - [ ] STD
+   - [ ] Fiber
+   - [ ] Str
+   - [ ] Math
+   - [ ] CMath
+   - [ ] FS
+   - [ ] JSON
+   - [ ] HTTP
+   - [ ] MD
+   - [ ] Rand
+- [ ] FFI
+   - [ ] C++
+   - [ ] C
+   - [ ] Python
+- [ ] JIT
+- [ ] Optional type hints
+- [ ] Transpiler for JavaScript
