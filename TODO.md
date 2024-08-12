@@ -10,12 +10,13 @@
    - [x] Function
 - [x] Basic arithmetic
 - [x] Comparison
+- [ ] Match expressions
 - [x] Global & local variables
 - [x] Loops
 - [x] Functions
    - [x] Closures
    - [x] First-class data type
-- [ ] Module
+- [ ] Module system
 - [ ] Concurrency (fibers)
 - [ ] Error handling (use of fibers)
 - [ ] Standard library

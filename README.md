@@ -25,7 +25,7 @@ std::for(names) ::: (name)
 ```
 
 ```js
-std := import(Std)
+{println: println} := import(Std)
 
 fn fib(n)
   if (n < 2)
@@ -33,5 +33,5 @@ fn fib(n)
   else
     fib(n - 1) + fib(n - 2)
 
-std::println("Result: {{}}", fib(12))
+println("Result: {{}}", fib(12))
 ```
