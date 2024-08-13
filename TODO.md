@@ -3,7 +3,7 @@
    - [x] Float
    - [x] String
    - [x] Atom
-      - [] Interning
+      - [ ] Interning
    - [x] Empty
    - [x] List
    - [x] Tuple
