@@ -3,6 +3,7 @@
    - [x] Float
    - [x] String
    - [x] Atom
+      - [] Interning
    - [x] Empty
    - [x] List
    - [x] Tuple
@@ -17,20 +18,21 @@
    - [x] Closures
    - [x] First-class data type
 - [ ] Module system
+- [ ] Generational garbage collection
 - [ ] Concurrency (fibers)
 - [ ] Error handling (use of fibers)
 - [ ] Standard library
    - [ ] Built-in functions
-   - [ ] STD
-   - [ ] Fiber
-   - [ ] Str
-   - [ ] Math
-   - [ ] CMath
-   - [ ] FS
-   - [ ] JSON
-   - [ ] HTTP
-   - [ ] MD
-   - [ ] Rand
+   - [ ] std
+   - [ ] fiber
+   - [ ] str
+   - [ ] math
+   - [ ] cmath
+   - [ ] fs
+   - [ ] json
+   - [ ] http
+   - [ ] md
+   - [ ] rand
 - [ ] FFI
    - [ ] C++
    - [ ] C
