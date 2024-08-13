@@ -15,17 +15,11 @@ void Object::mark() {
 }
 
 void GC::mayGC() {
-  mayGCNursery();
-  mayGCRetirementHome();
-}
-
-void GC::mayGCNursery() {
-  if (this->nurseryHeap >= this->maxNurserySize) this->GCNursery();
-}
-
-void GC::mayGCRetirementHome() {
-  if (this->retirementHomeHeap >= this->maxRetirementHomeSize)
-    this->GCRetirementHome();
+  if (this->nurseryHeap >= this->maxNurserySize) {
+    this->GCNursery();
+    if (this->retirementHomeHeap >= this->maxRetirementHomeSize)
+      this->GCRetirementHome();
+  }
 }
 
 void GC::GCNursery() {
@@ -47,11 +41,7 @@ void GC::GCNursery() {
 }
 
 void GC::GCRetirementHome() {
-  // Mark all
-  for (auto value : *this->stack)
-    if (std::holds_alternative<Object *>(value.value))
-      std::get<Object *>(value.value)->mark();
-
+  // No need for marking
   // Sweep
   for (auto obj : this->retirementHome) {
     if (!obj->marked) {

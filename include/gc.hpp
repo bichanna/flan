@@ -146,10 +146,7 @@ class GC {
   std::size_t nurseryHeap = 0;
   std::forward_list<Object*> nursery;
 
-  void mayGCNursery();
   void GCNursery();
-
-  void mayGCRetirementHome();
   void GCRetirementHome();
 
   void mayGC();
