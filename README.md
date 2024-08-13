@@ -17,7 +17,7 @@
 Almost nothing works currently... See the TODO list [here](https://github.com/bichanna/flan/blob/master/TODO.md).
 
 ```js
-std := import(Std)
+std := import(:std)
 
 names := ["Tsoding", "ThePrimeagen", "Fireship"]
 std::for(names) ::: (name)
@@ -25,7 +25,7 @@ std::for(names) ::: (name)
 ```
 
 ```js
-{println: println} := import(Std)
+{println: println} := import(:std)
 
 fn fib(n)
   if (n < 2)

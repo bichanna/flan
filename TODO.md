@@ -1,42 +1,48 @@
-- [x] Basic data types
-   - [x] Integer
-   - [x] Float
-   - [x] String
-   - [x] Atom
-      - [ ] Interning
-   - [x] Empty
-   - [x] List
-   - [x] Tuple
-   - [x] Table
-   - [x] Function
-- [x] Basic arithmetic
-- [x] Comparison
-- [ ] Match expressions
-- [x] Global & local variables
-- [x] Loops
-- [x] Functions
-   - [x] Closures
-   - [x] First-class data type
-- [ ] Module system
-- [x] Generational garbage collection
-- [ ] Concurrency (fibers)
-- [ ] Error handling (use of fibers)
-- [ ] Standard library
-   - [ ] Built-in functions
-   - [ ] std
-   - [ ] fiber
-   - [ ] str
-   - [ ] math
-   - [ ] cmath
-   - [ ] fs
-   - [ ] json
-   - [ ] http
-   - [ ] md
-   - [ ] rand
-- [ ] FFI
-   - [ ] C++
-   - [ ] C
-   - [ ] Python
-- [ ] JIT
-- [ ] Optional type hints
-- [ ] Transpiler for JavaScript
+- [ ] Front-End
+   - [ ] Lexer
+   - [ ] Parser
+   - [ ] Byte-code generator
+
+- [ ] Virtual Machine
+   - [x] Basic data types
+      - [x] Integer
+      - [x] Float
+      - [x] String
+      - [x] Atom
+         - [ ] Interning
+      - [x] Empty
+      - [x] List
+      - [x] Tuple
+      - [x] Table
+      - [x] Function
+   - [x] Basic arithmetic
+   - [x] Comparison
+   - [ ] Match expressions
+   - [x] Global & local variables
+   - [x] Loops
+   - [x] Functions
+      - [x] Closures
+      - [x] First-class data type
+   - [ ] Module system
+   - [x] Generational garbage collection
+   - [ ] Concurrency (fibers)
+   - [ ] Error handling (use of fibers)
+   - [ ] Standard library
+      - [ ] Built-in functions
+      - [ ] `:std`
+      - [ ] `:fiber`
+      - [ ] `:str`
+      - [ ] `:math`
+      - [ ] `:cmath`
+      - [ ] `:fs`
+      - [ ] `:json`
+      - [ ] `:http`
+      - [ ] `:md`
+      - [ ] `:rand`
+   - [ ] FFI
+      - [ ] C++
+      - [ ] C
+      - [ ] Python
+   - [ ] JIT
+   - [ ] Optional type hints
+   - [ ] Transpiler for JavaScript
