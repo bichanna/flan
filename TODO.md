@@ -10,6 +10,7 @@
       - [x] String
       - [x] Atom
          - [ ] Interning
+         - [ ] Different heap pool
       - [x] Empty
       - [x] List
       - [x] Tuple
@@ -23,6 +24,7 @@
    - [x] Functions
       - [x] Closures
       - [x] First-class data type
+      - [ ] Tail-call optimization
    - [ ] Module system
    - [x] Generational garbage collection
    - [ ] Concurrency (fibers)
