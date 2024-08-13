@@ -16,9 +16,10 @@ void Object::mark() {
 
 void GC::mayGC() {
   if (this->nurseryHeap >= this->maxNurserySize) {
-    this->GCNursery();
     if (this->retirementHomeHeap >= this->maxRetirementHomeSize)
       this->GCRetirementHome();
+
+    this->GCNursery();
   }
 }
 
