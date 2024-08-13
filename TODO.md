@@ -18,7 +18,7 @@
    - [x] Closures
    - [x] First-class data type
 - [ ] Module system
-- [ ] Generational garbage collection
+- [x] Generational garbage collection
 - [ ] Concurrency (fibers)
 - [ ] Error handling (use of fibers)
 - [ ] Standard library
