@@ -149,7 +149,7 @@ class GC {
   void GCNursery();
   void GCRetirementHome();
 
-  void mayGC();
+  void GCIfNeeded();
 
   void addToNursery(Object* obj);
   void addToRetirementHome(Object* obj);

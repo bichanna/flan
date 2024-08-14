@@ -14,7 +14,7 @@ void Object::mark() {
   this->marked = true;
 }
 
-void GC::mayGC() {
+void GC::GCIfNeeded() {
   if (this->nurseryHeap >= this->maxNurserySize) {
     if (this->retirementHomeHeap >= this->maxRetirementHomeSize)
       this->GCRetirementHome();
@@ -55,6 +55,7 @@ void GC::GCRetirementHome() {
 }
 
 void GC::addToNursery(Object *obj) {
+  this->GCIfNeeded();
   this->nursery.push_front(obj);
   this->nurseryHeap += obj->byteSize();
 }
