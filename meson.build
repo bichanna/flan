@@ -9,6 +9,7 @@ project('flan', 'cpp',
 )
 impala_include = include_directories('include')
 src = [
+  'src/value.cpp',
   'src/flan.cpp',
   'src/gc.cpp',
   'src/vm.cpp',
