@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <cstdlib>
 #include <forward_list>
 #include <string>
 #include <unordered_map>
@@ -47,9 +48,9 @@ struct String : public Object {
 
 struct Atom : public Object {
   // TODO: Use std::uint32_t instead of std::size_t?
-  const char* value;
-  const std::size_t byte_length;
-  Atom(const char* value, const std::size_t byte_length)
+  char* value;
+  std::size_t byte_length;
+  Atom(char* value, std::size_t byte_length)
       : value{value}, byte_length{byte_length} {};
   ~Atom() override {
     delete[] this->value;
@@ -136,6 +137,9 @@ struct Closure : public Object {
 
 class GC {
  private:
+  Atom* atomHeap;
+  std::size_t atomHeapCount = 0;
+  const std::size_t maxAtomHeapSize = 1024 * 1024;             //  ~1.0 MB
   const std::size_t maxNurserySize = 2048 * 2048 * 2;          //  ~8.4 MB
   const std::size_t maxRetirementHomeSize = 2048 * 2048 * 16;  // ~67.1 MB
   std::vector<Value>* stack;
@@ -157,9 +161,10 @@ class GC {
   void removeFromRetirementHome(Object* obj);
 
  public:
-  GC(std::vector<Value>* stack) : stack{stack} {};
+  GC(std::vector<Value>* stack);
+  ~GC();
   Value createString(std::string value);
-  Value createAtom(const char* value, const std::size_t byte_length);
+  Value createAtom(char* value, std::size_t byte_length);
   Value createList(std::vector<Value> elements);
   Value createTable(std::unordered_map<std::string, Value> hashMap);
   Value createTuple(Value* values, std::uint8_t length);

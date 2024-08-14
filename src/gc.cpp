@@ -9,6 +9,14 @@
 
 using namespace flan;
 
+GC::GC(std::vector<Value> *stack) : stack{stack} {
+  this->atomHeap = static_cast<Atom *>(std::malloc(maxAtomHeapSize));
+}
+
+GC::~GC() {
+  std::free(this->atomHeap);
+}
+
 void Object::mark() {
   if (this->marked) return;
   this->marked = true;
@@ -89,9 +97,10 @@ Value GC::createString(std::string value) {
   return str;
 }
 
-Value GC::createAtom(const char *value, const std::size_t byte_length) {
-  auto atom = new Atom(value, byte_length);
-  this->addToNursery(atom);
+Value GC::createAtom(char *value, std::size_t byte_length) {
+  auto atom = &atomHeap[atomHeapCount++];
+  atom->value = value;
+  atom->byte_length = byte_length;
   return atom;
 }
 

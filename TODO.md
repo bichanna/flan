@@ -10,7 +10,7 @@
       - [x] String
       - [x] Atom
          - [ ] Interning
-         - [ ] Different heap pool
+         - [x] Different heap pool
       - [x] Empty
       - [x] List
       - [x] Tuple
