@@ -9,7 +9,7 @@
       - [x] Float
       - [x] String
       - [x] Atom
-         - [ ] Interning
+         - [x] Interning (kinda?)
          - [x] Different heap pool
       - [x] Empty
       - [x] List

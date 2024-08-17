@@ -1,5 +1,6 @@
 #include "gc.hpp"
 
+#include <cstring>
 #include <string>
 #include <variant>
 
@@ -81,9 +82,16 @@ Value GC::createString(std::string value) {
 }
 
 Value GC::createAtom(char *value, std::size_t byte_length) {
-  auto atom = &atomHeap[atomHeapCount++];
-  atom->value = value;
-  atom->byte_length = byte_length;
+  Atom *atom = nullptr;
+  for (std::size_t i = 0; i < this->maxAtomHeapSize; i++)
+    if (std::strcmp(this->atomHeap[i].value, value)) atom = &this->atomHeap[i];
+
+  if (atom == nullptr) {
+    atom = &atomHeap[this->atomHeapCount++];
+    atom->value = value;
+    atom->byte_length = byte_length;
+  }
+
   return atom;
 }
 
