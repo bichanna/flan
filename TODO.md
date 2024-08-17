@@ -44,7 +44,11 @@
    - [ ] FFI
       - [ ] C++
       - [ ] C
+      - [ ] JavaScript
       - [ ] Python
    - [ ] JIT
    - [ ] Optional type hints
-   - [ ] Transpiler for JavaScript
+   - [ ] Transpiler
+      - [ ] JavaScript
+      - [ ] Bash script
+      - [ ] Python
