@@ -45,10 +45,8 @@
       - [ ] C++
       - [ ] C
       - [ ] JavaScript
-      - [ ] Python
    - [ ] JIT
    - [ ] Optional type hints
    - [ ] Transpiler
       - [ ] JavaScript
-      - [ ] Bash script
-      - [ ] Python
+      - [ ] C (from bytecode)
