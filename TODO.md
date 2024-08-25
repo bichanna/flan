@@ -2,6 +2,7 @@
    - [ ] Lexer
    - [ ] Parser
    - [ ] Byte-code generator
+      - [ ] Tail-call optimization
 
 - [ ] Virtual Machine
    - [x] Basic data types
@@ -24,7 +25,6 @@
    - [x] Functions
       - [x] Closures
       - [x] First-class data type
-      - [ ] Tail-call optimization
    - [ ] Module system
    - [x] Generational garbage collection
    - [ ] Concurrency (fibers)
