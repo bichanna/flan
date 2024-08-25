@@ -129,6 +129,12 @@ void VM::run() {
         break;
       }
 
+      case InstructionType::LoadFunc: {
+        bufferPtr++;
+        this->push(this->readFunction(bufferPtr));
+        break;
+      }
+
       case InstructionType::Pop: {
         bufferPtr++;
         this->pop();
@@ -1174,8 +1180,6 @@ Value VM::readValue(std::uint8_t* bufferPtr) {
       return readString(bufferPtr);
     case 5:
       return readAtom(bufferPtr);
-    case 6:
-      return readFunction(bufferPtr);
     default: {
       std::stringstream ss;
       ss << "Invalid value type " << std::hex << std::setw(2)

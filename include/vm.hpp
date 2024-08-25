@@ -117,6 +117,7 @@ enum class InstructionType : std::uint8_t {
   Load5,
   Load,
   Push,
+  LoadFunc,
   Pop,
   PopN,
   Nip,
