@@ -159,6 +159,12 @@ enum class InstructionType : std::uint8_t {
   MakeClosure,
   GetUpvalue,
   SetUpvalue,
+  IsStr,
+  IsAtom,
+  IsList,
+  IsTable,
+  IsTup,
+  IsFunc,  // Checks for closure too
   Halt = 255,
 };
 }  // namespace flan

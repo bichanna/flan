@@ -595,6 +595,56 @@ void VM::run() {
         break;
       }
 
+      case InstructionType::IsStr: {
+        bufferPtr++;
+        auto value = this->pop().value;
+        this->push(std::holds_alternative<Object*>(value) &&
+                   (typeid(std::get<Object*>(value)) == typeid(String)));
+        break;
+      }
+
+      case InstructionType::IsAtom: {
+        bufferPtr++;
+        auto value = this->pop().value;
+        this->push(std::holds_alternative<Object*>(value) &&
+                   (typeid(std::get<Object*>(value)) == typeid(Atom)));
+        break;
+      }
+
+      case InstructionType::IsList: {
+        bufferPtr++;
+        auto value = this->pop().value;
+        this->push(std::holds_alternative<Object*>(value) &&
+                   (typeid(std::get<Object*>(value)) == typeid(List)));
+        break;
+      }
+
+      case InstructionType::IsTable: {
+        bufferPtr++;
+        auto value = this->pop().value;
+        this->push(std::holds_alternative<Object*>(value) &&
+                   (typeid(std::get<Object*>(value)) == typeid(Table)));
+        break;
+      }
+
+      case InstructionType::IsTup: {
+        bufferPtr++;
+        auto value = this->pop().value;
+        this->push(std::holds_alternative<Object*>(value) &&
+                   (typeid(std::get<Object*>(value)) == typeid(Tuple)));
+        break;
+      }
+
+      case InstructionType::IsFunc: {
+        bufferPtr++;
+        auto value = this->pop().value;
+        if (std::holds_alternative<Object*>(value)) this->push(false);
+        auto couldBeFunc = std::get<Object*>(value);
+        this->push((typeid(couldBeFunc) == typeid(Function)) ||
+                   (typeid(couldBeFunc) == typeid(Closure)));
+        break;
+      }
+
       case InstructionType::Halt:
         bufferPtr++;
         goto quitRun;
