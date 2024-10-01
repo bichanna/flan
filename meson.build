@@ -1,21 +1,18 @@
-project('flan', 'cpp',
+project('flan', 'c',
   version: '0.0.0',
   license: 'MIT',
   default_options: [
     'warning_level=3',
     'werror=true',
-    'cpp_std=c++17'
+    'c_std=c99'
   ]
 )
-impala_include = include_directories('include')
+
 src = [
-  'src/value.cpp',
-  'src/flan.cpp',
-  'src/gc.cpp',
-  'src/vm.cpp',
+  'src/flan.h',
+  'src/flan.c',
 ]
 
 executable('flan',
   sources: src,
-  include_directories: impala_include,
 )
