@@ -11,6 +11,7 @@ project('flan', 'c',
 src = [
   'src/flan.h',
   'src/value.h',
+  'src/utf8.h',
   'src/flan.c',
   'src/value.c'
 ]
