@@ -10,7 +10,9 @@ project('flan', 'c',
 
 src = [
   'src/flan.h',
+  'src/value.h',
   'src/flan.c',
+  'src/value.c'
 ]
 
 executable('flan',
