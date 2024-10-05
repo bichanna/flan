@@ -22,4 +22,4 @@ FValue stack_at(Stack *stack, size_t index);
 FValue stack_from_end(Stack *stack, size_t end_index);
 void stack_set_from(Stack *stack, uint8_t new_from);
 
-#endif // !FSTACK_H
+#endif  // !FSTACK_H
