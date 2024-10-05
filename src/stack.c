@@ -3,19 +3,18 @@
 #include <stdlib.h>
 #include <string.h>
 
-Stack *init_stack() {
-  Stack *stack = malloc(sizeof(Stack));
-  stack->arr = malloc(sizeof(FValue) * INITIAL_STACK_SIZE);
-  stack->len = 0;
-  stack->cap = INITIAL_STACK_SIZE;
-  stack->from = 0;
+Stack init_stack() {
+  Stack stack;
+  stack.arr = malloc(sizeof(FValue) * INITIAL_STACK_SIZE);
+  stack.len = 0;
+  stack.cap = INITIAL_STACK_SIZE;
+  stack.from = 0;
   return stack;
 }
 
 void free_stack(Stack *stack) {
   free(stack->arr);
   stack->arr = NULL;
-  free(stack);
 }
 
 void stack_push(Stack *stack, FValue value) {
