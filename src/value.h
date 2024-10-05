@@ -53,8 +53,8 @@ typedef struct FAtom {
 typedef struct FList {
   FObject obj;
   FObject **arr;
-  int64_t len;
-  int64_t cap;
+  size_t len;
+  size_t cap;
 } FList;
 
 FValue init_empty_value();

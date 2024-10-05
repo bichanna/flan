@@ -1,8 +1,9 @@
 #include "value.h"
 
-#include "utf8.h"
 #include <stdlib.h>
 #include <string.h>
+
+#include "utf8.h"
 
 FValue init_empty_value() {
   return (FValue){
@@ -139,7 +140,7 @@ void list_object_append_element(FList *list_obj, FObject *new_elem) {
 }
 
 int list_object_remove(FList *list_obj, size_t index) {
-  if (index < 0 || index >= list_obj->len) return 1;
+  if (index >= list_obj->len) return 1;
 
   for (size_t i = index; i < list_obj->len - 1; i++)
     list_obj->arr[i] = list_obj->arr[i + 1];
