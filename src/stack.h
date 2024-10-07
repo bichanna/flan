@@ -1,6 +1,9 @@
 #ifndef FSTACK_H
 #define FSTACK_H
 
+#include <stddef.h>
+#include <stdint.h>
+
 #include "value.h"
 
 #define INITIAL_STACK_SIZE 256

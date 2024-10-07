@@ -16,6 +16,8 @@ src = [
   'src/value.c',
   'src/stack.h',
   'src/stack.c',
+  'src/gc.h',
+  'src/gc.c',
 ]
 
 executable('flan',
