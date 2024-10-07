@@ -15,7 +15,7 @@ typedef struct Stack {
   uint8_t from;
 } Stack;
 
-Stack init_stack();
+Stack init_stack(void);
 void free_stack(Stack *stack);
 
 void stack_push(Stack *stack, FValue value);

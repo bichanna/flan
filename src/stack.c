@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-Stack init_stack() {
+Stack init_stack(void) {
   Stack stack;
   stack.arr = malloc(sizeof(FValue) * INITIAL_STACK_SIZE);
   stack.len = 0;

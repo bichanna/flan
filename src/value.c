@@ -5,7 +5,7 @@
 
 #include "utf8.h"
 
-FValue init_empty_value() {
+FValue init_empty_value(void) {
   return (FValue){
       .val_type = VAL_EMPTY,
       .i = 0,
@@ -41,13 +41,13 @@ FValue init_object_value(FObject *obj) {
 }
 
 FObject init_object(ObjectType obj_type,
-                    size_t (*size)(),
+                    size_t (*size)(void),
                     void (*free)(void *)) {
   return (FObject){
       .marked = false, .obj_type = obj_type, .size = size, .free = free};
 }
 
-size_t string_object_size() {
+size_t string_object_size(void) {
   return sizeof(FString);
 }
 
@@ -77,7 +77,7 @@ int string_object_concat(FString *dest, FString *src) {
   return 0;
 }
 
-size_t atom_object_size() {
+size_t atom_object_size(void) {
   return sizeof(FAtom);
 }
 
@@ -98,7 +98,7 @@ size_t atom_object_utf8_len(FAtom *atom_obj) {
   return utf8len(atom_obj->str);
 }
 
-size_t list_object_size() {
+size_t list_object_size(void) {
   return sizeof(FList);
 }
 
