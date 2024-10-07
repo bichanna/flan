@@ -17,7 +17,6 @@ release:
 
 format:
   clang-format -i ./src/**
-  clang-format -i ./include/**
 
 clean:
   rm -rf {{BUILD_DIR}}
