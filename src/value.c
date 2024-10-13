@@ -8,144 +8,131 @@
 FValue init_empty_value(void) {
   return (FValue){
       .val_type = VAL_EMPTY,
-      .i = 0,
+      .val.i = 0,
   };
 }
 
 FValue init_integer_value(long long i) {
   return (FValue){
       .val_type = VAL_INTEGER,
-      .i = i,
+      .val.i = i,
   };
 }
 
 FValue init_float_value(double f) {
   return (FValue){
       .val_type = VAL_FLOAT,
-      .f = f,
+      .val.f = f,
   };
 }
 
 FValue init_bool_value(bool b) {
   return (FValue){
       .val_type = VAL_BOOL,
-      .b = b,
+      .val.b = b,
   };
 }
 
 FValue init_object_value(FObject *obj) {
   return (FValue){
       .val_type = VAL_OBJECT,
-      .obj = obj,
+      .val.obj = obj,
   };
 }
 
-FObject init_object(ObjectType obj_type,
-                    size_t (*size)(void),
-                    void (*free)(void *)) {
-  return (FObject){
-      .marked = false, .obj_type = obj_type, .size = size, .free = free};
-}
-
-size_t string_object_size(void) {
-  return sizeof(FString);
-}
-
-void string_object_free(void *string_obj) {
-  FString *str_obj = (FString *)string_obj;
-  free(str_obj->str);
-  str_obj->str = NULL;
-}
-
-FString *init_string_object(char *str) {
-  FString *str_obj = malloc(string_object_size());
-  str_obj->obj =
-      init_object(OBJ_STRING, string_object_size, string_object_free);
-  str_obj->str = str;
+FObject *create_string_object(char *str, FObject *prev) {
+  FObject *str_obj = malloc(sizeof(FObject));
+  str_obj->marked = false;
+  str_obj->obj_type = OBJ_STRING;
+  str_obj->obj.fstr.str = str;
+  str_obj->next = NULL;
+  str_obj->free_inner = string_object_free;
+  prev->next = str_obj;
   return str_obj;
 }
 
-size_t string_object_utf8_len(FString *str_obj) {
-  return utf8len(str_obj->str);
+void string_object_free(FObject *str_obj) {
+  free(str_obj->obj.fstr.str);
+  str_obj->obj.fstr.str = NULL;
+}
+
+size_t string_object_utf8_len(FString *fstr) {
+  return utf8len(fstr->str);
 }
 
 int string_object_concat(FString *dest, FString *src) {
-  char *new_str = realloc(dest->str, strlen(dest->str) + strlen(src->str) - 1);
+  size_t new_size = strlen(dest->str) + strlen(src->str) - 1;
+  char *new_str = realloc(dest->str, new_size);
   if (!new_str) return 1;
   utf8cat(new_str, src->str);
   dest->str = new_str;
   return 0;
 }
 
-size_t atom_object_size(void) {
-  return sizeof(FAtom);
-}
-
-void atom_object_free(void *atom_obj) {
-  FAtom *atom = (FAtom *)atom_obj;
-  free((void *)atom->str);
-  atom->str = NULL;
-}
-
-FAtom *init_atom_object(const char *str) {
-  FAtom *atom_obj = malloc(atom_object_size());
-  atom_obj->obj = init_object(OBJ_ATOM, atom_object_size, atom_object_free);
-  atom_obj->str = str;
+FObject *create_atom_object(const char *str, FObject *prev) {
+  FObject *atom_obj = malloc(sizeof(FObject));
+  atom_obj->marked = false;
+  atom_obj->obj_type = OBJ_ATOM;
+  atom_obj->obj.fatom.str = str;
+  atom_obj->next = NULL;
+  atom_obj->free_inner = atom_object_free;
+  prev->next = atom_obj;
   return atom_obj;
 }
 
-size_t atom_object_utf8_len(FAtom *atom_obj) {
-  return utf8len(atom_obj->str);
+void atom_object_free(FObject *atom_obj) {
+  free((void *)atom_obj->obj.fatom.str);
+  atom_obj->obj.fatom.str = NULL;
 }
 
-size_t list_object_size(void) {
-  return sizeof(FList);
+size_t atom_object_utf8_len(FAtom *fatom) {
+  return utf8len(fatom->str);
 }
 
-void list_object_free(void *list_obj) {
-  FList *list = (FList *)list_obj;
-  free(list->arr);
-  list->arr = NULL;
-  list->len = 0;
-  list->cap = 0;
-}
-
-FList *init_list_object_with_cap(size_t cap) {
-  FList *list_obj = malloc(list_object_size());
-  list_obj->obj = init_object(OBJ_LIST, list_object_size, list_object_free);
-  list_obj->arr = (FObject **)malloc(sizeof(FObject *) * cap);
-  list_obj->len = 0;
-  list_obj->cap = cap;
+FObject *create_list_object_with_cap(size_t cap, FObject *prev) {
+  FObject *list_obj = malloc(sizeof(FObject));
+  list_obj->marked = false;
+  list_obj->obj_type = OBJ_LIST;
+  list_obj->obj.flist.arr = (FObject **)malloc(sizeof(FObject *) * cap);
+  list_obj->obj.flist.len = 0;
+  list_obj->obj.flist.cap = cap;
+  list_obj->next = NULL;
+  list_obj->free_inner = list_object_free;
+  prev->next = list_obj;
   return list_obj;
 }
-
-FList *init_list_object() {
-  return init_list_object_with_cap(LIST_ELEM_INIT_CAP);
+FObject *create_list_object(FObject *prev) {
+  return create_list_object_with_cap(LIST_ELEM_INIT_CAP, prev);
 }
 
-void list_object_grow_cap(FList *list_obj, int by) {
-  list_obj->cap *= by;
-  list_obj->arr = realloc(list_obj->arr, list_obj->cap * sizeof(FObject *));
+void list_object_free(FObject *list_obj) {
+  free(list_obj->obj.flist.arr);
+  list_obj->obj.flist.arr = NULL;
+  list_obj->obj.flist.len = 0;
+  list_obj->obj.flist.cap = 0;
 }
 
-void list_object_append_element(FList *list_obj, FObject *new_elem) {
-  if (++(list_obj->len) == list_obj->cap)
-    list_object_grow_cap(list_obj, LIST_GROW_FACTOR);
-
-  list_obj->arr[list_obj->len - 1] = new_elem;
+void list_object_grow_cap(FList *flist, int by) {
+  flist->cap *= by;
+  flist->arr = realloc(flist->arr, sizeof(FObject *) * flist->cap);
 }
 
-int list_object_remove(FList *list_obj, size_t index) {
-  if (index >= list_obj->len) return 1;
+void list_object_append(FList *flist, FObject *elem) {
+  if (++(flist->len) == flist->cap)
+    list_object_grow_cap(flist, LIST_GROW_FACTOR);
 
-  for (size_t i = index; i < list_obj->len - 1; i++)
-    list_obj->arr[i] = list_obj->arr[i + 1];
+  flist->arr[flist->len - 1] = elem;
+}
 
-  list_obj->len--;
+int list_object_remove(FList *flist, size_t idx) {
+  if (idx >= flist->len) return 1;
+
+  for (size_t i = idx; i < flist->len - 1; i++)
+    flist->arr[i] = flist->arr[i + 1];
 
   return 0;
 }
 
-void list_object_pop(FList *list_obj) {
-  list_object_remove(list_obj, list_obj->len - 1);
+void list_object_pop(FList *flist) {
+  list_object_remove(flist, flist->len - 1);
 }

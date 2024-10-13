@@ -7,35 +7,24 @@
 #define NURSERY_SIZE 2048 * 2048 * 2        // ~8.4 MB
 #define NURSING_HOME_SIZE 2048 * 2048 * 16  // ~67.1 MB
 
-// FOLL is short for FObject Linked List
-typedef struct FOLLNode {
-  FObject *obj;
-  struct FOLLNode *next;
-} FOLLNode;
-
-typedef struct FOLLNode *FOLinkedList;
-
 typedef struct GC {
   Stack *stack;
   size_t nursery_size;
   size_t nursing_home_size;
-  FOLinkedList nursery_list;
-  FOLinkedList nursing_home_list;
+  FObject *nursery_list;
+  FObject *nursing_home_list;
 } GC;
 
-void collect_nursery(GC *gc);
-void collect_nursing_home(GC *gc);
-
-void collect_if_needed(GC *gc);
-
-void add_to_nursery(GC *gc, FObject *obj);
-void add_to_nursing_home(GC *gc, FObject *obj);
-void remove_from_nursery(GC *gc, FObject *obj);
-void remove_from_nursing_home(GC *gc, FObject *obj);
-
-GC *init_gc(Stack *stack);
+GC *create_gc(Stack *stack);
 void free_gc(GC *gc);
 
-void register_object(GC *gc, FObject *obj);
+FObject *create_and_register_string_object(GC *gc, char *str);
+FObject *create_and_register_atom_object(GC *gc, const char *str);
+FObject *create_and_register_list_object_with_cap(GC *gc, size_t cap);
+FObject *create_and_register_list_object(GC *gc);
+
+void collect_if_needed(GC *gc);
+void collect_nursery(GC *gc);
+void collect_nursing_home(GC *gc);
 
 #endif  // !FGC_H
