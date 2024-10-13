@@ -4,13 +4,13 @@
 
 #include "value.h"
 
-GC *create_gc(Stack *stack) {
-  GC *gc = malloc(sizeof(GC));
-  gc->stack = stack;
-  gc->nursery_size = 0;
-  gc->nursing_home_size = 0;
-  gc->nursery_list = NULL;
-  gc->nursing_home_list = NULL;
+GC init_gc(Stack *stack) {
+  GC gc;
+  gc.stack = stack;
+  gc.nursery_size = 0;
+  gc.nursing_home_size = 0;
+  gc.nursery_list = NULL;
+  gc.nursing_home_list = NULL;
   return gc;
 }
 
