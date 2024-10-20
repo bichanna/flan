@@ -15,7 +15,7 @@ typedef struct GC {
   FObject *nursing_home_list;
 } GC;
 
-GC gc_init(Stack *stack);
+void gc_init(GC *gc, Stack *stack);
 void gc_deinit(GC *gc);
 
 FObject *string_object_create_and_register(GC *gc, char *str);

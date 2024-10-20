@@ -4,14 +4,12 @@
 
 #include "value.h"
 
-GC gc_init(Stack *stack) {
-  GC gc;
-  gc.stack = stack;
-  gc.nursery_size = 0;
-  gc.nursing_home_size = 0;
-  gc.nursery_list = NULL;
-  gc.nursing_home_list = NULL;
-  return gc;
+void gc_init(GC *gc, Stack *stack) {
+  gc->stack = stack;
+  gc->nursery_size = 0;
+  gc->nursing_home_size = 0;
+  gc->nursery_list = NULL;
+  gc->nursing_home_list = NULL;
 }
 
 void gc_deinit(GC *gc) {
