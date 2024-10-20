@@ -15,16 +15,16 @@ typedef struct GC {
   FObject *nursing_home_list;
 } GC;
 
-GC init_gc(Stack *stack);
-void free_gc(GC *gc);
+GC gc_init(Stack *stack);
+void gc_deinit(GC *gc);
 
-FObject *create_and_register_string_object(GC *gc, char *str);
-FObject *create_and_register_atom_object(GC *gc, const char *str);
-FObject *create_and_register_list_object_with_cap(GC *gc, size_t cap);
-FObject *create_and_register_list_object(GC *gc);
+FObject *string_object_create_and_register(GC *gc, char *str);
+FObject *atom_object_create_and_register(GC *gc, const char *str);
+FObject *list_object_create_and_register_with_cap(GC *gc, size_t cap);
+FObject *list_object_create_and_register(GC *gc);
 
-void collect_if_needed(GC *gc);
-void collect_nursery(GC *gc);
-void collect_nursing_home(GC *gc);
+void gc_collect_if_needed(GC *gc);
+void gc_collect_nursery(GC *gc);
+void gc_collect_nursing_home(GC *gc);
 
 #endif  // !FGC_H

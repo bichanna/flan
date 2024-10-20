@@ -61,23 +61,23 @@ typedef struct FValue {
   } val;
 } FValue;
 
-FValue init_empty_value(void);
-FValue init_integer_value(long long i);
-FValue init_float_value(double f);
-FValue init_bool_value(bool b);
-FValue init_object_value(FObject *obj);
+FValue create_empty_value(void);
+FValue create_integer_value(long long i);
+FValue create_float_value(double f);
+FValue create_bool_value(bool b);
+FValue create_object_value(FObject *obj);
 
-FObject *create_string_object(char *str, FObject *prev);
+FObject *alloc_string_object(char *str, FObject *prev);
 void string_object_free(FObject *str_obj);
 size_t string_object_utf8_len(FString *fstr);
 int string_object_concat(FString *dest, FString *src);
 
-FObject *create_atom_object(const char *str, FObject *prev);
+FObject *alloc_atom_object(const char *str, FObject *prev);
 void atom_object_free(FObject *atom_obj);
 size_t atom_object_utf8_len(FAtom *fatom);
 
-FObject *create_list_object_with_cap(size_t cap, FObject *prev);
-FObject *create_list_object(FObject *prev);
+FObject *alloc_list_object_with_cap(size_t cap, FObject *prev);
+FObject *alloc_list_object(FObject *prev);
 void list_object_free(FObject *list_obj);
 void list_object_grow_cap(FList *flist, int by);
 void list_object_append(FList *flist, FObject *elem);

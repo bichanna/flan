@@ -40,7 +40,7 @@ FValue init_object_value(FObject *obj) {
   };
 }
 
-FObject *create_string_object(char *str, FObject *prev) {
+FObject *alloc_string_object(char *str, FObject *prev) {
   FObject *str_obj = malloc(sizeof(FObject));
   str_obj->marked = false;
   str_obj->obj_type = OBJ_STRING;
@@ -69,7 +69,7 @@ int string_object_concat(FString *dest, FString *src) {
   return 0;
 }
 
-FObject *create_atom_object(const char *str, FObject *prev) {
+FObject *alloc_atom_object(const char *str, FObject *prev) {
   FObject *atom_obj = malloc(sizeof(FObject));
   atom_obj->marked = false;
   atom_obj->obj_type = OBJ_ATOM;
@@ -89,7 +89,7 @@ size_t atom_object_utf8_len(FAtom *fatom) {
   return utf8len(fatom->str);
 }
 
-FObject *create_list_object_with_cap(size_t cap, FObject *prev) {
+FObject *alloc_list_object_with_cap(size_t cap, FObject *prev) {
   FObject *list_obj = malloc(sizeof(FObject));
   list_obj->marked = false;
   list_obj->obj_type = OBJ_LIST;
@@ -101,8 +101,8 @@ FObject *create_list_object_with_cap(size_t cap, FObject *prev) {
   prev->next = list_obj;
   return list_obj;
 }
-FObject *create_list_object(FObject *prev) {
-  return create_list_object_with_cap(LIST_ELEM_INIT_CAP, prev);
+FObject *alloc_list_object(FObject *prev) {
+  return alloc_list_object_with_cap(LIST_ELEM_INIT_CAP, prev);
 }
 
 void list_object_free(FObject *list_obj) {
