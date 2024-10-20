@@ -10,6 +10,7 @@
 #define LIST_GROW_FACTOR 2
 
 struct FObject;
+struct FValue;
 
 typedef struct FString {
   char *str;
@@ -20,7 +21,7 @@ typedef struct FAtom {
 } FAtom;
 
 typedef struct FList {
-  struct FObject **arr;
+  struct FValue *arr;
   size_t len;
   size_t cap;
 } FList;
@@ -80,7 +81,7 @@ FObject *alloc_list_object_with_cap(size_t cap, FObject *prev);
 FObject *alloc_list_object(FObject *prev);
 void list_object_free(FObject *list_obj);
 void list_object_grow_cap(FList *flist, int by);
-void list_object_append(FList *flist, FObject *elem);
+void list_object_append(FList *flist, FValue elem);
 int list_object_remove(FList *flist, size_t idx);
 void list_object_pop(FList *flist);
 

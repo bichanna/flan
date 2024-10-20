@@ -93,7 +93,7 @@ FObject *alloc_list_object_with_cap(size_t cap, FObject *prev) {
   FObject *list_obj = malloc(sizeof(FObject));
   list_obj->marked = false;
   list_obj->obj_type = OBJ_LIST;
-  list_obj->obj.flist.arr = (FObject **)malloc(sizeof(FObject *) * cap);
+  list_obj->obj.flist.arr = (FValue *)malloc(sizeof(FValue) * cap);
   list_obj->obj.flist.len = 0;
   list_obj->obj.flist.cap = cap;
   list_obj->next = NULL;
@@ -114,10 +114,10 @@ void list_object_free(FObject *list_obj) {
 
 void list_object_grow_cap(FList *flist, int by) {
   flist->cap *= by;
-  flist->arr = realloc(flist->arr, sizeof(FObject *) * flist->cap);
+  flist->arr = realloc(flist->arr, sizeof(FValue) * flist->cap);
 }
 
-void list_object_append(FList *flist, FObject *elem) {
+void list_object_append(FList *flist, FValue elem) {
   if (++(flist->len) == flist->cap)
     list_object_grow_cap(flist, LIST_GROW_FACTOR);
 
