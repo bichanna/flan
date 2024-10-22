@@ -123,7 +123,9 @@ void *hm_pop(HM *hm, const char *key) {
       const char *key = hm->entries[idx].key;
       free((void *)key);
       key = NULL;
+      void *val = hm->entries[idx].value;
       hm->entries[idx].value = NULL;
+      return val;
     }
 
     idx++;
