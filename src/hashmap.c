@@ -123,9 +123,7 @@ void *hm_pop(HM *hm, const char *key) {
       const char *key = hm->entries[idx].key;
       free((void *)key);
       key = NULL;
-      void *val = hm->entries[idx].value;
-      hm->entries[idx].value = NULL;
-      return val;
+      return hm->entries[idx].value;
     }
 
     idx++;
@@ -133,4 +131,28 @@ void *hm_pop(HM *hm, const char *key) {
   }
 
   return NULL;
+}
+
+HMIter hm_iter_create(HM *hm) {
+  HMIter hmi;
+  hmi.hm = hm;
+  hmi.idx = 0;
+  return hmi;
+}
+
+bool hm_iter_next(HMIter *it) {
+  HM *hm = it->hm;
+
+  while (it->idx < hm->cap) {
+    size_t i = it->idx;
+    it->idx++;
+    if (hm->entries[i].key != NULL) {
+      HMEntry entry = hm->entries[i];
+      it->key = entry.key;
+      it->value = entry.value;
+      return true;
+    }
+  }
+
+  return false;
 }

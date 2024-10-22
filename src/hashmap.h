@@ -28,4 +28,15 @@ void *hm_get(HM *hm, const char *key);
 const char *hm_set(HM *hm, const char *key, void *value);
 void *hm_pop(HM *hm, const char *key);
 
+typedef struct HMIter {
+  const char *key;
+  void *value;
+
+  HM *hm;
+  size_t idx;
+} HMIter;
+
+HMIter hm_iter_create(HM *hm);
+bool hm_iter_next(HMIter *it);
+
 #endif  // !FHM_H
