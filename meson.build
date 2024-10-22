@@ -18,6 +18,8 @@ src = [
   'src/stack.c',
   'src/gc.h',
   'src/gc.c',
+  'src/hashmap.h',
+  'src/hashmap.c',
 ]
 
 executable('flan',
