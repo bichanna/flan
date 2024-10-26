@@ -5,9 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "utf8.h"
 #include "gc.h"
 #include "stack.h"
+#include "utf8.h"
 #include "value.h"
 
 VMInitResult vm_init(VM *vm, const char *filename) {
@@ -207,7 +207,9 @@ static bool read_value(VM *vm, FValue *value) {
   return true;
 }
 
-static InterpretResult create_interpret_result(InterpretResultType type, const char *err_msg, bool show_stack_trace) {
+static InterpretResult create_interpret_result(InterpretResultType type,
+                                               const char *err_msg,
+                                               bool show_stack_trace) {
   InterpretResult res;
   char *msg = malloc(strlen(err_msg) + 1);
   utf8cpy(msg, err_msg);
@@ -219,16 +221,94 @@ static InterpretResult create_interpret_result(InterpretResultType type, const c
 
 InterpretResult interpret(VM *vm) {
   if (!check_magic_number(vm->inst))
-    return create_interpret_result(INTERPRET_ERR, "Invalid Magic number", false);
+    return create_interpret_result(
+        INTERPRET_ERR, "Invalid Magic number", false);
 
   if (!check_version(vm->inst))
-    return create_interpret_result(INTERPRET_ERR, "Upgrade the Flan runtime", false);
+    return create_interpret_result(
+        INTERPRET_ERR, "Upgrade the Flan runtime", false);
 
   for (;;) {
     InstructionType inst_type = (InstructionType)read_uint8(vm->inst);
 
     switch (inst_type) {
-      // TODO
+      case INST_LOAD_NEG1:
+        push(vm, create_integer_value(-1));
+        break;
+
+      case INST_LOAD0:
+        push(vm, create_integer_value(0));
+        break;
+
+      case INST_LOAD1:
+        push(vm, create_integer_value(1));
+        break;
+
+      case INST_LOAD2:
+        push(vm, create_integer_value(2));
+        break;
+
+      case INST_LOAD3:
+        push(vm, create_integer_value(3));
+        break;
+
+      case INST_LOAD4:
+        push(vm, create_integer_value(4));
+        break;
+
+      case INST_LOAD5:
+        push(vm, create_integer_value(5));
+        break;
+
+      case INST_LOAD: {
+        FValue val;
+        if (!read_value(vm, &val))
+          return create_interpret_result(
+              INTERPRET_ERR, "Invalid value type", false);
+        push(vm, val);
+        break;
+      }
+
+      case INST_PUSH: {
+        uint8_t len = read_uint8(vm->inst);
+        for (size_t i = 0; i < len; i++) {
+          FValue val;
+          if (!read_value(vm, &val))
+            return create_interpret_result(
+                INTERPRET_ERR, "Invalid value type", false);
+          push(vm, val);
+        }
+        break;
+      }
+
+      case INST_POP:
+        pop(vm);
+        break;
+
+      case INST_POPN: {
+        uint8_t len = read_uint8(vm->inst);
+        for (size_t i = 0; i < len; i++) pop(vm);
+        break;
+      }
+
+      case INST_NIP: {
+        FValue last = pop(vm);
+        pop(vm);
+        push(vm, last);
+        break;
+      }
+
+      case INST_NIPN: {
+        uint8_t len = read_uint8(vm->inst);
+        FValue last = pop(vm);
+        for (size_t i = 0; i < len; i++) pop(vm);
+        push(vm, last);
+        break;
+      }
+
+      case INST_DUP:
+        push(vm, stack_last_value(&vm->stack));
+        break;
     }
   }
 

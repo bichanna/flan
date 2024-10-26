@@ -65,15 +65,19 @@ InterpretResult interpret(VM *vm);
 
 typedef enum InstructionType {
   INST_LOAD_NEG1 = 0,
-  INST_LOAD_1 = 1,
-  INST_LOAD_2 = 2,
-  INST_LOAD_3 = 3,
-  INST_LOAD_4 = 4,
-  INST_LOAD_5 = 5,
-  INST_LOAD = 6,
-  INST_PUSH = 7,
-  INST_POP = 7,
-  INST_POPN = 8,
+  INST_LOAD1 = 1,
+  INST_LOAD2 = 2,
+  INST_LOAD3 = 3,
+  INST_LOAD4 = 4,
+  INST_LOAD5 = 5,
+  INST_LOAD0 = 6,
+  INST_LOAD = 7,
+  INST_PUSH = 8,
+  INST_POP = 9,
+  INST_POPN = 10,
+  INST_NIP = 11,
+  INST_NIPN = 12,
+  INST_DUP = 13,
 } InstructionType;
 
 void print_error(const char *msg);
