@@ -3,12 +3,14 @@
 
 #include <stdint.h>
 
+#include "gc.h"
 #include "hashmap.h"
 #include "stack.h"
 
+#define CALL_FRAMES_MAX 124
+
 const uint8_t VERSION[3] = {0, 0, 0};
 const uint8_t MAGIC_NUMBER[4] = {0x46, 0x4C, 0x41, 0x4E};
-const uint8_t CALL_FRAMES_MAX = 124;
 
 typedef struct ErrorInfo {
   uint16_t line;
@@ -24,7 +26,9 @@ typedef struct CallFrame {
 typedef struct VM {
   const char *filename;
   Stack stack;
-  const uint8_t *inst;
+  uint8_t *inst;
+
+  GC gc;
 
   CallFrame callframes[CALL_FRAMES_MAX];
   size_t callframes_len;
@@ -44,6 +48,33 @@ typedef enum VMInitResult {
 
 VMInitResult vm_init(VM *vm, const char *filename);
 void vm_deinit(VM *vm);
+
+typedef enum InterpretResultType {
+  INTERPRET_SUCCESS,
+  INTERPRET_ERR,
+} InterpretResultType;
+
+typedef struct InterpretResult {
+  InterpretResultType type;
+  const char *err_msg;
+  bool show_stack_trace;
+} InterpretResult;
+
+// remember to free err_msg if it's not NULL
+InterpretResult interpret(VM *vm);
+
+typedef enum InstructionType {
+  INST_LOAD_NEG1 = 0,
+  INST_LOAD_1 = 1,
+  INST_LOAD_2 = 2,
+  INST_LOAD_3 = 3,
+  INST_LOAD_4 = 4,
+  INST_LOAD_5 = 5,
+  INST_LOAD = 6,
+  INST_PUSH = 7,
+  INST_POP = 7,
+  INST_POPN = 8,
+} InstructionType;
 
 void print_error(const char *msg);
 void print_error_with_stack_trace(const ErrorInfo *err_info, const char *msg);

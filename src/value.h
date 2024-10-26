@@ -63,7 +63,7 @@ typedef struct FValue {
 } FValue;
 
 FValue create_empty_value(void);
-FValue create_integer_value(long long i);
+FValue create_integer_value(int64_t i);
 FValue create_float_value(double f);
 FValue create_bool_value(bool b);
 FValue create_object_value(FObject *obj);
