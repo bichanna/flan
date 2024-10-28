@@ -22,6 +22,15 @@ FObject *string_object_create_and_register(GC *gc, char *str);
 FObject *atom_object_create_and_register(GC *gc, const char *str);
 FObject *list_object_create_and_register_with_cap(GC *gc, size_t cap);
 FObject *list_object_create_and_register(GC *gc);
+FObject *func_object_create_and_register(GC *gc,
+                                         uint16_t arity,
+                                         const char *name,
+                                         uint8_t *inst);
+FObject *upval_object_create_and_register(GC *gc, FValue value);
+FObject *clos_object_create_and_register(GC *gc,
+                                         FUpval **upvalues,
+                                         uint8_t upval_count,
+                                         FFunc *func);
 
 void gc_collect_if_needed(GC *gc);
 void gc_collect_nursery(GC *gc);

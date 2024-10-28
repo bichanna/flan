@@ -45,6 +45,30 @@ FObject *list_object_create_and_register(GC *gc) {
   return alloc_list_object(gc->nursery_list);
 }
 
+FObject *func_object_create_and_register(GC *gc,
+                                         uint16_t arity,
+                                         const char *name,
+                                         uint8_t *inst) {
+  gc_collect_if_needed(gc);
+  gc->nursery_size += sizeof(FObject);
+  return alloc_func_object(arity, name, inst, gc->nursery_list);
+}
+
+FObject *upval_object_create_and_register(GC *gc, FValue value) {
+  gc_collect_if_needed(gc);
+  gc->nursery_size += sizeof(FObject);
+  return alloc_upval_object(value, gc->nursery_list);
+}
+
+FObject *clos_object_create_and_register(GC *gc,
+                                         FUpval **upvalues,
+                                         uint8_t upval_count,
+                                         FFunc *func) {
+  gc_collect_if_needed(gc);
+  gc->nursery_size += sizeof(FObject);
+  return alloc_clos_object(upvalues, upval_count, func, gc->nursery_list);
+}
+
 void gc_collect_if_needed(GC *gc) {
   if (gc->nursery_size >= NURSERY_SIZE) {
     // mark all

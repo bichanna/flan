@@ -136,3 +136,63 @@ int list_object_remove(FList *flist, size_t idx) {
 void list_object_pop(FList *flist) {
   list_object_remove(flist, flist->len - 1);
 }
+
+FObject *alloc_func_object(uint16_t arity,
+                           const char *name,
+                           const uint8_t *inst,
+                           FObject *prev) {
+  FObject *func_obj = malloc(sizeof(FObject));
+  func_obj->marked = false;
+  func_obj->obj_type = OBJ_FUNC;
+  func_obj->obj.ffunc.arity = arity;
+  func_obj->obj.ffunc.name = name;
+  func_obj->obj.ffunc.inst = inst;
+  func_obj->next = NULL;
+  func_obj->free_inner = func_object_free;
+  prev->next = func_obj;
+  return func_obj;
+}
+
+void func_object_free(FObject *func_obj) {
+  free((void *)func_obj->obj.ffunc.inst);
+  free((void *)func_obj->obj.ffunc.name);
+  func_obj->obj.ffunc.arity = 0;
+}
+
+FObject *alloc_upval_object(FValue value, FObject *prev) {
+  FObject *upval_obj = malloc(sizeof(FObject));
+  upval_obj->marked = false;
+  upval_obj->obj_type = OBJ_UPVAL;
+  upval_obj->obj.fupval.value = value;
+  upval_obj->next = NULL;
+  upval_obj->free_inner = upval_object_free;
+  prev->next = upval_obj;
+  return upval_obj;
+}
+
+void upval_object_free(FObject *upval_obj) {
+  // Nothing to free
+  (void)upval_obj;
+}
+
+FObject *alloc_clos_object(FUpval **upvalues,
+                           uint8_t upval_count,
+                           FFunc *func,
+                           FObject *prev) {
+  FObject *clos_obj = malloc(sizeof(FObject));
+  clos_obj->marked = false;
+  clos_obj->obj_type = OBJ_CLOS;
+  clos_obj->obj.fclos.upval_count = upval_count;
+  clos_obj->obj.fclos.upvalues = upvalues;
+  clos_obj->obj.fclos.func = func;
+  clos_obj->next = NULL;
+  clos_obj->free_inner = clos_object_free;
+  prev->next = clos_obj;
+  return clos_obj;
+}
+
+void clos_object_free(FObject *clos_obj) {
+  for (size_t i = 0; i < clos_obj->obj.fclos.upval_count; i++)
+    free(clos_obj->obj.fclos.upvalues[i]);
+  free(clos_obj->obj.fclos.upvalues);
+}

@@ -10,39 +10,6 @@
 #define LIST_GROW_FACTOR 2
 
 struct FObject;
-struct FValue;
-
-typedef struct FString {
-  char *str;
-} FString;
-
-typedef struct FAtom {
-  const char *str;
-} FAtom;
-
-typedef struct FList {
-  struct FValue *arr;
-  size_t len;
-  size_t cap;
-} FList;
-
-typedef enum ObjectType {
-  OBJ_STRING,
-  OBJ_ATOM,
-  OBJ_LIST,
-} ObjectType;
-
-typedef struct FObject {
-  bool marked;
-  ObjectType obj_type;
-  union {
-    FString fstr;
-    FAtom fatom;
-    FList flist;
-  } obj;
-  struct FObject *next;
-  void (*free_inner)(struct FObject *);
-} FObject;
 
 typedef enum ValueType {
   VAL_EMPTY,
@@ -58,9 +25,63 @@ typedef struct FValue {
     int64_t i;
     double f;
     bool b;
-    FObject *obj;
+    struct FObject *obj;
   } val;
 } FValue;
+
+typedef struct FString {
+  char *str;
+} FString;
+
+typedef struct FAtom {
+  const char *str;
+} FAtom;
+
+typedef struct FList {
+  FValue *arr;
+  size_t len;
+  size_t cap;
+} FList;
+
+typedef struct FFunc {
+  const char *name;
+  const uint8_t *inst;
+  uint16_t arity;
+} FFunc;
+
+typedef struct FUpval {
+  FValue value;
+} FUpval;
+
+typedef struct FClosure {
+  uint8_t upval_count;
+  FUpval **upvalues;
+  FFunc *func;
+} FClosure;
+
+typedef enum ObjectType {
+  OBJ_STRING,
+  OBJ_ATOM,
+  OBJ_LIST,
+  OBJ_FUNC,
+  OBJ_UPVAL,
+  OBJ_CLOS,
+} ObjectType;
+
+typedef struct FObject {
+  bool marked;
+  ObjectType obj_type;
+  union {
+    FString fstr;
+    FAtom fatom;
+    FList flist;
+    FFunc ffunc;
+    FUpval fupval;
+    FClosure fclos;
+  } obj;
+  struct FObject *next;
+  void (*free_inner)(struct FObject *);
+} FObject;
 
 FValue create_empty_value(void);
 FValue create_integer_value(int64_t i);
@@ -84,5 +105,20 @@ void list_object_grow_cap(FList *flist, int by);
 void list_object_append(FList *flist, FValue elem);
 int list_object_remove(FList *flist, size_t idx);
 void list_object_pop(FList *flist);
+
+FObject *alloc_func_object(uint16_t arity,
+                           const char *name,
+                           const uint8_t *inst,
+                           FObject *prev);
+void func_object_free(FObject *func_obj);
+
+FObject *alloc_upval_object(FValue value, FObject *prev);
+void upval_object_free(FObject *upval_obj);
+
+FObject *alloc_clos_object(FUpval **upvalues,
+                           uint8_t upval_count,
+                           FFunc *func,
+                           FObject *prev);
+void clos_object_free(FObject *clos_obj);
 
 #endif  // !FVALUE_H
